@@ -77,21 +77,9 @@ So to get it just:
 ```
 git clone <repo address>
 ```
-The module can be run from the command line. There are 3 options:
-1. command line mode:
-```
-python application.py
-```
-2. PyQt5 GUI mode:
-```
-python gui_Qt.py
-```
-3. Tkinter GUI mode (deprecated):
-```
-python gui.py
-```
+If you don´t want to package the module, skpi to the next section
 
-You can also package the script with cx_Freeze but in this stage it is still kind of buggy. If you decide to do so, before the first run of the respective setup script uncomment the line:
+You can package the script with cx_Freeze but in this stage it is still kind of buggy. If you decide to do so, before the first run of the respective setup script uncomment the line:
 ```
 # generate_excludes()
 ```
@@ -125,6 +113,22 @@ This version of setup might be still buggy and is under developement
 There is a third commandline-only option which is the most stable. To build it:
 ```
 setup_cmd.py build
+```
+
+## Running the code
+
+The module can be run from the command line. There are 3 options:
+1. command line mode:
+```
+python application.py
+```
+2. PyQt5 GUI mode:
+```
+python gui_Qt.py
+```
+3. Tkinter GUI mode (deprecated):
+```
+python gui.py
 ```
 
 ## Running the tests
