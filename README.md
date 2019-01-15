@@ -52,7 +52,7 @@ After this a window will open. In the collections tab download **popular**. Defa
 ```
 C:\nltk_data
 ```
-This is best leaved as is otherwise you will have to modify setup scripts for cx_Freeze. But other tahn this the loacation doesn´treally matter.
+This is best leaved as is otherwise you will have to modify setup scripts for cx_Freeze. But other than this the location doesn´t really matter.
 
 If you want to try and package script you also need to install
 ```
@@ -62,11 +62,11 @@ cx-Freeze>=5.1.1
 packages that are not necessary:
 * *python-Levenshtein* makes fuzzywuzzy a whole lot faster
 * *lxml* makes Beautifulsoup a whole lot faster
-* *PyQt5* is you want to use Tkinter GUI (deprecated) or console mode
+* *PyQt5* if you want to use Tkinter GUI (deprecated) or console mode
 
 You should be able to seamlessly substitute **PyQt5** with **PySide2** or **PyQt4** just by changing imports and some little alterations to the code.
 
-The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications module should be able to run on Linux and OsX too. This concers mainly default paths and interaction with clipboard in GUI.
+The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications module should be able to run on Linux and Os X too. This concers mainly default paths and interaction with clipboard in GUI.
 
 ### Installing
 
@@ -75,7 +75,7 @@ although it is still moderately buggy.
 So to get it just:
 
 ```
-git clone <repo addr>
+git clone <repo address>
 ```
 The module can be run from the command line. There are 3 options:
 1. command line mode:
