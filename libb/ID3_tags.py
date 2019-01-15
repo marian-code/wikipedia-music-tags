@@ -34,7 +34,7 @@ def write_tags(data: dict, lyrics_only):
             log_tags.exception(e)
 
     if data["file"] is None:
-        print(data["track"] + " " + data["type"] + Fore.LIGHTYELLOW_EX +
+        print(data["TITLE"] + " " + data["type"] + Fore.LIGHTYELLOW_EX +
               "does not have matching file!" + Fore.RESET)
         return 0
 

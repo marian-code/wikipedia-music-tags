@@ -576,6 +576,7 @@ class Window(QMainWindow, Ui_MainWindow):
                 shared_vars.terminate_app = True
 
                 time.sleep(0.03)
+                # TODO not working
                 sys.exit(self.exec_())  # TODO untested
             else:
                 shared_vars.wait_exit = False
@@ -687,6 +688,8 @@ class Window(QMainWindow, Ui_MainWindow):
             # TODO non-atomic
             self.__init_parser__()
 
+            self.input_band = self.band_entry_input.text()
+            self.input_album = self.album_entry_input.text()
             main_app = Thread(target=MAIN,
                               args=(str(self.input_band),
                                     str(self.input_album),
@@ -761,6 +764,7 @@ class Window(QMainWindow, Ui_MainWindow):
         }
 
         # TODO add statusbar with load more button
+        # TODO add button to open browser
         self.image_table = ImageTable()
         self.image_table.resize(1000, 700)
         self.image_table.setWindowTitle("Wiki Music - Cover Art search")
@@ -797,7 +801,7 @@ class Window(QMainWindow, Ui_MainWindow):
             nonlocal cancel
             cancel = True
 
-        # TODO when not nice round numbers - fials because of recursion
+        # TODO when not nice round numbers - fails because of recursion
         # these two methods keep calling each other
         @exception(log_gui)
         def _aspect_ratio_connect_X(dim_Y):
@@ -839,6 +843,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.image_dialog.size_spinbox_X.setValue(dim_X)
         self.image_dialog.size_spinbox_Y.setValue(dim_Y)
 
+        # TODO set file size in dialog
         # connect to dialog window button events
         self.image_dialog.ca_clipboard.stateChanged.connect(_set_clipboard)
         self.image_dialog.ca_file.stateChanged.connect(_set_file)
