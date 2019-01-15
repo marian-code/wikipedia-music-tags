@@ -154,7 +154,7 @@ pyuic5.exe -x cover_art.ui -o cover_art.py
 ```
 *PyQt4* and *PySide2* have utilities with other names.
 
-
+Changes to the code before git are in code changelog file.
 
 ## Authors
 
