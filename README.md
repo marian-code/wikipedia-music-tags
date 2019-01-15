@@ -130,6 +130,7 @@ python gui_Qt.py
 ```
 python gui.py
 ```
+**libb** can also be used as a library for getting music tags, lyrics and writing them to files
 
 ## Running the tests
 
