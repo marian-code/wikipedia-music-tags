@@ -27,7 +27,7 @@ from wiki_music.google_images_download import google_images_download
 log_gui.info("started imports")
 
 from gui_Qt_base import Ui_MainWindow
-from cover_art import Ui_Dialog
+from art_dialog_base import Ui_Dialog
 from application import LYRICS, MAIN
 from libb.ID3_tags import write_tags
 from utils import (list_files, module_path, we_are_frozen, get_music_path,
