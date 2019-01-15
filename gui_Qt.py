@@ -1,0 +1,961 @@
+# pylint: disable=no-name-in-module
+import package_setup
+
+import os
+import subprocess
+import sys
+import time
+import webbrowser
+import ctypes
+from threading import Thread
+from PyQt5.QtWidgets import (QMainWindow, QFileDialog, QApplication,
+                             QTableWidgetItem, QMessageBox, QAbstractItemView,
+                             QInputDialog, QLabel, QVBoxLayout, QTableWidget,
+                             QWidget, QDialog, QStatusBar)
+from PyQt5.QtGui import (QStandardItemModel, QStandardItem, QImage, QPixmap,
+                         QIcon, QPainter)
+from PyQt5.QtCore import (Qt, QSortFilterProxyModel, QTimer, pyqtProperty,
+                          pyqtSlot)
+
+if __name__ == '__main__':
+    from utils import clean_logs
+    clean_logs()
+
+from wiki_music import log_gui, parser, shared_vars, exception, synchronized
+from wiki_music.google_images_download import google_images_download
+
+log_gui.info("started imports")
+
+from gui_Qt_base import Ui_MainWindow
+from cover_art import Ui_Dialog
+from application import LYRICS, MAIN
+from libb.ID3_tags import write_tags
+from utils import (list_files, module_path, we_are_frozen, get_music_path,
+                   image_handle)
+
+log_gui.info("finished imports")
+
+
+class NumberSortModel(QSortFilterProxyModel):
+
+    def lessThan(self, left_index, right_index):
+
+        left_var = left_index.data(Qt.EditRole)
+        right_var = right_index.data(Qt.EditRole)
+
+        try:
+            return float(left_var) < float(right_var)
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            return left_var < right_var
+        except TypeError:  # in case of NoneType
+            return True
+
+
+class CustomQStandardItem(QStandardItem):
+    """Overrides default methods so only the filename is "displayed"
+    even though the object stores the full path
+    """
+
+    def data(self, role):
+        if role != 0:
+            return super(CustomQStandardItem, self).data(role)
+        else:
+            filtered = super(CustomQStandardItem, self).data(role)
+            filtered = str(os.path.split(filtered)[1])
+            return filtered
+
+    def real_data(self, role):
+        return super(CustomQStandardItem, self).data(role)
+
+    def text(self):
+        text_text = super(CustomQStandardItem, self).text()
+        text_data = self.real_data(Qt.DisplayRole)
+
+        if len(text_data) > len(text_text):
+            return text_data
+        else:
+            return text_text
+
+
+class ImageWidget(QWidget):
+    def __init__(self, text, img, parent=None):
+        QWidget.__init__(self, parent)
+
+        self._text = text
+        self._img = img
+
+        self.setLayout(QVBoxLayout())
+        self.lbPixmap = QLabel(self)
+        self.lbText = QLabel(self)
+        self.lbText.setAlignment(Qt.AlignCenter)
+
+        self.layout().addWidget(self.lbPixmap)
+        self.layout().addWidget(self.lbText)
+
+        self.initUi()
+
+    def initUi(self):
+        image = QImage()
+        image.loadFromData(self._img)
+        self.lbPixmap.setPixmap(QPixmap(image).scaledToWidth(150))
+        self.lbText.setText(self._text)
+
+    @pyqtProperty(str)
+    def img(self):
+        return self._img
+
+    @img.setter
+    def total(self, value):
+        if self._img == value:
+            return
+        self._img = value
+        self.initUi()
+
+    @pyqtProperty(str)
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        if self._text == value:
+            return
+        self._text = value
+        self.initUi()
+
+
+class ImageTable(QTableWidget):
+    def __init__(self, parent=None):
+        QTableWidget.__init__(self, parent)
+
+        self.max_columns = 4
+        self.actualCol = -1
+        self.setColumnCount(1)
+        self.setRowCount(1)
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+        # self.cellClicked.connect(self.onCellClicked)
+        self.horizontalHeader().setVisible(False)
+        self.verticalHeader().setVisible(False)
+        self.setShowGrid(False)
+
+    """
+    @pyqtSlot(int, int)
+    def onCellClicked(self, row, column):
+        w = self.cellWidget(row, column)
+        print(row, column)
+    """
+
+    def add_pic(self, label, picture):
+
+        if self.actualCol < self.max_columns:
+            self.actualCol += 1
+            if self.rowCount() == 1:
+                self.setColumnCount(self.columnCount() + 1)
+        elif self.actualCol == self.max_columns:
+            self.actualCol = 0
+            self.setRowCount(self.rowCount() + 1)
+
+        i = self.rowCount() - 1
+        j = self.actualCol
+        lb = ImageWidget(label, picture)
+        self.setCellWidget(i, j, lb)
+
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+
+
+# inherit base from QMainWindow and lyaout from Ui_MainWindow
+class Window(QMainWindow, Ui_MainWindow):
+
+    def __init__(self):
+        # call QMainWindow __init__ method
+        super(Window, self).__init__()
+        # call Ui_MainWindow user interface setup method
+        super(Window, self).setupUi(self)
+
+        # initialize
+        self.__initUI__()
+
+        # misc
+        self.input_work_dir = ""
+        self.input_album = ""
+        self.input_band = ""
+        self.write_json = False
+        self.offline_debbug = False
+        self.picture_visible = False
+
+        # tag related variables
+        self.files_prewiew = []
+
+        # init checker
+        self.remember = None
+        self.__description_checker__()
+        self.__exception_check__()
+        self.__conditions_check__()
+
+        # * PyQt5 Native
+        # set overlay functions
+        self.__setup_overlay__()
+
+    # setup methods
+    def __setup_overlay__(self):
+
+        # map buttons to functions
+        # must use lambda otherwise wrapper doesnt work correctly
+        self.browse_button.clicked.connect(lambda: self.__select_dir__())
+        self.wiki_search_button.clicked.connect(lambda: self.__run_search__())
+        self.coverArt.clicked.connect(lambda: self.__cover_art_search__())
+        self.lyrics_button.clicked.connect(
+            lambda: self.__run_lyrics_search__()
+            )
+        self.toolButton.clicked.connect(lambda: self.__select_file__())
+        self.band_entry_input.textChanged.connect(self.__entry_band__)
+        self.album_entry_input.textChanged.connect(self.__entry_album__)
+
+        # create table to hold the data
+        self.table = QStandardItemModel()
+        self.__table_headers__()
+
+        # create table-proxy mapping for sorting
+        self.proxy = NumberSortModel()
+        self.proxy.setSourceModel(self.table)
+        self.tableView.setModel(self.proxy)
+        self.tableView.setSortingEnabled(True)
+
+        # show table
+        self.tableView.show()
+
+        # enable drag and drop ordering of columns in table
+        self.tableView.horizontalHeader().setSectionsMovable(True)
+        self.tableView.horizontalHeader().setDragEnabled(True)
+        self.tableView.horizontalHeader().setDragDropMode(
+            QAbstractItemView.InternalMove
+            )
+
+        # connect to signal that is emited when table cell is clicked
+        self.tableView.clicked.connect(self.__detail__)
+
+        # connect menubar actions to functions
+        # must use lambda otherwise wrapper doesnt work correctly
+        self.actionDirectory.triggered.connect(lambda: self.__open_dir__())
+        self.actionWikipedia.triggered.connect(lambda: self.__open_browser__())
+        self.actionMp3_Tag.triggered.connect(lambda: self.__run_Mp3tag__())
+
+        # connect menubar actions to functions
+        self.actionAll_Tags.triggered.connect(lambda: self.__save_all__(False))
+        self.actionOnly_Lyrics.triggered.connect(
+            lambda: self.__save_all__(True)
+            )
+
+        # menubar buttons taht are not implemented
+        self.actionNew.triggered.connect(self.__do_nothing__)
+        self.actionOpen.triggered.connect(self.__do_nothing__)
+        self.actionExit.triggered.connect(self.__do_nothing__)
+        self.actionSave.triggered.connect(self.__do_nothing__)
+
+        self.actionHelp_Index.triggered.connect(self.__do_nothing__)
+        self.actionAbout.triggered.connect(self.__do_nothing__)
+        self.actionGit.triggered.connect(self.__do_nothing__)
+
+        if we_are_frozen() is True:
+            # show switches only if not frozen
+            self.offline_debbug_sw.hide()
+            self.json_write_sw.hide()
+        else:
+            # connect switches to functions
+            self.offline_debbug_sw.stateChanged.connect(
+                self.__select_offline_debbug__
+                )
+            self.json_write_sw.stateChanged.connect(self.__select_json__)
+
+    def __initUI__(self):
+        self.setWindowTitle("Wiki Music")
+        myappid = "WikiMusic"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        self.setWindowIcon(QIcon(os.path.join(module_path(),
+                                              "files/icon.ico")))
+
+    def __table_headers__(self):
+        _headers = ["Number:", "Name:", "Type:", "Artists:", "Composers:",
+                    "Discnumber:", "Lyrics:", "File:"]
+        self.table.setHorizontalHeaderLabels(_headers)
+
+    def __init_parser__(self):
+        # TODO non-atomic
+        parser.__init__()
+        parser.work_dir = self.input_work_dir
+        shared_vars.re_init()
+
+    # methods for data transfer between gui <--> parser object
+    def __parser_to_gui__(self):
+        # TODO non-atomic
+        longest = len(parser.numbers)
+
+        numbers = self.__spawn_rows_cols__(parser.numbers, longest)
+        tracks = self.__spawn_rows_cols__(parser.tracks, longest)
+        types = self.__spawn_rows_cols__(parser.types, longest)
+        disc_num = self.__spawn_rows_cols__(parser.disc_num, longest)
+        artists = self.__spawn_rows_cols__(parser.artists, longest)
+        lyrics = self.__spawn_rows_cols__(parser.lyrics, longest)
+        composers = self.__spawn_rows_cols__(parser.composers, longest)
+        files = self.__spawn_rows_cols__(parser.files, longest)
+
+        # files must always be at the last place because it uses custom
+        # QstandardItem - refer to __update_model__ function
+        return [numbers, tracks, types, artists, composers, disc_num, lyrics,
+                files]
+
+    def __spawn_rows_cols__(self, data, longest, cut=False):
+
+        if len(data) == 0:
+            return [""]*longest
+
+        temp = []
+        for i in range(len(data)):
+            temp.append("")
+            if isinstance(data[i], str):
+                temp[i] = data[i]
+            elif isinstance(data[i], (int, float)):
+                temp[i] = str(data[i])
+            elif isinstance(data[i], type(None)):
+                temp[i] = ""
+            elif isinstance(data[i], list):
+                temp[i] = ", ".join(sorted(data[i]))
+
+        return temp
+
+    def __gui_to_parser__(self):
+        # TODO non-atomic
+        parser.selected_genre = self.genre_entry.text()
+        parser.release_date = self.year_entry.text()
+        parser.album = self.album_entry.text()
+        parser.band = self.band_entry.text()
+
+        parser.numbers = self.__unspawn_rows_cols__(0)
+        parser.tracks = self.__unspawn_rows_cols__(1, separate=False)
+        parser.types = self.__unspawn_rows_cols__(2)
+        parser.disc_num = self.__unspawn_rows_cols__(5)
+        parser.artists = self.__unspawn_rows_cols__(3)
+        parser.lyrics = self.__unspawn_rows_cols__(6, separate=False)
+        parser.composers = self.__unspawn_rows_cols__(4)
+        parser.files = self.__unspawn_rows_cols__(7)
+
+    def __unspawn_rows_cols__(self, col, separate=True):
+
+        temp = []
+        for row in range(self.table.rowCount()):
+            temp.append(self.table.item(row, col).text())
+            if "," in temp[row] and separate is True:
+                temp[row] = [x.strip() for x in temp[row].split(",")]
+
+        return temp
+
+    def __display_image__(self, image=None):
+
+        if parser.cover_art is not None:
+            _img = parser.cover_art
+        elif image is not None:
+            _img = image
+        else:
+            return 0
+
+        image = QImage()
+        image.loadFromData(_img)
+
+        # TODO not working if picture has been selected multiple times
+        # only the first one is displayed
+        self.lbl = QLabel(self)
+        self.lbl.setPixmap(QPixmap(image))
+
+        if self.picture_visible is False:
+            self.picture_layout.addWidget(self.lbl)
+            self.picture_visible = True
+
+    # methods for managing gui data model
+    @exception(log_gui)
+    def __update_model__(self):
+        """
+        gets called after conditonns check is done
+        from within conditions check function
+        """
+
+        n_entries = len(parser.numbers)
+
+        if n_entries != 0:
+
+            log_gui.info("parser to gui")
+
+            self.genre_entry.setText(parser.selected_genre)
+            self.year_entry.setText(parser.release_date)
+            self.album_entry.setText(parser.album)
+            self.band_entry.setText(parser.band)
+
+            # TODO non-atomic
+            self.__parser_to_gui__()
+            text_var = self.__parser_to_gui__()
+
+            log_gui.info("init entries")
+
+            self.table.setRowCount(n_entries)
+            for row in range(n_entries):
+                for col, tv in enumerate(text_var):
+                    # files column uses custom QStandardItem which shows
+                    # only filename not the full path, files must be
+                    # always last in text_var
+                    if col == len(text_var) - 1:
+                        item = CustomQStandardItem(tv[row])
+                    else:
+                        item = QStandardItem(tv[row])
+
+                    self.table.setItem(row, col, item)
+
+            self.tableView.update()
+
+        else:
+            QTimer.singleShot(200, self.__update_model__)
+
+        log_gui.info("init entries done")
+
+    @exception(log_gui)
+    def __detail__(self, proxy_index):
+        """
+        Display detail of the row that is clicked
+        """
+
+        # proxy_index is QModelIndex proxyIndex Class type
+        # it is index of data mapping as shown in gui
+        # real indeces are different
+        source_index = self.proxy.mapToSource(proxy_index)
+        row = source_index.row()
+
+        # maintain row highlight
+        index = self.tableView.selectionModel().selectedRows()
+        self.tableView.selectRow(index[0].row())
+
+        entries = [
+            self.number_detail,
+            self.title_detail,
+            None,
+            self.artist_detail,
+            self.composer_detail,
+            None,
+            self.lyrics_detail,
+            self.file_detail
+        ]
+
+        log_gui.info("connect detail function")
+
+        for col, e in enumerate(entries):
+            if e is not None:
+                e.disconnect()
+                e.setText(self.table.item(row, col).text())
+                # col_inner = col is a hack to change the
+                # scope of col otherwise lambda will refer
+                # to actual value of col since it is in
+                # outer scope
+                # None is the default argument for text since QTextEdit
+                # signal doesn´t retutn text
+                e.textChanged.connect(lambda text=None, col_inner=col:
+                                      self.__text_check__(row, col_inner,
+                                                          text))
+
+    def __text_check__(self, row, col, text):
+
+        if text is None:
+            item = QStandardItem(self.lyrics_detail.toPlainText())
+        else:
+            # because file has custom QStandardItem
+            if isinstance(self.table.item(row, col), CustomQStandardItem):
+                item = CustomQStandardItem(text)
+            else:
+                item = QStandardItem(text)
+
+        self.table.setItem(row, col, item)
+
+    # periodically checking methods
+    @exception(log_gui)
+    def __conditions_check__(self):
+        """
+        checks for answers to questins the main app asks
+        the sends them back to app
+        """
+
+        def msg_to_bool(out):
+            if out == QMessageBox.Yes:
+                return True
+            else:
+                return False
+
+        if shared_vars.wait is True:
+
+            if shared_vars.switch == "genres":
+
+                log_gui.info("initialize question window")
+                # TODO non-atomic
+                if len(parser.genres) == 0:
+                    text, ok = QInputDialog.getText(self,
+                                                    "Text Input Dialog",
+                                                    "Input genre:")
+                    if ok is True:
+                        parser.selected_genre = text
+                    else:
+                        parser.selected_genre = "N/A"
+                else:
+                    item, ok = QInputDialog.getItem(self,
+                                                    "Select input dialog",
+                                                    "List of genres",
+                                                    parser.genres, 0,
+                                                    False)
+                    if ok is True:
+                        parser.selected_genre = item
+                    else:
+                        parser.selected_genre = "N/A"
+
+            if shared_vars.load is True:
+                QTimer.singleShot(0, self.__update_model__)
+
+            if shared_vars.switch == "comp":
+                log_gui.info("ask to copy composers")
+                msg = QMessageBox(QMessageBox.Question, "Question",
+                                  "Do you want to copy artists to composers?",
+                                  QMessageBox.Yes | QMessageBox.No)
+
+                shared_vars.assign_artists = msg_to_bool(msg.exec_())
+
+            if shared_vars.switch == "lyrics":
+                log_gui.info("ask to find lyrics")
+                msg = QMessageBox(QMessageBox.Question, "Question",
+                                  "Do you want to find lyrics?",
+                                  QMessageBox.Yes | QMessageBox.No)
+
+                shared_vars.write_lyrics = msg_to_bool(msg.exec_())
+
+            shared_vars.load = False
+            shared_vars.switch = None
+            shared_vars.wait = False
+
+        if shared_vars.done is False:
+            QTimer.singleShot(100, self.__conditions_check__)
+        else:
+            # announce that gui has reached the barrier
+            log_gui.info("gui reached barrier")
+            shared_vars.barrier.wait()
+
+            log_gui.info("start __update_model__ function")
+            QTimer.singleShot(0, self.__update_model__)
+            self.__display_image__()
+
+    # lock must be here because there are non atomic operations i.e. +=
+
+    def __exception_check__(self):
+        if shared_vars.exception is not None:
+            msg = QMessageBox(QMessageBox.Critical, "Exception",
+                              shared_vars.exception)
+            msg.setDetailedText(open(r"logs/wiki_music_parser.log",
+                                     "r").read())
+            msg.exec_()
+            shared_vars.exception = None
+
+        if shared_vars.warning is not None:
+            QMessageBox(QMessageBox.Warning, "Warning",
+                        shared_vars.warning).exec_()
+            shared_vars.warning = None
+
+        if shared_vars.ask_exit is not None:
+            msg = QMessageBox(QMessageBox.Question, "Warning",
+                              "Do you want to stop the search?",
+                              QMessageBox.Yes | QMessageBox.No)
+            msg.setInformativeText(shared_vars.ask_exit)
+            terminate = msg.exec_()
+
+            if terminate == QMessageBox.Yes:
+                shared_vars.wait_exit = False
+                shared_vars.terminate_app = True
+
+                time.sleep(0.03)
+                sys.exit(self.exec_())  # TODO untested
+            else:
+                shared_vars.wait_exit = False
+                shared_vars.ask_exit = None
+
+        QTimer.singleShot(500, self.__exception_check__)
+
+    @exception(log_gui)
+    @synchronized(shared_vars.lock)
+    def __description_checker__(self):
+
+        QTimer.singleShot(400, self.__description_checker__)
+
+        if " . . ." in shared_vars.describe:
+            shared_vars.describe = shared_vars.describe.replace(" . . .", "")
+
+        self.remember = shared_vars.describe
+
+        if shared_vars.describe != " " and shared_vars.describe != "":
+            if (self.remember == shared_vars.describe and
+                "Done" not in shared_vars.describe):
+                shared_vars.describe += " ."
+            self.statusbar.showMessage(shared_vars.describe)
+        else:
+            self.statusbar.showMessage("")
+
+    # methods that bind to gui elements
+    @exception(log_gui)
+    def __save_all__(self, lyrics_only):
+        # TODO non-atomic
+        if len(parser.numbers) == 0:
+            QMessageBox(QMessageBox.Information, "Info",
+                        "You must run the search first!").exec_()
+        else:
+            if self.input_work_dir == "":
+                QMessageBox(QMessageBox.Information, "Info",
+                            "You must specify directory with files!").exec_()
+                return None
+
+            self.__gui_to_parser__()
+            dict_data, writable = parser.data_to_dict(reassign_files=False)
+
+            if writable is True:
+                for data in dict_data:
+                    write_tags(data, lyrics_only=lyrics_only)
+            else:
+                QMessageBox(QMessageBox.Information, "Info",
+                            "Cannot write tags because there are no "
+                            "coresponding files")
+
+            # reload files from disc after save
+            self.__init_parser__()
+            parser.files = list_files(self.input_work_dir)
+            parser.read_files()
+            self.__update_model__()
+
+    # TODO DOESN´T REMEMBER LAST DIR
+    @exception(log_gui)
+    def __select_dir__(self):
+
+        if we_are_frozen() is False:
+            start_dir = r"C:/Users/Marián Rynik/OneDrive/Dokumenty/Visual Studio 2017/Projects/Python/wiki_music/test_music"
+        else:
+            start_dir = get_music_path()
+        self.input_work_dir = QFileDialog.getExistingDirectory(self,
+                                                               "Open Folder",
+                                                               start_dir)
+
+        parser.work_dir = self.input_work_dir
+
+        # TODO non-atomic
+        parser.files = list_files(parser.work_dir)
+        parser.read_files()
+
+        self.input_album = parser.album
+        self.input_band = parser.band
+
+        self.display_dir.setText(self.input_work_dir)
+        self.band_entry.setText(self.input_band)
+        self.album_entry.setText(self.input_album)
+
+        self.band_entry_input.setText(self.input_band)
+        self.album_entry_input.setText(self.input_album)
+
+        self.__update_model__()
+
+    @exception(log_gui)
+    def __run_search__(self, *args):
+
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Message")
+
+        if str(self.input_band) == "":
+            msg.setText("You must input artist!")
+            msg.exec_()
+            return None
+        elif str(self.input_album) == "":
+            msg.setText("You must input album!")
+            msg.exec_()
+            return None
+        elif str(self.input_work_dir) == "":
+            msg.setText("You must select working directory!")
+            msg.exec_()
+            return None
+        else:
+            log_gui.info("starting wikipedia search")
+
+            # TODO non-atomic
+            self.__init_parser__()
+
+            main_app = Thread(target=MAIN,
+                              args=(str(self.input_band),
+                                    str(self.input_album),
+                                    self.input_work_dir,
+                                    True))
+            main_app.daemon = True
+            main_app.start()
+
+    @exception(log_gui)
+    def __run_lyrics_search__(self, *args):
+
+        if str(self.input_work_dir) == "":
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must select working directory!").exec_()
+
+        if self.input_work_dir is not None:
+
+            log_gui.info("starting lyrics search")
+
+            main_app = Thread(target=LYRICS,
+                              args=(self.input_work_dir, True))
+            main_app.start()
+
+            log_gui.info("lyrics search started")
+
+    @exception(log_gui)
+    def __cover_art_search__(self):
+
+        def _async_search():
+
+            new_count = self.imd.count
+            if new_count > self.old_count:
+                for i in range(self.old_count, new_count):
+                    s = self.imd.fullsize_dim[i]
+                    t = self.imd.thumbs[i]
+                    try:
+                        dim = "{}x{}\n{:.2f}Kb".format(s[1][0], s[1][1],
+                                                       s[0] / 1024)
+                    except TypeError:
+                        break
+                    """
+                    if t is None:
+                        with open("files/Na.jpg", "rb") as imageFile:
+                            t = bytearray(imageFile.read())
+                        break
+                    """
+                    self.image_table.add_pic(dim, t)
+
+                self.old_count = new_count
+
+            if self.image_table.isVisible() is False:
+                self.imd.exit = True
+            else:
+                QTimer.singleShot(100, _async_search)
+
+        if parser.band is None or parser.album is None:
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must input Artist and Album first").exec_()
+            return 0
+
+        self.imd = google_images_download.googleimagesdownload()
+        self.old_count = self.imd.count
+
+        query = "{} {}".format(parser.band, parser.album)
+        arguments = {
+            "keywords": query,
+            "limit": 20,
+            "size": "large",
+            "no_download": True,
+            "no_download_thumbs": True,
+            "thumbnail": True
+        }
+
+        # TODO add statusbar with load more button
+        self.image_table = ImageTable()
+        self.image_table.resize(1000, 700)
+        self.image_table.setWindowTitle("Wiki Music - Cover Art search")
+        self.image_table.setWindowIcon(QIcon(os.path.join(module_path(),
+                                                          "files/icon.ico")))
+        # self.image_table.setStatusBar(QStatusBar())
+        # ! X in app doesnt necesarilly mean destroyed() might be only hidden
+        # self.image_table.destroyed.connect(self.__do_nothing__)
+
+        self.image_table.show()
+        self.image_table.cellClicked.connect(self.__select_picture__)
+
+        self.image_search_thread = Thread(target=self.imd.download,
+                                          args=(arguments, ))
+        self.image_search_thread.daemon = True
+        self.image_search_thread.start()
+
+        QTimer.singleShot(0, _async_search)
+
+        shared_vars.describe = "Searching for Cover Art"
+
+    @exception(log_gui)
+    def __select_picture__(self, row, col):
+
+        def _set_clipboard():
+            nonlocal clipboard
+            clipboard = self.image_dialog.ca_clipboard.isChecked()
+
+        def _set_file():
+            nonlocal _file
+            _file = self.image_dialog.ca_file.isChecked()
+
+        def _dialog_cancel():
+            nonlocal cancel
+            cancel = True
+
+        # TODO when not nice round numbers - fials because of recursion
+        # these two methods keep calling each other
+        @exception(log_gui)
+        def _aspect_ratio_connect_X(dim_Y):
+            value = int(original_ratio * dim_Y)
+            self.image_dialog.size_spinbox_X.setValue(value)
+
+        @exception(log_gui)
+        def _aspect_ratio_connect_Y(dim_X):
+            value = int((1 / original_ratio) * dim_X)
+            self.image_dialog.size_spinbox_Y.setValue(value)
+
+        size = None
+        clipboard = True
+        _file = None
+        cancel = False
+
+        # position of clicked picture in list
+        index = (self.image_table.max_columns + 1) * row + col
+        log_gui.info("clicked: {}".format(self.imd.fullsize_url[index]))
+
+        # 0-th position is size in b, and 1-st position is tuple of dimensions
+        dim = self.imd.fullsize_dim[index][1]
+        try:
+            dim_X, dim_Y = dim
+        except TypeError:
+            log_gui("exception index: {}".format(index))
+            raise Exception("File cannot be accessed")
+
+        original_ratio = dim_X / dim_Y
+
+        # create dialog to get desired resize, save to disk
+        # and copy to clipboard decision
+        dialog_window = QDialog()
+        dialog_window.setWindowTitle("Select options")
+        self.image_dialog = Ui_Dialog()
+        self.image_dialog.setupUi(dialog_window)
+
+        # set values
+        self.image_dialog.size_spinbox_X.setValue(dim_X)
+        self.image_dialog.size_spinbox_Y.setValue(dim_Y)
+
+        # connect to dialog window button events
+        self.image_dialog.ca_clipboard.stateChanged.connect(_set_clipboard)
+        self.image_dialog.ca_file.stateChanged.connect(_set_file)
+        self.image_dialog.buttonBox.rejected.connect(_dialog_cancel)
+        self.image_dialog.size_spinbox_X.valueChanged.connect(
+            _aspect_ratio_connect_Y)
+        self.image_dialog.size_spinbox_Y.valueChanged.connect(
+            _aspect_ratio_connect_X)
+        dialog_window.rejected.connect(_dialog_cancel)
+
+        dialog_window.exec_()
+
+        if cancel is True:
+            return 0
+
+        self.image_table.close()
+        self.imd.exit = True
+        self.__display_image__(self.imd.thumbs[index])
+
+        size_X = self.image_dialog.size_spinbox_X.value()
+        size_Y = self.image_dialog.size_spinbox_Y.value()
+
+        size = (size_X, size_Y)
+        if dim == size:
+            size = None
+
+        if _file is True:
+            _file = os.path.join(self.input_work_dir, "Folder.jpg")
+
+        shared_vars.describe = "Downloading full size cover art"
+        log_gui.info("Downloading full size cover art from: "
+                     "{}".format(self.imd.fullsize_url[index]))
+
+        result = image_handle(self.imd.fullsize_url[index], size=size,
+                              clipboad=clipboard, path=_file, log=log_gui)
+
+        if result is not True:
+            shared_vars.exception = ("Error in processing Cover Art "
+                                     "{}".format(result))
+            log_gui.exception(result)
+            return 0
+
+        if size is not None:
+            shared_vars.describe = "Cover art resized to: {}x{}".format(*size)
+            log_gui.info("Cover art resized to: {}x{}".format(*size))
+        if clipboard is True:
+            shared_vars.describe = "Cover art copied to clipboard"
+            log_gui.info("Cover art copied to clipboard")
+        if _file is not None:
+            shared_vars.describe = "Cover art saved to file"
+            log_gui.info("Cover art saved to file")
+
+    @exception(log_gui)
+    def __open_dir__(self):
+
+        if self.input_work_dir == "":
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must select directory first!").exec_()
+
+        else:
+            print("Opening folder...")
+            os.startfile(self.input_work_dir)
+            """
+            if sys.platform == "linux" or sys.platform == "linux2":
+                subprocess.check_call(['xdg-open',
+                                        self.input_work_dir.get()])
+            elif sys.platform == "win32":
+                #subprocess.Popen('explorer "self.input_work_dir.get()"')
+            """
+
+    def __select_file__(self):
+        _file = QFileDialog.getOpenFileName(self,
+                                            "Select song file",
+                                            self.input_work_dir,
+                                            "Audio files (*.mp3 *.flac *.m4a)"
+                                            ";;All files (*)")
+
+        self.file_detail.setText(_file[0])
+
+    @exception(log_gui)
+    def __open_browser__(self):
+
+        if parser.url is not None:
+            webbrowser.open_new_tab(parser.url)
+        else:
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must run the search first!").exec_()
+
+    @exception(log_gui)
+    def __run_Mp3tag__(self):
+        if self.input_work_dir == "":
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must select directory first!").exec_()
+        else:
+            subprocess.Popen([r"C:\Program Files (x86)\Mp3tag\Mp3tag.exe",
+                              r'/fp:'+self.input_work_dir])
+
+    def __entry_band__(self, text):
+        parser.band = text
+
+    def __entry_album__(self, text):
+        parser.album = text
+
+    def __select_json__(self):
+        shared_vars.write_json = self.json_write_sw.isChecked()
+
+    def __select_offline_debbug__(self):
+        shared_vars.offline_debbug = self.offline_debbug_sw.isChecked()
+
+    def __do_nothing__(self):
+        log_gui.info("Not implemented yet")
+        QMessageBox(QMessageBox.Warning,
+                    "Info", "Not implemented yet!").exec_()
+
+if __name__ == "__main__":
+    import sys
+    app = QApplication(sys.argv)
+    ui = Window()
+    ui.show()
+    sys.exit(app.exec_())

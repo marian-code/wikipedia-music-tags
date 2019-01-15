@@ -1,0 +1,16 @@
+# VS Code files
+.vs/
+.vscode/
+
+# python
+__pycache__/
+
+# testing 
+Aventine/
+test_music/
+tests/
+logs/
+wiki_music_setup.log
+
+# build dir
+build/
