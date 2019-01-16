@@ -34,6 +34,7 @@ if we_are_frozen() is False:
 log.info("starting imports")
 
 from wiki_music import parser, exception
+from utils import module_path
 
 lyricsfinder = lazy_import.lazy_module("lyricsfinder")
 re = lazy_import.lazy_module("re")
@@ -61,6 +62,17 @@ def save_lyrics():
     """
 
     log.info("starting save lyrics")
+    log.info("loading google api key")
+
+    _file = os.path.join(module_path(), "files", "google_api_key.txt")
+    try:
+        f = open(_file, "r")
+        google_api_key = f.read().strip()
+    except Exception as e:
+        raise Exception("You must input Google api key. Refer to repository "
+                        "for instructions https://github.com/marian-code/wikipedia-music-tags")
+    else:
+        log.info("Key loaded successfully")
 
     parser.lyrics = []
     for i in range(len(parser.tracks)):
@@ -88,7 +100,7 @@ def save_lyrics():
         arg = []
         # starmap takes list of tupples for argument
         for t in parser.tracks:
-            arg.append((parser.band, parser.album, t))
+            arg.append((parser.band, parser.album, t, google_api_key))
 
         pool = Pool()
         lyrics_temp = pool.starmap(get_lyrics, arg)
@@ -104,7 +116,8 @@ def save_lyrics():
             if i == duplicates[i]:
                 lyrics_temp.append(get_lyrics(parser.band,
                                               parser.album,
-                                              parser.tracks[i]))
+                                              parser.tracks[i],
+                                              google_api_key))
 
         t3 = time.time()
         print("serial part:", t3 - t2, "s")
@@ -121,11 +134,13 @@ def save_lyrics():
 
 
 @exception(log)
-def get_lyrics(artist: str, album: str, song: str) -> dict:
+def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
 
     log.info("starting lyricsfinder ")
 
-    lyrics = next(lyricsfinder.search_lyrics(song, album, artist, google_api_key="AIzaSyAlcmHItgtDPmCLqvqwKdmnceMXuBQHnuI"), None)
+    lyrics = next(lyricsfinder.search_lyrics(song, album, artist,
+                                             google_api_key=google_api_key),
+                  None)
 
     if not lyrics:
         return {
@@ -137,7 +152,7 @@ def get_lyrics(artist: str, album: str, song: str) -> dict:
         lyrics_data["filename"] = lyrics.save_name
         lyrics_data["timestamp"] = time.time()
         print(Fore.GREEN + "Saved lyrics for: ",
-                Fore.RESET, artist + " - " + song)
+              Fore.RESET, artist + " - " + song)
         log.info("Saved lyrics for " + "artist" + " - " + "song")
 
     log.info("lyrics to dict")
@@ -149,7 +164,7 @@ def get_lyrics(artist: str, album: str, song: str) -> dict:
             "release_date": lyrics_data["release_date"],
             # replace \n with \r\n if there is no \r in front of \n
             "lyrics": (normalize(lyrics_data["lyrics"]
-                        .replace("\r", "").replace("\n", "\r\n"))),
+                       .replace("\r", "").replace("\n", "\r\n"))),
             "origin": lyrics_data["origin"],
             "timestamp": lyrics_data["timestamp"]
         }

@@ -68,6 +68,8 @@ You should be able to seamlessly substitute **PyQt5** with **PySide2** or **PyQt
 
 The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications module should be able to run on Linux and Os X too. This concers mainly default paths and interaction with clipboard in GUI.
 
+If you want to utilize lyrics search you will have to get a [Google Developer API Key](https://console.developers.google.com/projectselector/apis/library/customsearch.googleapis.com/) **(Strongly Recommended)** with the 'Custom Search' API enabled. This link should take one there once logged in. this is a requirement of [LyricsFinder](https://github.com/GieselaDev/LyricsFinder) module. When you have the key create a file named **google_api_key.txt** under **files** directory and copy the key there.
+
 ### Installing
 
 There´s no installing yet but the module can be packaged with cx_Freeze 
