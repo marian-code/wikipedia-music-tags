@@ -1,0 +1,32 @@
+Metadata-Version: 2.0
+Name: lyricsfinder
+Version: 1.2.5
+Summary: Retrieve lyrics from various websites!
+Home-page: https://github.com/siku2/LyricsFinder
+Author: siku2
+Author-email: siku2@outlook.com
+License: UNKNOWN
+Description-Content-Type: UNKNOWN
+Keywords: lyrics
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Multimedia :: Sound/Audio
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.6
+Requires-Dist: beautifulsoup4
+Requires-Dist: requests
+
+LyricsFinder
+============
+
+LyricsFinder is a modular and easily expandable Python Package that is
+used to extract lyrics. By having the ability to use a
+combination of a Google Custom Search Engine and a set of extractors for
+several sources, lyrics are attained with much higher accuracy and
+generally from the best desired source.
+
+Further reading:
+https://lyricsfinder.giesela.io/
+
+

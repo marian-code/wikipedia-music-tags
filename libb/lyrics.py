@@ -68,9 +68,10 @@ def save_lyrics():
     try:
         f = open(_file, "r")
         google_api_key = f.read().strip()
-    except Exception as e:
+    except Exception:
         raise Exception("You must input Google api key. Refer to repository "
-                        "for instructions https://github.com/marian-code/wikipedia-music-tags")
+                        "for instructions "
+                        "https://github.com/marian-code/wikipedia-music-tags")
     else:
         log.info("Key loaded successfully")
 

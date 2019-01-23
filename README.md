@@ -144,8 +144,7 @@ Coding style adheres on PEP8 style guide so just use PEP8 lintner and read the d
 
 ## Contributing
 
-There are some TODOs scattered around the code and created issues so 
-thats a good place to start. Base user interface layout should be changed only with the use of Qt designer and use of files:
+There are some TODOs scattered around the code and created issues so thats a good place to start. There is also a list of TODOs maintained in [code_changelog](https://github.com/marian-code/wikipedia-music-tags/blob/master/code_changelog.md) file. Base user interface layout should be changed only with the use of Qt designer and use of files:
 ```
 art_dialog_base.ui
 Qt_layout.ui
