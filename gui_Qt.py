@@ -192,9 +192,8 @@ class Window(QMainWindow, Ui_MainWindow):
 
         # init checker
         self.remember = None
-        self.__description_checker__()
-        self.__exception_check__()
-        self.__conditions_check__()
+        self.__init_checkers__()
+        self.__start_checkers__()
 
         # * PyQt5 Native
         # set overlay functions
@@ -289,6 +288,24 @@ class Window(QMainWindow, Ui_MainWindow):
         parser.work_dir = self.input_work_dir
         shared_vars.re_init()
 
+    def __init_checkers__(self):
+        self.description_timer = QTimer()
+        self.description_timer.timeout.connect(self.__description_checker__)
+        self.description_timer.setSingleShot(True)
+
+        self.exception_timer = QTimer()
+        self.exception_timer.timeout.connect(self.__exception_check__)
+        self.exception_timer.setSingleShot(True)
+
+        self.conditions_timer = QTimer()
+        self.conditions_timer.timeout.connect(self.__conditions_check__)
+        self.conditions_timer.setSingleShot(True)
+
+    def __start_checkers__(self):
+        self.description_timer.start(200)
+        self.exception_timer.start(500)
+        self.conditions_timer.start(400)
+
     # methods for data transfer between gui <--> parser object
     def __parser_to_gui__(self):
         # TODO non-atomic
@@ -334,14 +351,14 @@ class Window(QMainWindow, Ui_MainWindow):
         parser.album = self.album_entry.text()
         parser.band = self.band_entry.text()
 
-        parser.numbers = self.__unspawn_rows_cols__(0)
+        parser.numbers = self.__unspawn_rows_cols__(0, separate=False)
         parser.tracks = self.__unspawn_rows_cols__(1, separate=False)
         parser.types = self.__unspawn_rows_cols__(2)
-        parser.disc_num = self.__unspawn_rows_cols__(5)
+        parser.disc_num = self.__unspawn_rows_cols__(5, separate=False)
         parser.artists = self.__unspawn_rows_cols__(3)
         parser.lyrics = self.__unspawn_rows_cols__(6, separate=False)
         parser.composers = self.__unspawn_rows_cols__(4)
-        parser.files = self.__unspawn_rows_cols__(7)
+        parser.files = self.__unspawn_rows_cols__(7, separate=False)
 
     def __unspawn_rows_cols__(self, col, separate=True):
 
@@ -538,7 +555,7 @@ class Window(QMainWindow, Ui_MainWindow):
             shared_vars.wait = False
 
         if shared_vars.done is False:
-            QTimer.singleShot(100, self.__conditions_check__)
+            self.conditions_timer.start(200)
         else:
             # announce that gui has reached the barrier
             log_gui.info("gui reached barrier")
@@ -547,8 +564,6 @@ class Window(QMainWindow, Ui_MainWindow):
             log_gui.info("start __update_model__ function")
             QTimer.singleShot(0, self.__update_model__)
             self.__display_image__()
-
-    # lock must be here because there are non atomic operations i.e. +=
 
     def __exception_check__(self):
         if shared_vars.exception is not None:
@@ -582,13 +597,14 @@ class Window(QMainWindow, Ui_MainWindow):
                 shared_vars.wait_exit = False
                 shared_vars.ask_exit = None
 
-        QTimer.singleShot(500, self.__exception_check__)
+        self.exception_timer.start(500)
 
+    # lock must be here because there are non atomic operations i.e. +=
     @exception(log_gui)
     @synchronized(shared_vars.lock)
     def __description_checker__(self):
 
-        QTimer.singleShot(400, self.__description_checker__)
+        self.description_timer.start(400)
 
         if " . . ." in shared_vars.describe:
             shared_vars.describe = shared_vars.describe.replace(" . . .", "")
@@ -688,6 +704,8 @@ class Window(QMainWindow, Ui_MainWindow):
             # TODO non-atomic
             self.__init_parser__()
 
+            self.__start_checkers__()
+
             self.input_band = self.band_entry_input.text()
             self.input_album = self.album_entry_input.text()
             main_app = Thread(target=MAIN,
@@ -709,6 +727,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
             log_gui.info("starting lyrics search")
 
+            self.__start_checkers__()
             main_app = Thread(target=LYRICS,
                               args=(self.input_work_dir, True))
             main_app.start()

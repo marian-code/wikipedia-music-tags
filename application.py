@@ -193,10 +193,9 @@ def MAIN(band, album, work_dir, GUI):
 
     # print out tracklist
     log_print(msg_GREEN="Found Track list(s)")
-    i = 1
-    for data in parser.data_collect:
-        print("Tracklist " + str(i) + ": " + data[0][0])
-        i += 1
+    
+    for i, data in enumerate(parser.data_collect):
+        print("Tracklist " + str(i + 1) + ": " + data[0][0])
 
     # process track list
     log_print(msg_GREEN="Processing tracks", print_out=False)

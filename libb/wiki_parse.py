@@ -128,9 +128,8 @@ class wikipedia_parser:
                 break
 
         # match "/wiki/SOMETHING" where SOMWETHING is not Music_genre
-        g = (genres_html.findAll(href=re.compile(r"/wiki/(?!Music_genre)")))
-        for i in range(len(g)):
-            g[i] = g[i].string
+        gndr = (genres_html.findAll(href=re.compile(r"/wiki/(?!Music_genre)")))
+        g = [g.string for g in gndr]
 
         self.genres = g
 
@@ -143,7 +142,7 @@ class wikipedia_parser:
                     image = child.find("img")
                     break
 
-            image_url = "https:" + image["src"]
+            image_url = "https:{}".format(image["src"])
 
             self.cover_art = requests.get(image_url).content
         except NameError:
@@ -164,7 +163,7 @@ class wikipedia_parser:
         except AttributeError as e:
             print(e)
             log_parser.warning(e)
-            shared_vars.warning = str(e)
+            shared_vars.warning = e
             return True
         else:
             if fuzz.token_set_ratio(normalize_caseless(self.band),
@@ -216,7 +215,7 @@ class wikipedia_parser:
         except Exception as e:
             print(e)
             log_parser.exception(e)
-            shared_vars.exception = str(e)
+            shared_vars.exception = e
             self.NLTK_names = []
 
         self.NLTK_names = set(self.NLTK_names + self.personnel)
@@ -243,15 +242,12 @@ class wikipedia_parser:
         # find NLTK names that occure in sentence after specified phrases
         # split to sentences
         sentences = []
-        for sentence in html.split("."):
-            for delimit in ["written by",
-                            "composed by",
-                            "lyrics by",
-                            "music by",
-                            "arrangements by",
-                            "vocal lines by"]:
+        delimiters = ["written by", "composed by", "lyrics by", "music by",
+                      "arrangements by", "vocal lines by"]
 
-                if re.search(delimit, sentence, re.IGNORECASE):
+        for sentence in html.split("."):
+            for d in delimiters:
+                if re.search(d, sentence, re.IGNORECASE):
                     sentences.append(sentence)
 
         # extract composers from sentences
@@ -261,8 +257,8 @@ class wikipedia_parser:
             # find which track are affected by except
             index = []
             if len(parts) == 2:
-                for i in range(len(self.tracks)):
-                    if caseless_contains(self.tracks[i], parts[1]):
+                for i, tr in enumerate(self.tracks):
+                    if caseless_contains(tr, parts[1]):
                         index.append(i)
 
             # assign composers to tracks
@@ -277,9 +273,9 @@ class wikipedia_parser:
 
                 if caseless_contains(name, parts[0]):
                     n = check_name_complete(name, parts[0])
-                    for i in range(len(self.composers)):
+                    for i, comp in enumerate(self.composers):
                         if i not in index:
-                            if n not in self.composers[i]:
+                            if n not in comp:
                                 self.composers[i].append(n)
 
     def BASIC_OUT(self):
@@ -313,23 +309,19 @@ class wikipedia_parser:
         except AttributeError as e:
             print(e)
             log_parser.warning(e)
-            shared_vars.warning = str(e)
+            shared_vars.warning = e
 
             self.contents = []
             self.contents_raw = []
 
-            if (self.soup.find(class_="mw-headline", id="Track_listing")
-               is not None):
-                self.contents.append("Track_listing")
-                self.contents_raw.append("1 Track_listing")
-            if (self.soup.find(class_="mw-headline", id="Personnel")
-               is not None):
-                self.contents.append("Personnel")
-                self.contents_raw.append("2 Personnel")
-            if (self.soup.find(class_="mw-headline", id="References")
-               is not None):
-                self.contents.append("References")
-                self.contents_raw.append("3 References")
+            ids = ["Track_listing", "Personnel", "Credits", "References"]
+
+            index = 1
+            for _id in ids:
+                if self.soup.find(class_="mw-headline", id=_id) is not None:
+                    self.contents_raw.append(_id)
+                    self.contents.append("{} {}".format(index, _id))
+                    index += 1
 
         else:
             self.contents = self.contents.split("\n")
@@ -339,38 +331,43 @@ class wikipedia_parser:
                 self.contents.pop(0)
 
             self.contents_raw = []
-            for i in range(len(self.contents)):
-                if len(re.findall(r'\d+', self.contents[i])) > 1:
-                    self.contents[i] = "   " + self.contents[i]
+            for item in self.contents:
+                if len(re.findall(r'\d+', item)) > 1:
+                    item = "   " + item
                 else:
-                    self.contents_raw.append(self.contents[i].split(' ', 1)[1])
+                    self.contents_raw.append(item.split(' ', 1)[1])
 
     def PERSONNEL(self):
 
-        for i in range(len(self.contents_raw)):
-            if "Personnel" in self.contents_raw[i]:
-                pos = i+1
+        stop = None
+        for i, item in enumerate(self.contents_raw):
+            if "personnel" in normalize_caseless(item):
+                stop = self.contents_raw[i + 1]
+                break
+            elif "credits" in normalize_caseless(item):
+                stop = self.contents_raw[i + 1]
                 break
 
         # if pos is not initialized this means
         # that there is no additional presonel
         # entry on the page. Thus no info can
         # be retrieved and the function exits
-        try:
-            pos
-        except NameError:
+        if stop is None:
             return [], []
 
         start = int(self.formated_html.find("\nPersonnel"))
-        end = int(self.formated_html.find("\n" + self.contents[pos]))
+        if start == -1:
+            start = int(self.formated_html.find("\nCredits"))
+
+        end = int(self.formated_html.find("\n" + stop, start))
+
         self.personnel = self.formated_html[start:end]
 
         self.appearences = []
         self.personnel = self.personnel.split("\n")
 
-        it = 0
         f = [" (", " | "]
-        for person in self.personnel:
+        for it, person in enumerate(self.personnel):
             p = normalize(person)
             p = re.sub('[^A-Za-z0-9 ()]+', '|', p)
             pos = 100
@@ -390,23 +387,23 @@ class wikipedia_parser:
             pos = [m.start() for m in re.finditer(r'\d+', person)]
 
             temp_new = []
-            for t in range(len(temp)):
+            for i, tmp in enumerate(temp):
                 # zbavit sa cisel referencii
-                if (person.rfind("[", 0,   pos[t]) != -1 and
-                   person.find("]", pos[t]) != -1):
+                if (person.rfind("[", 0,   pos[i]) != -1 and
+                   person.find("]", pos[i]) != -1):
                     pass
                 # odstranit ak je cislo obsiahnute v nazve skladby
-                elif (person.rfind("\"", 0,   pos[t]) != -1 and
-                      person.find("\"", pos[t]) != -1):
+                elif (person.rfind("\"", 0,   pos[i]) != -1 and
+                      person.find("\"", pos[i]) != -1):
                     pass
                 else:
-                    temp_new.append(temp[t])
+                    temp_new.append(tmp)
 
             temp = list(map(int, temp_new))
             temp = [i - 1 for i in temp]
 
-            for i in range(len(self.tracks)):
-                if fuzz.token_set_ratio(self.tracks[i], person) > 90:
+            for i, tr in enumerate(self.tracks):
+                if fuzz.token_set_ratio(tr, person) > 90:
                     temp.append(str(i))
 
             if len(temp) > 0 and temp is not None:
@@ -414,32 +411,30 @@ class wikipedia_parser:
             else:
                 self.appearences.append([])
 
-            it += 1
-
         # delete empty list entries
         temp_p = []
         temp_a = []
 
-        for i in range(len(self.personnel)):
-            self.personnel[i] = (self.personnel[i]
+        for i, person in enumerate(self.personnel):
+            self.personnel[i] = (person
                                  .encode('utf-8', 'ignore').decode("utf-8"))
-            if self.personnel[i] != "":
-                temp_p.append(self.personnel[i])
+            if person != "":
+                temp_p.append(person)
                 temp_a.append(self.appearences[i])
 
         # delete duplicates
         self.personnel = []
         self.appearences = []
 
-        for i in range(len(temp_p)):
-            if temp_p[i] not in self.personnel:
-                self.personnel.append(temp_p[i])
-                self.appearences.append(temp_a[i])
+        for tp, ta in zip(temp_p, temp_a):
+            if tp not in self.personnel:
+                self.personnel.append(tp)
+                self.appearences.append(ta)
             else:
-                for j in range(len(self.personnel)):
-                    if temp_p[i] in self.personnel[j]:
-                        if not temp_a[i]:
-                            self.appearences[j].extend(temp_a[i])
+                for i, person in enumerate(self.personnel):
+                    if tp in person:
+                        if not ta:
+                            self.appearences[i].extend(ta)
 
         for i in range(len(self.appearences)):
             self.appearences[i] = list(map(int, self.appearences[i]))
@@ -451,35 +446,33 @@ class wikipedia_parser:
         tables = self.soup.findAll("table", class_=re.compile("tracklist"))
 
         self.data_collect = []
-        for tn in range(len(tables)):
-            table = tables[tn]
-
+        for table in tables:
+            
             # preinit list of lists
             rows = table.findAll("tr")
             row_lengths = [len(r.findAll(['th', 'td'])) for r in rows]
             ncols = max(row_lengths)
             nrows = len(rows)
             data = []
-            for i in range(nrows):
+
+            for _ in rows:
                 rowD = []
-                for j in range(ncols):
+                for _ in range(ncols):
                     rowD.append('')
                 data.append(rowD)
 
             # process html
-            for i in range(len(rows)):
-                row = rows[i]
+            for i, row in enumerate(rows):
                 rowD = []
                 cells = row.findAll(["td", "th"])
-                for j in range(len(cells)):
-                    cell = cells[j]
 
+                for j, cell in enumerate(cells):
                     # lots of cells span cols and rows so lets deal with that
                     cspan = int(cell.get('colspan', 1))
                     rspan = int(cell.get('rowspan', 1))
+
                     for k in range(rspan):
                         for l in range(cspan):
-                            # print(cell.text)
                             data[i+k][j+l] += cell.text
 
                 data.append(rowD)
@@ -520,43 +513,43 @@ class wikipedia_parser:
                 sys.exit()
 
             data = []
-            for i in range(len(rows)):
+            for i, row in enumerate(rows):
                 data.append([])
 
                 try:
-                    number = re.search(r"\d+\.", rows[i]).group()
+                    number = re.search(r"\d+\.", row).group()
                 except AttributeError:
                     number = str(i + 1)
                 else:
-                    rows[i] = rows[i].replace(number, "")
+                    rows[i] = row.replace(number, "")
                 finally:
                     number = re.sub(r"^0|\.", "", number.strip())
                     data[-1].append(number)
 
                 try:
-                    time = re.search(r"\d+\:\d+", rows[i]).group()
+                    time = re.search(r"\d+\:\d+", row).group()
                 except AttributeError:
-                    data[-1].append(rows[i].strip())
+                    data[-1].append(row.strip())
                 else:
-                    rows[i] = re.sub(r"\s*–?-?\s*" + time, "", rows[i])
-                    rows[i] = rows[i].replace(time, "")
-                    rows[i] = re.sub(r"\"", "", rows[i])
-                    data[-1].append(rows[i].strip())
+                    rows[i] = re.sub(r"\s*–?-?\s*" + time, "", row)
+                    rows[i] = row.replace(time, "")
+                    rows[i] = re.sub(r"\"", "", row)
+                    data[-1].append(row.strip())
                     data[-1].append(time)
 
             self.data_collect.append(data)
 
-    # probably not used
+    # TODO probably not used
     def __clear_ref__(self, data: list) -> list:
 
         # odstranenie referencii
-        for i in range(len(data)):
-            if "[" in data[i]:
-                start = data[i].find("[")
-                end = data[i].find("]", start)
+        for i, d in enumerate(data):
+            if "[" in d:
+                start = d.find("[")
+                end = d.find("]", start)
                 # max dvojciferne referencie zaporne je vtedy ak sa nenajde ]
                 if end - start < 4 and end - start > 0:
-                    data[i] = data[i][:start].strip()
+                    data[i] = d[:start].strip()
 
         return data
 
@@ -569,26 +562,26 @@ class wikipedia_parser:
 
             # extract tracks and subtracks
             temp = data.split("\n")
-            for j in range(len(temp)):
+            for j, tmp in enumerate(temp):
                 if j > 0:
                     # replace " with space, delete empty spaces,
                     # remove numbering if there is any
-                    temp[j] = (temp[j].replace("\"", "")
+                    temp[j] = (tmp.replace("\"", "")
                                .strip().split(' ', 1)[1])
                 else:
-                    temp[j] = temp[j].replace("\"", "").strip()
+                    temp[j] = tmp.replace("\"", "").strip()
 
-                if "(" in temp[j]:
-                    start = temp[j].find("(")
-                    end = temp[j].find(")", start)
+                if "(" in tmp:
+                    start = tmp.find("(")
+                    end = tmp.find(")", start)
                     # odstranenie zatvoriek s casom
-                    if temp[j][start + 1:end].replace(":", "").isdigit():
-                        temp[j] = temp[j][:start] + temp[j][end + 1:]
-                        temp[j] = temp[j].strip()
+                    if tmp[start + 1:end].replace(":", "").isdigit():
+                        temp[j] = tmp[:start] + tmp[end + 1:]
+                        temp[j] = tmp.strip()
                     # odstranenie bonus track
-                    if "bonus" in normalize_caseless(temp[j][start + 1:end]):
-                        temp[j] = temp[j][:start] + temp[j][end + 1:]
-                        temp[j] = temp[j].strip()
+                    if "bonus" in normalize_caseless(tmp[start + 1:end]):
+                        temp[j] = tmp[:start] + tmp[end + 1:]
+                        temp[j] = tmp.strip()
 
             tracks.append(temp[0].strip())
             subtracks.append(temp[1:len(temp)])
@@ -597,8 +590,8 @@ class wikipedia_parser:
 
         def ART(data):
             temp = re.split(",|&", data)
-            for j in range(len(temp)):
-                temp[j] = (re.sub(",", "", temp[j])).strip()
+            for j, tmp in enumerate(temp):
+                temp[j] = (re.sub(",", "", tmp)).strip()
 
             return temp
 
@@ -667,8 +660,8 @@ class wikipedia_parser:
         self.disks = [i[0] for i in disks_filtered]
 
         # assign disc number to tracks
-        for i in range(len(self.tracks)):
-            for j in range(len(self.disk_sep) - 1):
+        for i, _ in enumerate(self.tracks):
+            for j, _ in enumerate(self.disk_sep[:-1]):
                 if self.disk_sep[j] <= i and i < self.disk_sep[j + 1]:
                     self.disc_num.append(j + 1)
 
@@ -680,7 +673,8 @@ class wikipedia_parser:
                      "Orchestral",
                      "Live",
                      "Piano Version"]
-        unwanted = ["featuring", "feat.", "feat"]
+        # TODO not covering capitalized versions
+        unwanted = ["featuring", "feat.", "feat", "narration by", "narration"]
         to_delete = ["bonus track", "bonus"]
 
         self.types = []
@@ -690,26 +684,24 @@ class wikipedia_parser:
 
         # hladanie umelcov ked su v zatvorke za skladbou
         # + zbavovanier sa bonus track a pod.
-        for j in range(len(self.tracks)):
+        for j, tr in enumerate(self.tracks):
 
             self.types.append("")
             self.sub_types.append([])
 
-            if "(" in self.tracks[j]:
+            if "(" in tr:
 
-                start_list = [m.start() for m in re.finditer(r'\(',
-                              self.tracks[j])]
-                end_list = [m.start() for m in re.finditer(r'\)',
-                            self.tracks[j])]
+                start_list = [m.start() for m in re.finditer(r'\(', tr)]
+                end_list = [m.start() for m in re.finditer(r'\)', tr)]
 
                 for start, end in zip(start_list, end_list):
 
-                    artist = re.sub("[,:]", "", self.tracks[j][start + 1:end])
+                    artist = re.sub("[,:]", "", tr[start + 1:end])
 
                     for td in to_delete:
                         if td in normalize_caseless(artist):
-                            self.tracks[j] = (self.tracks[j][:start - 1] +
-                                              self.tracks[j][end + 1:]).strip()
+                            self.tracks[j] = (tr[:start - 1] +
+                                              tr[end + 1:]).strip()
                             break
 
                     artist = re.split(r",|\/|\\", artist)
@@ -717,46 +709,41 @@ class wikipedia_parser:
                     for art in artist:
                         for un in unwanted:
                             art = art.replace(un, "").strip()
+                            art = art.replace(un.capitalize(), "").strip()
 
                         # check against additional personnel
                         for person in self.personnel:
                             if fuzz.token_set_ratio(art, person) > 90:
                                 self.artists[j].append(person)
-                                self.tracks[j] = (self.tracks[j][:start] +
-                                                  self.tracks[j][end + 1:])
-                                self.tracks[j] = self.tracks[j].strip()
+                                self.tracks[j] = (tr[:start] + tr[end + 1:])
+                                self.tracks[j] = tr.strip()
 
                         # check agains composers
                         for comp in comp_flat:
                             if fuzz.token_set_ratio(art, comp) > 90:
                                 self.artists[j].append(comp)
-                                self.tracks[j] = (self.tracks[j][:start] +
-                                                  self.tracks[j][end + 1:])
-                                self.tracks[j] = self.tracks[j].strip()
+                                self.tracks[j] = (tr[:start] + tr[end + 1:])
+                                self.tracks[j] = tr.strip()
 
                         # check if instrumental, ...
                         for typ in def_types:
                             if fuzz.token_set_ratio(art, typ) > 90:
                                 self.types[j] = process.extractOne(art, def_types, scorer=fuzz.token_sort_ratio)[0]
-                                self.tracks[j] = (self.tracks[j][:start] +
-                                                  self.tracks[j][end + 1:])
-                                self.tracks[j] = self.tracks[j].strip()
+                                self.tracks[j] = (tr[:start] + tr[end + 1:])
+                                self.tracks[j] = tr.strip()
                                 break
 
             if len(self.subtracks) != 0:
-                for i in range(len(self.subtracks[j])):
-                    self.sub_types[j] = [""] * len(self.subtracks[j])
-                    if "(" in self.subtracks[j][i]:
+                for i, sbtr in enumerate(self.subtracks[j]):
+                    self.sub_types[j] = [""] * len(sbtr)
+                    if "(" in sbtr[i]:
 
-                        start_list = [m.start() for m in re.finditer(r'\(',
-                                      self.tracks[j])]
-                        end_list = [m.start() for m in re.finditer(r'\)',
-                                    self.tracks[j])]
+                        start_list = [m.start() for m in re.finditer(r'\(', tr)]
+                        end_list = [m.start() for m in re.finditer(r'\)', tr)]
 
                         for start, end in zip(start_list, end_list):
 
-                            art = re.sub("[,:]", "",
-                                         self.subtracks[j][i][start + 1:end])
+                            art = re.sub("[,:]", "", sbtr[i][start + 1:end])
                             art = art.split(" ")
 
                             for i in range(len(art)):
@@ -764,20 +751,20 @@ class wikipedia_parser:
                                 for person in self.personnel:
                                     if fuzz.token_set_ratio(art[i], person) > 90:
                                         self.artists[j].append(person)
-                                        self.subtracks[j][i] = self.subtracks[j][i][:start] + self.subtracks[j][i][end + 1:]
-                                        self.subtracks[j][i] = self.subtracks[j][i].strip()
+                                        self.subtracks[j][i] = sbtr[i][:start] + sbtr[i][end + 1:]
+                                        self.subtracks[j][i] = sbtr[i].strip()
 
                                 # check if instrumental, ...
                                 for typ in def_types:
                                     if fuzz.token_set_ratio(art[i], typ) > 90:
                                         self.sub_types[j][i] = process.extractOne(art[i], def_types, scorer=fuzz.token_sort_ratio)[0]
-                                        self.subtracks[j][i] = self.subtracks[j][i][:start] + self.subtracks[j][i][end + 1:]
-                                        self.subtracks[j][i] = self.subtracks[j][i].strip()
+                                        self.subtracks[j][i] = sbtr[i][:start] + sbtr[i][end + 1:]
+                                        self.subtracks[j][i] = sbtr[i].strip()
                                         break
 
         # get rid of artists duplicates
-        for i in range(len(self.artists)):
-            self.artists[i] = sorted(list(set(self.artists[i])))
+        for i, art in enumerate(self.artists):
+            self.artists[i] = sorted(list(set(art)))
 
     def COMPLETE(self):
 
@@ -787,11 +774,12 @@ class wikipedia_parser:
         # complete everything with everything
         for i in range(len(to_complete)):
             for j in range(len(to_complete)):
+                # TODO doesnt return function probably modifies only local copy 
                 replace_N_dim(to_complete[i], to_complete[j])
 
         # sort artist alphabeticaly
         if len(self.artists) > 0:
-            for i in range(len(self.artists)):
+            for i, _ in enumerate(self.artists):
                 self.artists[i].sort()
 
         # sort tracklist composers alphabeticaly
@@ -802,23 +790,51 @@ class wikipedia_parser:
         # get rid of feat., faeturing ...
         for i in range(len(to_complete)):
             for un in unwanted:
+                # TODO doesnt return function probably modifies only local copy 
                 delete_N_dim(to_complete[i], un)
 
     def WIKI(self):
 
         # TODO implement timeout error
 
+        def parse_results(results):
+            # old method
+            # print(results)
+            for r in results:
+                r = normalize_caseless(r)
+                if ("album" in r and normalize_caseless(self.album) in r):
+                    #print("found:", r)
+                    return r
+
+            return None
+            
+
+            # TODO new method
+            """
+            print(results)
+            print(process.extractOne("{} {} album".format(self.album, self.band), results, scorer=fuzz.token_sort_ratio))
+
+            return None
+            """
+
+        # TODO new method
+        """
+        searches = [self.album, "{} (album)".format(self.album),
+                    "{} ({} album)".format(self.album, self.band)]
+        """
+
+        # old method
+        searches = [self.album]
+
         try:
-            for result in wiki.search(self.album):
-                result = normalize_caseless(result)
-                if ("album" in result and
-                   normalize_caseless(self.album) in result):
-                    querry = result
+            results = []
+            for s in searches:
+                results += wiki.search(s)
+                querry = parse_results(results)
+                if querry is not None:
                     break
 
-            try:
-                querry
-            except NameError as e:
+            if querry is None:
                 querry = self.album
 
             self.page = wiki.page(querry)
@@ -836,7 +852,9 @@ class wikipedia_parser:
         except wiki.exceptions.PageError:
             try:
                 self.page = wiki.page(self.album + " " + self.band)
-            except wiki.exceptions.PageError:
+            except wiki.exceptions.PageError as e:
+                log_parser.warning(e)
+                shared_vars.warning = e
                 print(Fore.LIGHTYELLOW_EX + "Album was not found!!" +
                       Fore.RESET)
                 sys.exit()
@@ -844,8 +862,8 @@ class wikipedia_parser:
         except wiki.exceptions.HTTPTimeoutError as e:
             print(e)
             log_parser.exception(e)
-            shared_vars.exception = """Search failed probably due to
-                                       poor internet connetion"""
+            shared_vars.exception = ("Search failed probably due to"
+                                     "poor internet connetion")
             sys.exit()
 
         self.url = self.page.url
@@ -862,6 +880,7 @@ class wikipedia_parser:
         # check if the album belongs to band that was requested
         self.check_BAND()
 
+    # TODO from here rewrite in more pythonic way
     def DISK_WRITE(self):
 
         self.bracketed_types = bracket(self.types)
@@ -928,7 +947,7 @@ class wikipedia_parser:
                         except NameError as e:
                             print(e)
                             log_parser.exception(e)
-                            shared_vars.exception = str(e)
+                            shared_vars.exception = e
                             continue
                         if j != temp:
                             file.write(self.disks[j] + ": " +
@@ -999,7 +1018,7 @@ class wikipedia_parser:
                     except NameError as e:
                         print(e)
                         log_parser.exception(e)
-                        shared_vars.exception = str(e)
+                        shared_vars.exception = e
                         continue
                     if j != temp:
                         print("Disc", j + 1, ": " +
@@ -1022,6 +1041,7 @@ class wikipedia_parser:
             for a in apper:
                 self.artists[a].append(person)
 
+    # TODO to here rewrite in more pythonic way
     def data_to_dict(self, reassign_files=True):
 
         self.bracketed_types = bracket(self.types)
@@ -1036,14 +1056,14 @@ class wikipedia_parser:
             print("\n".join(files), "\n")
             print(Fore.GREEN + "Assigning files to tracks:" + Fore.RESET)
 
-            for i in range(len(self.tracks)):
-                self.tracks[i] = self.tracks[i].strip()
+            for i, tr in enumerate(self.tracks):
+                self.tracks[i] = tr.strip()
                 found = False
 
                 # TODO restructure
                 for path in files:
                     f = os.path.split(path)[1]
-                    if (normalize_caseless(win_naming_convetion(self.tracks[i])) in
+                    if (normalize_caseless(win_naming_convetion(tr)) in
                         normalize_caseless(f) and
                         normalize_caseless(self.types[i]) in
                         normalize_caseless(f)):
@@ -1052,15 +1072,15 @@ class wikipedia_parser:
                         break
 
                 if found is True:
-                    print(Fore.LIGHTYELLOW_EX + self.tracks[i] + Fore.RESET,
-                          "-"*(1 + max_length - len(self.tracks[i])) + ">",
+                    print(Fore.LIGHTYELLOW_EX + tr + Fore.RESET,
+                          "-"*(1 + max_length - len(tr)) + ">",
                           path)
 
                     self.files.append(path)
 
                 elif found is False:
-                    print(Fore.LIGHTBLUE_EX + self.tracks[i] + Fore.RESET,
-                          "."*(2 + max_length - len(self.tracks[i])),
+                    print(Fore.LIGHTBLUE_EX + tr + Fore.RESET,
+                          "."*(2 + max_length - len(tr)),
                           "Does not have a matching file!")
 
                     self.files.append("")
@@ -1114,15 +1134,15 @@ class wikipedia_parser:
         lyrics_data = []
         numbers_data = []
         tracks_data = []
-        for i in range(len(self.files)):
-            path, f = os.path.split(self.files[i])
+        for i, fl in enumerate(self.files):
+            path, f = os.path.split(fl)
             # match digits, zero or one whitespace characters, zero or one dot
             # zero or one dash, zero or one whitespace characters
             f = re.sub(r"\d\s?\.?-?\s?", "", f)
             file_names.append(os.path.join(path, f))
 
             (album, band, artists, composers, release_date, disc_num,
-             genre, lyrics, track, number) = read_tags(self.files[i])
+             genre, lyrics, track, number) = read_tags(fl)
 
             # individual tags
             artists_data.append(sorted(re.split(r",\s?", artists)))
@@ -1170,22 +1190,13 @@ class wikipedia_parser:
     def extract_names(self):
 
         # pass to NLTK only relevant part of page
-        for i in range(len(self.contents_raw)):
-                if "Track listing" in self.contents_raw[i]:
-                    if i + 2 <= len(self.contents_raw):
-                        pos = i+2
-                    else:
-                        pos = len(self.contents_raw)
-                    break
-
-        try:
-            pos
-        except NameError:
-            self.NLTK_names = []
-            return 0
+        stop = self.contents_raw[-1]
+        for i, item in enumerate(self.contents_raw):
+            if "references" in normalize_caseless(item):
+                stop = item
 
         start = int(self.formated_html.find("\nTrack listing"))
-        end = int(self.formated_html.find("\n" + self.contents[pos]))
+        end = int(self.formated_html.find("\n" + stop))
         document = self.formated_html[start:end]
 
         # NLTK extraction
@@ -1230,3 +1241,4 @@ class wikipedia_parser:
                 filtered_names.append(n)
 
         self.NLTK_names = filtered_names
+

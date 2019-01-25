@@ -76,7 +76,7 @@ def save_lyrics():
         log.info("Key loaded successfully")
 
     parser.lyrics = []
-    for i in range(len(parser.tracks)):
+    for i, _ in enumerate(parser.tracks):
         if parser.types[i] == "Instrumental":
             parser.lyrics.append("Instrumental")
         elif parser.types[i] == "Orchestral":
@@ -85,9 +85,9 @@ def save_lyrics():
             parser.lyrics.append(None)
 
     log.info("initialize duplicates")
-
     duplicates = [i for i in range(len(parser.lyrics))]
-    for i in range(len(parser.lyrics)):
+
+    for i, _ in enumerate(parser.lyrics):
         for j in range(i + 1, len(parser.lyrics)):
             if (fuzz.token_set_ratio(parser.tracks[i], parser.tracks[j]) >
                     90 and parser.lyrics[j] is None):
@@ -113,23 +113,21 @@ def save_lyrics():
 
     else:
         t2 = time.time()
-        for i in range(len(parser.tracks)):
+        for i, tr in enumerate(parser.tracks):
             if i == duplicates[i]:
-                lyrics_temp.append(get_lyrics(parser.band,
-                                              parser.album,
-                                              parser.tracks[i],
-                                              google_api_key))
+                lyrics_temp.append(get_lyrics(parser.band, parser.album,
+                                              tr, google_api_key))
 
         t3 = time.time()
         print("serial part:", t3 - t2, "s")
 
     index = 0
-    for i in range(len(parser.lyrics)):
+    for i, _ in enumerate(parser.lyrics):
         if i == duplicates[i]:
             parser.lyrics[i] = lyrics_temp[index]
             index += 1
 
-    for i in range(len(parser.lyrics)):
+    for i, _ in enumerate(parser.lyrics):
         if parser.lyrics[i] is None:
             parser.lyrics[i] = parser.lyrics[duplicates[i]]
 
@@ -152,6 +150,7 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
         lyrics_data = lyrics.to_dict()
         lyrics_data["filename"] = lyrics.save_name
         lyrics_data["timestamp"] = time.time()
+        
         print(Fore.GREEN + "Saved lyrics for: ",
               Fore.RESET, artist + " - " + song)
         log.info("Saved lyrics for " + "artist" + " - " + "song")

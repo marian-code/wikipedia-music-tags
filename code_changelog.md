@@ -18,6 +18,7 @@
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - if the coresponding wiki page cannor be found try appending (*album*) or (*band* *album*) to the album name as in [Circle](https://en.wikipedia.org/wiki/Circle_(Amorphis_album))
+- fix COMPLETE function in parser - important
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird

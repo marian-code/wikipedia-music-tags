@@ -38,6 +38,8 @@ def write_tags(data: dict, lyrics_only):
               "does not have matching file!" + Fore.RESET)
         return 0
 
+    print(data["file"])
+
     if lyrics_only is False:
         print(Fore.GREEN + "Writing tags to: " + Fore.RESET, data["file"])
     else:
