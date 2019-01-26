@@ -536,22 +536,6 @@ class wikipedia_parser:
 
             self.data_collect.append(data)
 
-    # TODO probably not used
-    """
-    def __clear_ref__(self, data: list) -> list:
-
-        # odstranenie referencii
-        for i, d in enumerate(data):
-            if "[" in d:
-                start = d.find("[")
-                end = d.find("]", start)
-                # max dvojciferne referencie zaporne je vtedy ak sa nenajde ]
-                if end - start < 4 and end - start > 0:
-                    data[i] = d[:start].strip()
-
-        return data
-    """
-
     def process_TRACKS(self):
 
         def TR(data):
@@ -783,9 +767,10 @@ class wikipedia_parser:
             for un in unwanted:
                 delete_N_dim(to_complete[i], un)
 
+    # TODO implement timeout error
     def WIKI(self):
 
-        # TODO implement timeout error
+        
         nc = normalize_caseless
         searches = ["{} ({} album)".format(self.album, self.band),
                     self.album, "{} (album)".format(self.album)]
@@ -793,10 +778,10 @@ class wikipedia_parser:
         try:
             for query in searches:
                 self.page = wiki.page(title=query, auto_suggest=True)
-                summ = nc(page.summary)
+                summ = nc(self.page.summary)
                 if nc(self.band) in summ and nc(self.album) in summ:
                     break
-                    
+
         except wiki.exceptions.DisambiguationError as e:
             print("Found entries: ")
             print("\n".join(e.options[:3]), "\n...")
@@ -812,7 +797,7 @@ class wikipedia_parser:
                 self.page = wiki.page(self.album + " " + self.band)
             except wiki.exceptions.PageError as e:
                 log_parser.warning(e)
-                shared_vars.warning = e
+                shared_vars.warning = "Album was not found!!"
                 print(Fore.LIGHTYELLOW_EX + "Album was not found!!" +
                       Fore.RESET)
                 sys.exit()

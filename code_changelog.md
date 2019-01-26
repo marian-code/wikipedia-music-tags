@@ -17,16 +17,20 @@
 - add support for PySide2 and PyQt4
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
-- if the coresponding wiki page cannor be found try appending (*album*) or (*band* *album*) to the album name as in [Circle](https://en.wikipedia.org/wiki/Circle_(Amorphis_album))
-- fix COMPLETE function in parser - important
+
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
 - load composer fails for https://en.wikipedia.org/wiki/Pursuit_of_the_Sun_%26_Allure_of_the_Earth
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
-- problem finding https://en.wikipedia.org/wiki/Circle_(Amorphis_album)
 
 # Change Log
+
+### 26.1.2019
+- numerous bug fixes
+- rewrite code in a nicer more pythonic way
+- write docstrings in utils module
+- new much better method of wikipedia page guessing
 
 ### 16.1.2019
 - changes to handling google api key
