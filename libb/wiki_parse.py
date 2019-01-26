@@ -28,8 +28,7 @@ functools = lazy_import.lazy_module("functools")
 
 
 def warning(function):
-    """
-    A decorator that wraps the passed in function and logs
+    """ A decorator that wraps the passed in function and logs
     exceptions should one occur
     """
     @functools.wraps(function)
@@ -435,6 +434,7 @@ class wikipedia_parser:
         num_length = int(len(self.numbers))
         for i, app in enumerate(self.appearences):
             self.appearences[i] = list(map(int, app))
+        for i, app in enumerate(self.appearences):
             self.appearences[i] = list(filter(lambda x: x <= num_length, app))
 
     def TRACKS(self):
@@ -664,7 +664,6 @@ class wikipedia_parser:
                 if self.disk_sep[j] <= i and i < self.disk_sep[j + 1]:
                     self.disc_num.append(j + 1)
 
-    # TODO restructure long lines
     def info_TRACKS(self):
 
         def_types = ["Instrumental", "Acoustic", "Orchestral", "Live",
@@ -678,84 +677,82 @@ class wikipedia_parser:
         comp_flat = flatten_set(self.composers)
 
         # hladanie umelcov ked su v zatvorke za skladbou
-        # + zbavovanier sa bonus track a pod.
-        for j, tr in enumerate(self.tracks):
+        # + zbavovanie sa bonus track a pod.
+        for i, tr in enumerate(self.tracks):
 
             self.types.append("")
             self.sub_types.append([])
 
-            if "(" in tr:
+            start_list = [m.start() for m in re.finditer(r'\(', tr)]
+            end_list = [m.start() for m in re.finditer(r'\)', tr)]
 
-                start_list = [m.start() for m in re.finditer(r'\(', tr)]
-                end_list = [m.start() for m in re.finditer(r'\)', tr)]
+            for start, end in zip(start_list, end_list):
 
-                for start, end in zip(start_list, end_list):
+                artist = re.sub("[,:]", "", tr[start + 1:end])
 
-                    artist = re.sub("[,:]", "", tr[start + 1:end])
+                for td in to_delete:
+                    if td in normalize_caseless(artist):
+                        self.tracks[i] = (tr[:start - 1] +
+                                          tr[end + 1:]).strip()
+                        break
 
-                    for td in to_delete:
-                        if td in normalize_caseless(artist):
-                            self.tracks[j] = (tr[:start - 1] +
-                                              tr[end + 1:]).strip()
-                            break
+                artist = re.split(r",|\/|\\", artist)
 
-                    artist = re.split(r",|\/|\\", artist)
+                for art in artist:
+                    for un in unwanted:
+                        art = art.replace(un, "").strip()
+                        art = art.replace(un.capitalize(), "").strip()
 
-                    for art in artist:
-                        for un in unwanted:
-                            art = art.replace(un, "").strip()
-                            art = art.replace(un.capitalize(), "").strip()
+                    # check against additional personnel
+                    for person in self.personnel:
+                        if fuzz.token_set_ratio(art, person) > 90:
+                            self.artists[i].append(person)
+                            tr = (tr[:start] + tr[end + 1:])
+                            self.tracks[i] = tr.strip()
 
-                        # check against additional personnel
-                        for person in self.personnel:
-                            if fuzz.token_set_ratio(art, person) > 90:
-                                self.artists[j].append(person)
-                                self.tracks[j] = (tr[:start] + tr[end + 1:])
-                                self.tracks[j] = tr.strip()
+                    # check agains composers
+                    for comp in comp_flat:
+                        if fuzz.token_set_ratio(art, comp) > 90:
+                            self.artists[i].append(comp)
+                            tr = (tr[:start] + tr[end + 1:])
+                            self.tracks[i] = tr.strip()
 
-                        # check agains composers
-                        for comp in comp_flat:
-                            if fuzz.token_set_ratio(art, comp) > 90:
-                                self.artists[j].append(comp)
-                                self.tracks[j] = (tr[:start] + tr[end + 1:])
-                                self.tracks[j] = tr.strip()
+                    # check if instrumental, ...
+                    _type, score = process.extractOne(
+                        art, def_types, scorer=fuzz.token_sort_ratio)
+                    if score > 90:
+                        self.types[i] = _type
+                        tr = tr[:start] + tr[end + 1:]
+                        self.tracks[i] = tr.strip()
 
-                        # check if instrumental, ...
-                        for typ in def_types:
-                            if fuzz.token_set_ratio(art, typ) > 90:
-                                self.types[j] = process.extractOne(art, def_types, scorer=fuzz.token_sort_ratio)[0]
-                                self.tracks[j] = (tr[:start] + tr[end + 1:])
-                                self.tracks[j] = tr.strip()
-                                break
+            if len(self.subtracks) > 0:
+                for j, sbtr in enumerate(self.subtracks[i]):
 
-            if len(self.subtracks) != 0:
-                for i, sbtr in enumerate(self.subtracks[j]):
-                    self.sub_types[j] = [""] * len(sbtr)
-                    if "(" in sbtr[i]:
+                    self.sub_types[i] = [""] * len(sbtr)
 
-                        start_list = [m.start() for m in re.finditer(r'\(', tr)]
-                        end_list = [m.start() for m in re.finditer(r'\)', tr)]
+                    start_list = [m.start() for m in re.finditer(r'\(', sbtr)]
+                    end_list = [m.start() for m in re.finditer(r'\)', sbtr)]
 
-                        for start, end in zip(start_list, end_list):
+                    for start, end in zip(start_list, end_list):
 
-                            art = re.sub("[,:]", "", sbtr[i][start + 1:end])
-                            art = art.split(" ")
+                        art = re.sub("[,:]", "", sbtr[start + 1:end])
+                        art = art.split(" ")
 
-                            for i in range(len(art)):
-                                # check against additional personnel
-                                for person in self.personnel:
-                                    if fuzz.token_set_ratio(art[i], person) > 90:
-                                        self.artists[j].append(person)
-                                        self.subtracks[j][i] = sbtr[i][:start] + sbtr[i][end + 1:]
-                                        self.subtracks[j][i] = sbtr[i].strip()
+                        for a in art:
+                            # check against additional personnel
+                            for person in self.personnel:
+                                if fuzz.token_set_ratio(a, person) > 90:
+                                    self.artists[i].append(person)
+                                    sbtr = sbtr[:start] + sbtr[end + 1:]
+                                    self.subtracks[i][j] = sbtr.strip()
 
-                                # check if instrumental, ...
-                                for typ in def_types:
-                                    if fuzz.token_set_ratio(art[i], typ) > 90:
-                                        self.sub_types[j][i] = process.extractOne(art[i], def_types, scorer=fuzz.token_sort_ratio)[0]
-                                        self.subtracks[j][i] = sbtr[i][:start] + sbtr[i][end + 1:]
-                                        self.subtracks[j][i] = sbtr[i].strip()
-                                        break
+                            # check if instrumental, ...
+                            _type, score = process.extractOne(
+                                a, def_types, scorer=fuzz.token_sort_ratio)
+                            if score > 90:
+                                self.sub_types[i][j] = _type
+                                sbtr = sbtr[:start] + sbtr[end + 1:]
+                                self.subtracks[i][j] = sbtr.strip()
 
         # get rid of artists duplicates
         for i, art in enumerate(self.artists):
@@ -789,50 +786,17 @@ class wikipedia_parser:
     def WIKI(self):
 
         # TODO implement timeout error
-
-        def parse_results(results):
-            # old method
-            # print(results)
-            for r in results:
-                r = normalize_caseless(r)
-                if ("album" in r and normalize_caseless(self.album) in r):
-                    # print("found:", r)
-                    return r
-
-            return None
-
-            # TODO new method
-            """
-            print(results)
-            print(process.extractOne("{} {} album".format(self.album,
-                                                          self.band),
-                                     results, scorer=fuzz.token_sort_ratio))
-
-            return None
-            """
-
-        # TODO new method
-        """
-        searches = [self.album, "{} (album)".format(self.album),
-                    "{} ({} album)".format(self.album, self.band)]
-        """
-
-        # old method
-        searches = [self.album]
+        nc = normalize_caseless
+        searches = ["{} ({} album)".format(self.album, self.band),
+                    self.album, "{} (album)".format(self.album)]
 
         try:
-            results = []
-            for s in searches:
-                results += wiki.search(s)
-                querry = parse_results(results)
-                if querry is not None:
+            for query in searches:
+                self.page = wiki.page(title=query, auto_suggest=True)
+                summ = nc(page.summary)
+                if nc(self.band) in summ and nc(self.album) in summ:
                     break
-
-            if querry is None:
-                querry = self.album
-
-            self.page = wiki.page(querry)
-
+                    
         except wiki.exceptions.DisambiguationError as e:
             print("Found entries: ")
             print("\n".join(e.options[:3]), "\n...")
@@ -874,13 +838,15 @@ class wikipedia_parser:
         # check if the album belongs to band that was requested
         self.check_BAND()
 
-    # TODO from here rewrite in more pythonic way
     def DISK_WRITE(self):
 
         self.bracketed_types = bracket(self.types)
 
         # compute number of spaces
         spaces, _ = count_spaces(self.tracks, self.bracketed_types)
+
+        if len(self.artists) == 0:
+            self.artists = [""]
 
         # write to file
         for j, dsk in enumerate(self.disks):
@@ -889,52 +855,34 @@ class wikipedia_parser:
             with open(fname, 'w', encoding='utf-8') as f:
                 f.write(dsk + u'\n')
                 for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
-                    if len(self.artists) > 0:
-                        if i + 1 < 10:
-                            #f.write("{}.  {} {}{}{}\n".format(self.numbers[i], self.tracks[i], self.bracketed_types[i], spaces[i], ", ".join(self.artists[i]))
+                    f.write("{:>2}.  {} {}{}{}\n".format(self.numbers[i],
+                                                         self.tracks[i],
+                                                         self.bracketed_types[i],
+                                                         spaces[i],
+                                                         ", ".join(self.artists[i])))
 
-                            f.write(str(self.numbers[i]) + ".  " +
-                                    self.tracks[i] + " " +
-                                    self.bracketed_types[i] + spaces[i] +
-                                    ", ".join(self.artists[i]) + u'\n')
-                        else:
-                            f.write(str(self.numbers[i]) + ". " +
-                                    self.tracks[i] + " " +
-                                    self.bracketed_types[i] + spaces[i] +
-                                    ", ".join(self.artists[i]) + u'\n')
-                    else:
-                        if i + 1 < 10:
-                            f.write(str(self.numbers[i]) + ".  " +
-                                    self.tracks[i] + " " +
-                                    self.bracketed_types[i] + spaces[i] +
-                                    u'\n')
-                        else:
-                            f.write(str(self.numbers[i]) + ". " +
-                                    self.tracks[i] + " " +
-                                    self.bracketed_types[i] + spaces[i] +
-                                    u'\n')
-
-                    for k in range(len(self.subtracks[i])):
-                        f.write("  " + write_roman(k + 1) + ". " +
-                                self.subtracks[i][k] + " " +
-                                self.sub_types[i][k] + u'\n')
+                    for k, (s_tr, s_tp) in enumerate(zip(self.subtracks[i],
+                                                         self.sub_types[i])):
+                        f.write("  {:2}. {} {}\n".format(write_roman(k + 1),
+                                                         s_tr, s_tp))
 
         # save found personel to file
         with open(self.debug_folder + '/personnel.txt',
-                  'w', encoding='utf8') as file:
+                  'w', encoding='utf8') as f:
 
             for pers, app in zip(self.personnel, self.appearences):
 
                 if len(app) > 0:
-                    file.write(pers + " - ")
+                    f.write(pers + " - ")
                     temp = 50
 
-                    for a in app:
+                    for k, a in enumerate(app):
                         for j, _ in enumerate(self.disk_sep[:-1]):
 
                             if (int(a) > self.disk_sep[j] and
                                 int(a) < self.disk_sep[j + 1]):  # noqa E129
                                 break
+
                         try:
                             j
                         # this is triggered if no tracklist was loaded
@@ -943,18 +891,19 @@ class wikipedia_parser:
                             log_parser.exception(e)
                             shared_vars.exception = e
                             continue
+
                         if j != temp:
-                            file.write(self.disks[j] + ": " +
-                                       self.numbers[int(a)])
+                            f.write("{}: {}".format(self.disks[j],
+                                                    self.numbers[int(a)]))
                             temp = j
                         else:
-                            file.write(self.numbers[int(a)])
+                            f.write(self.numbers[int(a)])
 
                         if k != len(app) - 1:
-                            file.write(", ")
-                    file.write(u'\n')
+                            f.write(", ")
+                    f.write(u'\n')
                 else:
-                    file.write(pers + u'\n')
+                    f.write(pers + u'\n')
 
     def print_tracklist(self):
 
@@ -962,50 +911,47 @@ class wikipedia_parser:
         spaces, length = count_spaces(self.tracks, self.bracketed_types)
 
         # print to console
-        for j in range(len(self.disks)):
-            print("\n" + Fore.GREEN + str(j + 1) + ". Disk: " +
-                  Fore.RESET, self.disks[j])
-
-            try:
-                print(Fore.LIGHTGREEN_EX + self.header[j][0] + " " +
-                      self.header[j][1], end="")
-            except:
-                pass
-            try:
-                print(" "*(length + len(self.header[j][1])) +
-                      self.header[j][2], end="")
-            except:
-                pass
-            try:
-                print(", " + self.header[j][3], end="")
-            except:
-                pass
+        for j, (ds, hd) in enumerate(zip(self.disks, self.header)):
+            print("\n" + Fore.GREEN + "{}. Disk: ".format(j + 1) +
+                  Fore.RESET, ds)
+            if len(hd) >= 2:
+                print(Fore.LIGHTGREEN_EX + hd[0] + " " + hd[1], end="")
+            if len(hd) >= 3:
+                print(" "*(length + len(hd[1])) + hd[2], end="")
+            if len(hd) >= 4:
+                print(", " + hd[3], end="")
             print(Fore.RESET)
 
             for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
-                print(f"{self.numbers[i]: >{2}}" + ". " + self.tracks[i] +
-                      " " + self.bracketed_types[i] + spaces[i] +
-                      ", ".join(self.artists[i]) +
-                      ", ".join(self.composers[i]))
+                print("{:>2}. {} {}{} {}".format(self.numbers[i],
+                                                 self.tracks[i],
+                                                 self.bracketed_types[i],
+                                                 spaces[i],
+                                                 ", ".join(self.artists[i] +
+                                                           self.composers[i])))
 
-                for k in range(len(self.subtracks[i])):
-                    print("  " + write_roman(k + 1) + ". " +
-                          self.subtracks[i][k] + " " + self.sub_types[i][k])
+                for k, (sbtr, sbtp) in enumerate(zip(self.subtracks[i],
+                                                     self.sub_types[i])):
+                    print("  {}. {} {}".format(write_roman(k + 1), sbtr, sbtp))
 
     def print_personnel(self):
 
         if len(self.personnel) == 0:
             print("---\n")
 
-        for i in range(len(self.personnel)):
-            if len(self.appearences[i]) > 0:
-                print(self.personnel[i] + " - ", end="")
+        for pers, app in zip(self.personnel, self.appearences):
+
+            if len(app) > 0:
+                print(pers + " - ", end="")
                 temp = 50
-                for k in range(len(self.appearences[i])):
-                    for j in range(len(self.disk_sep) - 1):
-                        if (int(self.appearences[i][k]) > self.disk_sep[j] and
-                           int(self.appearences[i][k]) < self.disk_sep[j + 1]):
+
+                for k, a in enumerate(app):
+                    for j, _ in enumerate(self.disk_sep[:-1]):
+
+                        if (int(a) > self.disk_sep[j] and
+                            int(a) < self.disk_sep[j + 1]):  # noqa E129
                             break
+
                     try:
                         j
                     # this is triggered if no tracklist was loaded
@@ -1014,31 +960,32 @@ class wikipedia_parser:
                         log_parser.exception(e)
                         shared_vars.exception = e
                         continue
+
                     if j != temp:
-                        print("Disc", j + 1, ": " +
-                              self.numbers[int(self.appearences[i][k])],
+                        print("Disc {}: {}".format(j + 1,
+                                                   self.numbers[int(a)]),
                               end="")
                         temp = j
                     else:
-                        print(self.numbers[int(self.appearences[i][k])],
-                              end="")
+                        print(self.numbers[int(a)], end="")
 
-                    if k != len(self.appearences[i]) - 1:
+                    if k != len(app) - 1:
                         print(", ", end="")
                 print("")
             else:
-                print(self.personnel[i])
+                print(pers)
 
     def merge_artist_personnel(self):
 
-        for person, apper in zip(self.personnel, self.appearences):
-            for a in apper:
+        for person, appear in zip(self.personnel, self.appearences):
+            for a in appear:
                 self.artists[a].append(person)
 
-    # TODO to here rewrite in more pythonic way
     def data_to_dict(self, reassign_files=True):
 
         self.bracketed_types = bracket(self.types)
+        nc = normalize_caseless
+        wnc = win_naming_convetion
 
         if reassign_files is True:
             max_length = len(max(self.tracks, key=len))
@@ -1054,13 +1001,9 @@ class wikipedia_parser:
                 self.tracks[i] = tr.strip()
                 found = False
 
-                # TODO restructure
                 for path in files:
                     f = os.path.split(path)[1]
-                    if (normalize_caseless(win_naming_convetion(tr)) in
-                        normalize_caseless(f) and
-                        normalize_caseless(self.types[i]) in
-                        normalize_caseless(f)):  # noqa E129
+                    if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
 
                         found = True
                         break
