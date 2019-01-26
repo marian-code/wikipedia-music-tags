@@ -1,12 +1,13 @@
-## Module for variable synchronization between application and GUI
+# Module for variable synchronization between application and GUI
 
 from threading import Barrier, Lock
 
-## Class for synchronizing info between threads
+# Class for synchronizing info between threads
 #
 # info_exchange class provides means to synchronize some
 # variables between gui and application, it serves to pass
 # the questions asked in application to to Tkinter frontend.
+
 
 class info_exchange():
 

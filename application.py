@@ -8,7 +8,7 @@ if __name__ == '__main__':
     from utils import clean_logs
     clean_logs()
 
-from wiki_music import parser, shared_vars, log_app, info_exchange
+from wiki_music import parser, shared_vars, log_app, info_exchange  # noqa: E402
 
 
 # add signal handler to exit gracefully
@@ -193,7 +193,7 @@ def MAIN(band, album, work_dir, GUI):
 
     # print out tracklist
     log_print(msg_GREEN="Found Track list(s)")
-    
+
     for i, data in enumerate(parser.data_collect):
         print("Tracklist " + str(i + 1) + ": " + data[0][0])
 
@@ -417,8 +417,3 @@ if __name__ == "__main__":
         band = str(input())
         print(Fore.RESET)
         MAIN(band, album, parser.work_dir, GUI=False)
-
-
-# ####################################################################x
-# GOOGLE LYRICS API
-# AIzaSyAlcmHItgtDPmCLqvqwKdmnceMXuBQHnuI

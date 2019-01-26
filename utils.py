@@ -21,13 +21,14 @@ winreg = lazy_import.lazy_module("winreg")
 requests = lazy_import.lazy_module("requests")
 
 __all__ = ['write_roman', 'roman_num', "normalize", "normalize_caseless",
-           "caseless_equal", "nth", "count_spaces", "bracket",
+           "caseless_equal", "count_spaces", "bracket",
            "colorama_init", "json_dump", "to_bool", "win_naming_convetion",
            "we_are_frozen", "caseless_contains", "get_music_path",
-           "image_handle"]
+           "image_handle"]  #, "nth"]
 
 
 def write_roman(num: int):
+    """ Convert integer to roman number """
 
     roman = OrderedDict()
     roman[1000] = "M"
@@ -60,24 +61,36 @@ def roman_num(num: int) -> str:
 
 
 def normalize(text: str) -> str:
+    """ NFKD string normalization """
     return unicodedata.normalize("NFKD", text)
 
 
 def normalize_caseless(text: str) -> str:
+    """ NFKD casefold string normalization """
     return unicodedata.normalize("NFKD", text.casefold())
 
 
 def caseless_equal(left: str, right: str) -> bool:
+    """ Check for normalized string equality """ 
     return normalize_caseless(left) == normalize_caseless(right)
 
 
 def caseless_contains(string: str, in_text: str) -> bool:
+    """ Check if string is contained in text.\n
+    string : str
+        string to search for
+    in_text : str
+        string to search in
+    """
+
     if normalize_caseless(string) in normalize_caseless(in_text):
         return True
     else:
         return False
 
 
+# TODO probably not used
+"""
 def nth(n: int, string: str) -> int:
     if n < 0:
         pos = -1
@@ -87,42 +100,67 @@ def nth(n: int, string: str) -> int:
         except IndexError:
             pos = len(string) - 2
     return pos
+"""
 
 
-def count_spaces(tracks: list, types: list) -> list:
+def count_spaces(tracks: list, types: list) -> (list, int):
+    """ Counts max length of elements in list and croesponding spaces for 
+    each item to fit that length.\n
+
+    Parameters
+    ----------
+    tracks : list
+        input data
+    types : list
+        input data
+    """
 
     length = 0
-    for i in range(len(tracks)):
-        if len(tracks[i]) + len(types[i]) > length:
-            length = len(tracks[i]) + len(types[i])
+    for tr, tp in zip(tracks, types):
+        if len(tr) + len(tp) > length:
+            length = len(tr) + len(tp)
 
     spaces = []
-    for i in range(len(tracks)):
-        spaces.append(" "*(length - len(tracks[i]) - len(types[i]) + 8))
+    for tr, tp in zip(tracks, types):
+        spaces.append(" "*(length - len(tr) - len(tp) + 8))
 
     return spaces, length
 
 
-def bracket(data: list):
+def bracket(data: list) -> list:
+    """ Puts elements of the list in brackets.\n
 
-    data_edited = []
-    for d in data:
+    Parameters
+    ----------
+    data : list
+        input data
+    """
+
+    for i, d in enumerate(data):
         if len(d) > 0:
-            data_edited.append("(" + d + ")")
+            data[i] = "({})".format(d)
         else:
-            data_edited.append("")
+            data[i] = ""
 
-    return data_edited
+    return data
 
 
 def colorama_init():
+    """ Colorama initialize foe Windows """
     init(convert=True)
 
 
 def list_files(work_dir: str) -> list:
+    """ List music files in directory.\n
+
+    Parameters
+    ----------
+    work_dir : str
+        directory to search
+    """
 
     album_files = []
-    file_types = [".m4a", ".mp3", ".flac", ".alac", ".wav", ".wma"]
+    file_types = [".m4a", ".mp3", ".flac", ".alac", ".wav", ".wma", ".ogg"]
 
     for root, _, files in os.walk(work_dir):
         for f in files:
@@ -132,18 +170,29 @@ def list_files(work_dir: str) -> list:
     return album_files
 
 
-def json_dump(dict_data: list, work_dir: str):
+def json_dump(dict_data: list, save_dir: str):
+    """ Save json file to disk.\n
 
-    print(Fore.GREEN + "\nSaving JSON file: " + Fore.RESET +
-          os.path.join(work_dir, 'database.json') + "\n")
-    with open(os.path.join(work_dir, 'database.json'), 'w') as outfile:
+    Parameters
+    ----------
+    dict_data : list
+        list of dictionarie to save to disk
+    save_dir : str
+        directory to save to
+    """
+
+    _path = os.path.join(save_dir, 'database.json')
+    print(Fore.GREEN + "\nSaving JSON file: " + Fore.RESET + _path + "\n")
+    with open(_path, 'w') as outfile:
         json.dump(dict_data, outfile, indent=4)
 
 
-def find_N_dim(array, template):
+def _find_N_dim(array, template):
+    # hepler function for replace_N_dim and delete_N_dim
+
     if isinstance(array, list) is True:
         for a in array:
-            ret = find_N_dim(a, template)
+            ret = _find_N_dim(a, template)
             if ret is not None:
                 return ret
     else:
@@ -153,22 +202,35 @@ def find_N_dim(array, template):
                 return array
 
 
-def replace_N_dim(to_replace, to_find):
+def replace_N_dim(to_replace: list, to_find: list):
+    """ `to_replace` is a list which elements are not complete. Changes to this
+    list are made in-place.\n
+    `to_find` argument is the list which contains full strings.\n
+    All uncomplete strings in to_replace will be replaced by their
+    longer version from to_find.\n
+
+    Parameters
+    ----------
+    to_replace : list
+        Input data.
+    to_find : list
+       Input data.
+    """
+
     if isinstance(to_replace, list) is True:
         for i in range(len(to_replace)):
             ret = replace_N_dim(to_replace[i], to_find)
             if ret is not None:
                 to_replace[i] = ret
     else:
-        return find_N_dim(to_find, to_replace)
+        return _find_N_dim(to_find, to_replace)
 
 
-def delete_N_dim(to_replace, to_find):
-    """
-    `to_replace` is a list which elements which contain\n
-    unwanted strings.\n
-    `to_find` argument is the unwanted string.\n
-    All unwanted strings will be replaced by empty string.
+def delete_N_dim(to_replace: list, to_find: str):
+    """ `to_replace` is a list which elements contain unwanted strings.
+    Changes to this list are made in-place.\n
+    `to_find` argument is the unwanted string. All unwanted strings will be
+    replaced by empty string.\n
 
     Parameters
     ----------
@@ -188,14 +250,26 @@ def delete_N_dim(to_replace, to_find):
 
 
 def get_max_len(data: list) -> int:
-    """
-    Returns max length of array in horizontal direction
+    """ Returns max length of array in horizontal direction.\n
+
+    Parameters
+    ----------
+    data : list
+        Input data.
     """
 
     return max([len(i) for i in data])
 
 
 def to_bool(string: str) -> bool:
+    """ Coverts string (yes, no, y, n adn capitalized versions) to bool.\n
+
+    Parameters
+    ----------
+    string : str
+        Input value.
+    """
+
     if (normalize_caseless(string) == "y" or
        normalize_caseless(string) == "yes"):
         return True
@@ -204,12 +278,17 @@ def to_bool(string: str) -> bool:
         return False
 
 
-def we_are_frozen():
+def we_are_frozen() -> bool:
+    """ Checks if the running code is frozen (e.g by cx-Freeze). Outputs
+    True or False.
+    """
+
     # All of the modules are built-in to the interpreter, e.g., by py2exe
     return hasattr(sys, "frozen")
 
 
-def module_path():
+def module_path() -> str:
+    """ Outputs root path of the module. """
     # encoding = sys.getfilesystemencoding()
     if we_are_frozen():
         return os.path.dirname(sys.executable)
@@ -217,6 +296,8 @@ def module_path():
 
 
 def clean_logs():
+    """ Attempts to clear the log files from previous run in logs directory.
+    """
 
     print("removing", os.path.join(module_path(), "logs"))
 
@@ -236,19 +317,40 @@ def clean_logs():
 
 
 def win_naming_convetion(string: str, dir_name=False) -> str:
+    """ Returns Windows normalized path name with removed forbiden
+    characters.\n
+
+    Parameters
+    ----------
+    string : str
+        Input path to normalize
+    dir_name : bool
+        whether to use aditional normalization for directories
+    """
+
     if dir_name is True:  # windows doesn´t like folders with dots at the end
         string = re.sub(r"\.+$", "", string)
     return re.sub(r"\<|\>|\:|\"|\/|\\|\||\?|\*", "", string)
 
 
 def flatten_set(array: list) -> set:
+    """ Converst 2D list to 1D set.\n
+
+     Parameters
+    ----------
+    array : list
+        2D list to flatten
+    """
+
     return set([item for sublist in array for item in sublist])
 
 
-def get_music_path():
-    """Returns the default downloads path for linux or windows"""
+def get_music_path() -> str:
+    """Returns the default music path for linux or windows"""
+
     if os.name == 'nt':
-        sub_key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders'
+        sub_key = (r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+                   r"\Shell Folders")
         music_guid = '{4BD8D571-6D19-48D3-BE97-422220080E43}'
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
@@ -262,7 +364,15 @@ def get_music_path():
 
 
 def get_sizes(uri):
-    # get file size *and* image size (None if not known)
+    """ Get file size *and* image size (None if not known) of picture on the 
+    internet without downloading it.\n
+
+    Parameters
+    ----------
+    uri : str
+        picture url addres
+    """
+
     try:
         file = urlopen(uri)
         size = file.headers.get("content-length")
@@ -277,7 +387,7 @@ def get_sizes(uri):
             p.feed(data)
             if p.image:
                 return size, p.image.size
-                break
+
         file.close()
 
         return size, None
@@ -285,14 +395,43 @@ def get_sizes(uri):
         return None, None
 
 
-def _send_to_clipboard(clip_type, data):
+def _send_to_clipboard(clip_type: int, data: BytesIO):
+    """ Pastes data to clipboard.\n
+
+    Parameters
+    ----------
+    clip_type : int
+        type of the clipboard
+    data: ByteIO
+        data to paste to clipboard
+    """
+
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
     win32clipboard.SetClipboardData(clip_type, data)
     win32clipboard.CloseClipboard()
 
 
-def image_handle(url, size=None, clipboad=True, path=None, log=None):
+def image_handle(url: str, size=None, clipboad=True, path=None,
+                 log=None) -> bool:
+    """ Downloads image from internet and reduces its size to <300Kb. If
+    specified in input image can be also resized to defined dimensions.
+    Than paste to clipboard or/and save to file based on input.
+
+    Parameters
+    ----------
+    url : str
+        url addres of image
+    size: tuple or None
+        tuple of desired image dimensions e.g. (500, 500). If None(default)
+        image is not resized.
+    clipboard: bool
+        whether to paste image to clipboard
+    path: str or None
+        path to save picture on disk. If None - don´t save.
+    log : logging.Logger
+        logger object to log messages
+    """
 
     try:
         image = requests.get(url).content

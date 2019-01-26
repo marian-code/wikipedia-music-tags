@@ -18,7 +18,7 @@ def write_tags(data: dict, lyrics_only):
 
             if isinstance(value, (int, float)):
                 value = str(value)
-            
+
             song.tags[tag] = value
         except AttributeError as e:
             print(Fore.LIGHTRED_EX, "Probably encoding error!", Fore.RESET)
@@ -79,8 +79,7 @@ def write_tags(data: dict, lyrics_only):
             else:
                 song.tags["ARTIST"] = [data["ALBUMARTIST"]]
         else:
-            raise NotImplementedError("Unsupported data type for "
-                                        "ARTIST tag")
+            raise NotImplementedError("Unsupported data type for ARTIST tag")
     else:
         pass
 

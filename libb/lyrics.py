@@ -5,39 +5,14 @@ Anime Lyrics, AZLyrics, Genius, Lyricsmode, \
 Lyrical Nonsense, Musixmatch, darklyrics
 """
 import package_setup
-import os
 import lazy_import
-import logging
-from utils import module_path, we_are_frozen
-
-# create formater
-formatter = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
-                              "pid = %(process)d \n\t - "
-                              "proces name = %(processName)s \n\t - "
-                              "module = %(module)s,"
-                              "funcName = %(funcName)s \n\t - "
-                              "%(message)s \n\t",
-                              datefmt="%H:%M:%S")
-# create logger
-log = logging.getLogger(str(os.getpid()))
-log.setLevel(logging.DEBUG)
-# create file log
-fh = logging.FileHandler(r"logs/wiki_music_lyrics_" +
-                         str(os.getpid()) + ".log")
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-log.addHandler(fh)
+from utils import we_are_frozen
+from wiki_music import log_lyrics, parser, exception, google_api_key
 
 if we_are_frozen() is False:
-    log.propagate = False
-
-log.info("starting imports")
-
-from wiki_music import parser, exception
-from utils import module_path
+    log_lyrics.propagate = False
 
 lyricsfinder = lazy_import.lazy_module("lyricsfinder")
-re = lazy_import.lazy_module("re")
 time = lazy_import.lazy_module("time")
 Pool = lazy_import.lazy_callable("multiprocessing.Pool")
 Fore = lazy_import.lazy_callable("colorama.Fore")
@@ -47,33 +22,14 @@ normalize = lazy_import.lazy_callable("utils.normalize")
 
 colorama_init()
 
-log.info("imports done")
+log_lyrics.info("imports done")
 
 __all__ = ["save_lyrics", "get_lyrics"]
 
 
 def save_lyrics():
-    """
-    Function is parallelized by use of multiprocessing.\n
-    I have encountered strange problems with creating a\n
-    shared Value or Array of strings. The problem is\n
-    bypassed by using Manager().Value and putting those\n
-    into list.
-    """
 
-    log.info("starting save lyrics")
-    log.info("loading google api key")
-
-    _file = os.path.join(module_path(), "files", "google_api_key.txt")
-    try:
-        f = open(_file, "r")
-        google_api_key = f.read().strip()
-    except Exception:
-        raise Exception("You must input Google api key. Refer to repository "
-                        "for instructions "
-                        "https://github.com/marian-code/wikipedia-music-tags")
-    else:
-        log.info("Key loaded successfully")
+    log_lyrics.info("starting save lyrics")
 
     parser.lyrics = []
     for i, _ in enumerate(parser.tracks):
@@ -84,8 +40,8 @@ def save_lyrics():
         else:
             parser.lyrics.append(None)
 
-    log.info("initialize duplicates")
-    duplicates = [i for i in range(len(parser.lyrics))]
+    log_lyrics.info("initialize duplicates")
+    duplicates = [i for i, _ in enumerate(parser.lyrics)]
 
     for i, _ in enumerate(parser.lyrics):
         for j in range(i + 1, len(parser.lyrics)):
@@ -109,7 +65,7 @@ def save_lyrics():
         pool.close()
         pool.join()
         t3 = time.time()
-        print("paralel part:", t3 - t2, "s")
+        print("parallel part:", t3 - t2, "s")
 
     else:
         t2 = time.time()
@@ -132,10 +88,10 @@ def save_lyrics():
             parser.lyrics[i] = parser.lyrics[duplicates[i]]
 
 
-@exception(log)
+@exception(log_lyrics)
 def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
 
-    log.info("starting lyricsfinder ")
+    log_lyrics.info("starting lyricsfinder ")
 
     lyrics = next(lyricsfinder.search_lyrics(song, album, artist,
                                              google_api_key=google_api_key),
@@ -150,12 +106,12 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
         lyrics_data = lyrics.to_dict()
         lyrics_data["filename"] = lyrics.save_name
         lyrics_data["timestamp"] = time.time()
-        
+
         print(Fore.GREEN + "Saved lyrics for: ",
               Fore.RESET, artist + " - " + song)
-        log.info("Saved lyrics for " + "artist" + " - " + "song")
+        log_lyrics.info("Saved lyrics for " + "artist" + " - " + "song")
 
-    log.info("lyrics to dict")
+    log_lyrics.info("lyrics to dict")
 
     lyrics = {
             "success": True,
@@ -169,7 +125,7 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
             "timestamp": lyrics_data["timestamp"]
         }
 
-    log.info("done")
+    log_lyrics.info("done")
 
     return lyrics["lyrics"]
 
@@ -177,4 +133,5 @@ if __name__ == "__main__":
 
     # testing
     from pprint import pprint
-    pprint(get_lyrics("arch enemy", "", "you will know my name"))
+    pprint(get_lyrics("arch enemy", "", "you will know my name",
+                      "<google_api_key>"))

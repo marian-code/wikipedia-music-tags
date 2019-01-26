@@ -1,9 +1,9 @@
 import package_setup
 import lazy_import
 
-from utils import (colorama_init, count_spaces, delete_N_dim, find_N_dim,
-                   json_dump, list_files, normalize, normalize_caseless,
-                   replace_N_dim, write_roman, bracket, win_naming_convetion,
+from utils import (colorama_init, count_spaces, delete_N_dim, json_dump,
+                   list_files, normalize, normalize_caseless, replace_N_dim,
+                   write_roman, bracket, win_naming_convetion,
                    caseless_contains, flatten_set)
 
 from fuzzywuzzy import process
@@ -22,13 +22,9 @@ os = lazy_import.lazy_module("os")
 re = lazy_import.lazy_module("re")
 requests = lazy_import.lazy_module("requests")
 sys = lazy_import.lazy_module("sys")
-time = lazy_import.lazy_module("time")
-warnings = lazy_import.lazy_module("warnings")
 wiki = lazy_import.lazy_module("wikipedia")
 pickle = lazy_import.lazy_module("pickle")
 functools = lazy_import.lazy_module("functools")
-
-warnings.filterwarnings('ignore', '.*code.*', )
 
 
 def warning(function):
@@ -436,9 +432,10 @@ class wikipedia_parser:
                         if not ta:
                             self.appearences[i].extend(ta)
 
-        for i in range(len(self.appearences)):
-            self.appearences[i] = list(map(int, self.appearences[i]))
-            self.appearences[i] = list(filter(lambda x: x <= int(len(self.numbers)), self.appearences[i]))
+        num_length = int(len(self.numbers))
+        for i, app in enumerate(self.appearences):
+            self.appearences[i] = list(map(int, app))
+            self.appearences[i] = list(filter(lambda x: x <= num_length, app))
 
     def TRACKS(self):
 
@@ -447,7 +444,7 @@ class wikipedia_parser:
 
         self.data_collect = []
         for table in tables:
-            
+
             # preinit list of lists
             rows = table.findAll("tr")
             row_lengths = [len(r.findAll(['th', 'td'])) for r in rows]
@@ -540,6 +537,7 @@ class wikipedia_parser:
             self.data_collect.append(data)
 
     # TODO probably not used
+    """
     def __clear_ref__(self, data: list) -> list:
 
         # odstranenie referencii
@@ -552,6 +550,7 @@ class wikipedia_parser:
                     data[i] = d[:start].strip()
 
         return data
+    """
 
     def process_TRACKS(self):
 
@@ -665,15 +664,11 @@ class wikipedia_parser:
                 if self.disk_sep[j] <= i and i < self.disk_sep[j + 1]:
                     self.disc_num.append(j + 1)
 
+    # TODO restructure long lines
     def info_TRACKS(self):
 
-        # TODO restructure
-        def_types = ["Instrumental",
-                     "Acoustic",
-                     "Orchestral",
-                     "Live",
+        def_types = ["Instrumental", "Acoustic", "Orchestral", "Live",
                      "Piano Version"]
-        # TODO not covering capitalized versions
         unwanted = ["featuring", "feat.", "feat", "narration by", "narration"]
         to_delete = ["bonus track", "bonus"]
 
@@ -774,7 +769,6 @@ class wikipedia_parser:
         # complete everything with everything
         for i in range(len(to_complete)):
             for j in range(len(to_complete)):
-                # TODO doesnt return function probably modifies only local copy 
                 replace_N_dim(to_complete[i], to_complete[j])
 
         # sort artist alphabeticaly
@@ -790,7 +784,6 @@ class wikipedia_parser:
         # get rid of feat., faeturing ...
         for i in range(len(to_complete)):
             for un in unwanted:
-                # TODO doesnt return function probably modifies only local copy 
                 delete_N_dim(to_complete[i], un)
 
     def WIKI(self):
@@ -803,16 +796,17 @@ class wikipedia_parser:
             for r in results:
                 r = normalize_caseless(r)
                 if ("album" in r and normalize_caseless(self.album) in r):
-                    #print("found:", r)
+                    # print("found:", r)
                     return r
 
             return None
-            
 
             # TODO new method
             """
             print(results)
-            print(process.extractOne("{} {} album".format(self.album, self.band), results, scorer=fuzz.token_sort_ratio))
+            print(process.extractOne("{} {} album".format(self.album,
+                                                          self.band),
+                                     results, scorer=fuzz.token_sort_ratio))
 
             return None
             """
@@ -889,14 +883,16 @@ class wikipedia_parser:
         spaces, _ = count_spaces(self.tracks, self.bracketed_types)
 
         # write to file
-        for j in range(len(self.disks)):
+        for j, dsk in enumerate(self.disks):
 
             fname = self.debug_folder + '/tracklist_{}.txt'.format(j)
             with open(fname, 'w', encoding='utf-8') as f:
-                f.write(self.disks[j] + u'\n')
+                f.write(dsk + u'\n')
                 for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
                     if len(self.artists) > 0:
                         if i + 1 < 10:
+                            #f.write("{}.  {} {}{}{}\n".format(self.numbers[i], self.tracks[i], self.bracketed_types[i], spaces[i], ", ".join(self.artists[i]))
+
                             f.write(str(self.numbers[i]) + ".  " +
                                     self.tracks[i] + " " +
                                     self.bracketed_types[i] + spaces[i] +
@@ -927,19 +923,17 @@ class wikipedia_parser:
         with open(self.debug_folder + '/personnel.txt',
                   'w', encoding='utf8') as file:
 
-            for i in range(len(self.personnel)):
+            for pers, app in zip(self.personnel, self.appearences):
 
-                if len(self.appearences[i]) > 0:
-                    file.write(self.personnel[i] + " - ")
+                if len(app) > 0:
+                    file.write(pers + " - ")
                     temp = 50
 
-                    for k in range(len(self.appearences[i])):
-                        for j in range(len(self.disk_sep) - 1):
+                    for a in app:
+                        for j, _ in enumerate(self.disk_sep[:-1]):
 
-                            if (int(self.appearences[i][k]) >
-                                    self.disk_sep[j] and
-                                    int(self.appearences[i][k]) <
-                                    self.disk_sep[j + 1]):
+                            if (int(a) > self.disk_sep[j] and
+                                int(a) < self.disk_sep[j + 1]):  # noqa E129
                                 break
                         try:
                             j
@@ -951,16 +945,16 @@ class wikipedia_parser:
                             continue
                         if j != temp:
                             file.write(self.disks[j] + ": " +
-                                       self.numbers[int(self.appearences[i][k])])
+                                       self.numbers[int(a)])
                             temp = j
                         else:
-                            file.write(self.numbers[int(self.appearences[i][k])])
+                            file.write(self.numbers[int(a)])
 
-                        if k != len(self.appearences[i]) - 1:
+                        if k != len(app) - 1:
                             file.write(", ")
                     file.write(u'\n')
                 else:
-                    file.write(self.personnel[i] + u'\n')
+                    file.write(pers + u'\n')
 
     def print_tracklist(self):
 
@@ -1066,7 +1060,7 @@ class wikipedia_parser:
                     if (normalize_caseless(win_naming_convetion(tr)) in
                         normalize_caseless(f) and
                         normalize_caseless(self.types[i]) in
-                        normalize_caseless(f)):
+                        normalize_caseless(f)):  # noqa E129
 
                         found = True
                         break
@@ -1241,4 +1235,3 @@ class wikipedia_parser:
                 filtered_names.append(n)
 
         self.NLTK_names = filtered_names
-

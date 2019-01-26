@@ -3,6 +3,7 @@ import os
 import logging
 from package_setup import we_are_frozen
 from functools import wraps
+from utils import module_path
 
 from sync import info_exchange
 shared_vars = info_exchange()
@@ -15,6 +16,7 @@ formatter = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
                               "funcName = %(funcName)s \n\t - "
                               "%(message)s \n\t",
                               datefmt="%H:%M:%S")
+
 # loggging for app
 log_app = logging.getLogger('wiki_music_app')
 log_app.setLevel(logging.DEBUG)
@@ -47,12 +49,33 @@ fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 log_parser.addHandler(fh)
 
-from libb.wiki_parse import wikipedia_parser
+# logging for lyrics
+log_lyrics = logging.getLogger(str(os.getpid()))
+log_lyrics.setLevel(logging.DEBUG)
+fh = logging.FileHandler("logs/wiki_music_lyrics_{}.log".format(os.getpid()))
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+log_lyrics.addHandler(fh)
+
+# must be here after loggers, otherwise parser imports fail
+# because things that parser imports are not yet initialized
+from libb.wiki_parse import wikipedia_parser  # noqa E402
 parser = wikipedia_parser()
+
+# load google api key for lyrics search
+_file = os.path.join(module_path(), "files", "google_api_key.txt")
+try:
+    f = open(_file, "r")
+    google_api_key = f.read().strip()
+except Exception:
+    raise Exception("You must input Google api key. Refer to repository "
+                    "for instructions "
+                    "https://github.com/marian-code/wikipedia-music-tags")
+
 
 def exception(logger):
     """
-    A decorator that wraps the passed in function and logs 
+    A decorator that wraps the passed in function and logs
     exceptions should one occur
     """
     def real_wrapper(function):
@@ -68,6 +91,7 @@ def exception(logger):
         return wrapper
     return real_wrapper
 
+
 def synchronized(lock):
     """ Synchronization decorator. """
 
@@ -81,12 +105,3 @@ def synchronized(lock):
                 lock.release()
         return wrapper
     return real_wrapper
-
-"""
-# switch off logging when GUI is not running
-if we_are_frozen() == False:
-    log_app.propagate = False
-    log_gui.propagate = False
-    log_parser.propagate = False
-    log_tags.propagate = False
-"""

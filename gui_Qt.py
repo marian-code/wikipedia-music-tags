@@ -21,17 +21,18 @@ if __name__ == '__main__':
     from utils import clean_logs
     clean_logs()
 
-from wiki_music import log_gui, parser, shared_vars, exception, synchronized
-from wiki_music.google_images_download import google_images_download
+from wiki_music import (log_gui, parser, shared_vars,
+                        exception, synchronized)  # noqa: E402
+from wiki_music.google_images_download import google_images_download  # noqa: E402
 
 log_gui.info("started imports")
 
-from gui_Qt_base import Ui_MainWindow
-from art_dialog_base import Ui_Dialog
-from application import LYRICS, MAIN
-from libb.ID3_tags import write_tags
+from gui_Qt_base import Ui_MainWindow  # noqa: E402
+from art_dialog_base import Ui_Dialog  # noqa: E402
+from application import LYRICS, MAIN  # noqa: E402
+from libb.ID3_tags import write_tags  # noqa: E402
 from utils import (list_files, module_path, we_are_frozen, get_music_path,
-                   image_handle)
+                   image_handle)  # noqa: E402
 
 log_gui.info("finished imports")
 
@@ -613,7 +614,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
         if shared_vars.describe != " " and shared_vars.describe != "":
             if (self.remember == shared_vars.describe and
-                "Done" not in shared_vars.describe):
+                "Done" not in shared_vars.describe):  # noqa E129
                 shared_vars.describe += " ."
             self.statusbar.showMessage(shared_vars.describe)
         else:
@@ -654,7 +655,9 @@ class Window(QMainWindow, Ui_MainWindow):
     def __select_dir__(self):
 
         if we_are_frozen() is False:
-            start_dir = r"C:/Users/Marián Rynik/OneDrive/Dokumenty/Visual Studio 2017/Projects/Python/wiki_music/test_music"
+            start_dir = (r"C:/Users/Marián Rynik/OneDrive/Dokumenty"
+                         r"/Visual Studio 2017/Projects/Python"
+                         r"/wiki_music/test_music")
         else:
             start_dir = get_music_path()
         self.input_work_dir = QFileDialog.getExistingDirectory(self,

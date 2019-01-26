@@ -14,7 +14,8 @@ import distutils
 
 def generate_excludes():
     # python modules install dir
-    path = (r"C:\Program Files (x86)\Microsoft Visual Studio\Shared\Anaconda3_64\Lib\site-packages")
+    path = (r"C:\Program Files (x86)\Microsoft Visual Studio\Shared"
+            r"\Anaconda3_64\Lib\site-packages")
 
     dirs = []
     for d in os.listdir(path):
@@ -35,9 +36,14 @@ def main():
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
     # set tcl paths
-    #TODO apparently we dont need tcl lib but cx_freeze is unhappy without them
-    os.environ['TCL_LIBRARY'] = r"C:\Program Files (x86)\Microsoft Visual Studio\Shared\Anaconda3_64\tcl\tcl8.6"
-    os.environ['TK_LIBRARY'] = r"C:\Program Files (x86)\Microsoft Visual Studio\Shared\Anaconda3_64\tcl\tk8.6"
+    # TODO apparently we dont need tcl lib but cx_freeze
+    # TODO is unhappy without them
+    os.environ['TCL_LIBRARY'] = (r"C:\Program Files (x86)"
+                                 r"\Microsoft Visual Studio\Shared"
+                                 r"\Anaconda3_64\tcl\tcl8.6")
+    os.environ['TK_LIBRARY'] = (r"C:\Program Files (x86)"
+                                r"\Microsoft Visual Studio\Shared"
+                                r"\Anaconda3_64\tcl\tk8.6")
 
     # packages we want to import
     packages = [
@@ -153,7 +159,7 @@ def main():
 
     build_exe_options = {"packages": packages,
                          "excludes": excludes,
-                         'zip_include_packages':'PyQt5',
+                         'zip_include_packages': 'PyQt5',
                          "includes": [
                              "lyricsfinder",
                              "PyQt5.QtCore",

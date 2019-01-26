@@ -14,8 +14,8 @@ import distutils
 
 def generate_excludes():
     # python modules install dir
-    path = r"""C:\Program Files (x86)\Microsoft Visual Studio\
-               Shared\Anaconda3_64\Lib\site-packages"""
+    path = (r"C:\Program Files (x86)\Microsoft Visual Studio\Shared"
+            r"\Anaconda3_64\Lib\site-packages")
 
     dirs = []
     for d in os.listdir(path):
@@ -36,12 +36,12 @@ def main():
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
     # set tcl paths
-    os.environ['TCL_LIBRARY'] = r"""C:\Program Files (x86)\
-                                Microsoft Visual Studio\Shared\
-                                Anaconda3_64\tcl\tcl8.6"""
-    os.environ['TK_LIBRARY'] = r"""C:\Program Files (x86)\
-                               Microsoft Visual Studio\Shared\
-                               Anaconda3_64\tcl\tk8.6"""
+    os.environ['TCL_LIBRARY'] = (r"C:\Program Files (x86)"
+                                 r"\Microsoft Visual Studio\Shared"
+                                 r"\Anaconda3_64\tcl\tcl8.6")
+    os.environ['TK_LIBRARY'] = (r"C:\Program Files (x86)"
+                                r"\Microsoft Visual Studio\Shared"
+                                r"\Anaconda3_64\tcl\tk8.6")
 
     # packages we want to import
     packages = [
