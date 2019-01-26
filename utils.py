@@ -24,7 +24,7 @@ __all__ = ['write_roman', 'roman_num', "normalize", "normalize_caseless",
            "caseless_equal", "count_spaces", "bracket",
            "colorama_init", "json_dump", "to_bool", "win_naming_convetion",
            "we_are_frozen", "caseless_contains", "get_music_path",
-           "image_handle"]  #, "nth"]
+           "image_handle"]  # , "nth"]
 
 
 def write_roman(num: int):
@@ -71,15 +71,15 @@ def normalize_caseless(text: str) -> str:
 
 
 def caseless_equal(left: str, right: str) -> bool:
-    """ Check for normalized string equality """ 
+    """ Check for normalized string equality """
     return normalize_caseless(left) == normalize_caseless(right)
 
 
 def caseless_contains(string: str, in_text: str) -> bool:
     """ Check if string is contained in text.\n
-    string : str
+    string: str
         string to search for
-    in_text : str
+    in_text: str
         string to search in
     """
 
@@ -104,14 +104,14 @@ def nth(n: int, string: str) -> int:
 
 
 def count_spaces(tracks: list, types: list) -> (list, int):
-    """ Counts max length of elements in list and croesponding spaces for 
+    """ Counts max length of elements in list and croesponding spaces for
     each item to fit that length.\n
 
     Parameters
     ----------
-    tracks : list
+    tracks: list
         input data
-    types : list
+    types: list
         input data
     """
 
@@ -132,17 +132,18 @@ def bracket(data: list) -> list:
 
     Parameters
     ----------
-    data : list
+    data: list
         input data
     """
 
-    for i, d in enumerate(data):
+    data_tmp = []
+    for d in data:
         if len(d) > 0:
-            data[i] = "({})".format(d)
+            data_tmp.append("({})".format(d))
         else:
-            data[i] = ""
+            data_tmp.append("")
 
-    return data
+    return data_tmp
 
 
 def colorama_init():
@@ -155,7 +156,7 @@ def list_files(work_dir: str) -> list:
 
     Parameters
     ----------
-    work_dir : str
+    work_dir: str
         directory to search
     """
 
@@ -175,9 +176,9 @@ def json_dump(dict_data: list, save_dir: str):
 
     Parameters
     ----------
-    dict_data : list
+    dict_data: list
         list of dictionarie to save to disk
-    save_dir : str
+    save_dir: str
         directory to save to
     """
 
@@ -211,9 +212,9 @@ def replace_N_dim(to_replace: list, to_find: list):
 
     Parameters
     ----------
-    to_replace : list
+    to_replace: list
         Input data.
-    to_find : list
+    to_find: list
        Input data.
     """
 
@@ -234,9 +235,9 @@ def delete_N_dim(to_replace: list, to_find: str):
 
     Parameters
     ----------
-    to_replace : list
+    to_replace: list
         Input data.
-    to_find : str
+    to_find: str
        Input data.
     """
 
@@ -254,7 +255,7 @@ def get_max_len(data: list) -> int:
 
     Parameters
     ----------
-    data : list
+    data: list
         Input data.
     """
 
@@ -266,7 +267,7 @@ def to_bool(string: str) -> bool:
 
     Parameters
     ----------
-    string : str
+    string: str
         Input value.
     """
 
@@ -322,9 +323,9 @@ def win_naming_convetion(string: str, dir_name=False) -> str:
 
     Parameters
     ----------
-    string : str
+    string: str
         Input path to normalize
-    dir_name : bool
+    dir_name: bool
         whether to use aditional normalization for directories
     """
 
@@ -338,7 +339,7 @@ def flatten_set(array: list) -> set:
 
      Parameters
     ----------
-    array : list
+    array: list
         2D list to flatten
     """
 
@@ -364,12 +365,12 @@ def get_music_path() -> str:
 
 
 def get_sizes(uri):
-    """ Get file size *and* image size (None if not known) of picture on the 
+    """ Get file size *and* image size (None if not known) of picture on the
     internet without downloading it.\n
 
     Parameters
     ----------
-    uri : str
+    uri: str
         picture url addres
     """
 
@@ -400,7 +401,7 @@ def _send_to_clipboard(clip_type: int, data: BytesIO):
 
     Parameters
     ----------
-    clip_type : int
+    clip_type: int
         type of the clipboard
     data: ByteIO
         data to paste to clipboard
@@ -420,16 +421,16 @@ def image_handle(url: str, size=None, clipboad=True, path=None,
 
     Parameters
     ----------
-    url : str
+    url: str
         url addres of image
     size: tuple or None
-        tuple of desired image dimensions e.g. (500, 500). If None(default)
+        tuple of desired image dimensions e.g. (500, 500). If None (default)
         image is not resized.
     clipboard: bool
         whether to paste image to clipboard
     path: str or None
         path to save picture on disk. If None - don´t save.
-    log : logging.Logger
+    log: logging.Logger
         logger object to log messages
     """
 
