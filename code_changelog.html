@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+        <title>To-Do</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+        <link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <style>
+.task-list-item { list-style-type: none; } .task-list-item-checkbox { margin-left: -20px; vertical-align: middle; }
+</style>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        
+        <script src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+    </head>
+    <body>
+        <h1 id="to-do">To-Do</h1>
+<ul>
+<li>acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels</li>
+<li>maybe bypass the dict method of passing data to save function</li>
+<li>still no json load</li>
+<li>potentialy separate scripts from lib and make lib a standalone package!!! this should solve all sorts of problems with imports ...</li>
+<li>try Pool.starmap_Async to load lyrics while other things are done - introduces more complexity and reduces code readability - maybe not a great idea</li>
+<li>need to reevaluate speed and possibly get rid of lazy imports - sometimes they cause weird interactions</li>
+<li>frozen code doesnt run on x86 systems, need 32bit python installation to build 32bit app</li>
+<li>implement timeout errors - cannot seem to cath it probably originates from other module</li>
+<li>parser probably should have its own lock - access to its variables should be guarded - see 13.1.2019 entry in changelog</li>
+<li>freezed Qt app is too big ~ 0.65GB - most files probably not needed</li>
+<li>consider using mutagen <a href="https://mutagen.readthedocs.io/en/latest/index.html">mutagen</a> instead of pytaglib</li>
+<li>use &quot;zip_include_packages&quot; in cx_freeze setup to reduce size refer to:<br>
+<a href="https://github.com/anthony-tuininga/cx_Freeze/issues/256">https://github.com/anthony-tuininga/cx_Freeze/issues/256</a><br>
+<a href="https://stackoverflow.com/questions/27281317/cx-freeze-preventing-including-unneeded-packages">https://stackoverflow.com/questions/27281317/cx-freeze-preventing-including-unneeded-packages</a></li>
+<li>add support for PySide2 and PyQt4</li>
+<li>consired using <a href="http://audiotools.sourceforge.net/programming/index.html#">audiotools</a></li>
+<li>tcl files are not needed for PyQt version but cx_freeze includes them</li>
+<li>try extract this <a href="https://en.wikipedia.org/wiki/Aina_(band)">https://en.wikipedia.org/wiki/Aina_(band)</a></li>
+</ul>
+<h3 id="individual-problem-cases">Individual problem cases</h3>
+<ul>
+<li>load guests as in <a href="https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird">https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird</a></li>
+<li>load composer fails for <a href="https://en.wikipedia.org/wiki/Pursuit_of_the_Sun_%26_Allure_of_the_Earth">https://en.wikipedia.org/wiki/Pursuit_of_the_Sun_%26_Allure_of_the_Earth</a></li>
+<li>tracklist not found here <a href="https://en.wikipedia.org/wiki/Ethera">https://en.wikipedia.org/wiki/Ethera</a></li>
+</ul>
+<h1 id="change-log">Change Log</h1>
+<h3 id="1852019">18.5.2019</h3>
+<ul>
+<li>more strict PEP8 adherance</li>
+<li>minor bug fixes</li>
+</ul>
+<h3 id="2842019">28.4.2019</h3>
+<ul>
+<li>added for/else clauses for readability</li>
+<li>use f-strings instead of format() function</li>
+<li>parser function names to lowercase according to PEP8 guidelines</li>
+<li>merge most parts of disk write and console printing</li>
+</ul>
+<h3 id="1922019">19.2.2019</h3>
+<ul>
+<li>minor bug fixes to lyrics writing</li>
+<li>some use of f-strings</li>
+</ul>
+<h3 id="2712019">27.1.2019</h3>
+<ul>
+<li>cover art search dialog now has its own base class created in qt designer</li>
+</ul>
+<h3 id="2612019">26.1.2019</h3>
+<ul>
+<li>numerous bug fixes</li>
+<li>rewrite code in a nicer more pythonic way</li>
+<li>write docstrings in utils module</li>
+<li>new much better method of wikipedia page guessing</li>
+</ul>
+<h3 id="1612019">16.1.2019</h3>
+<ul>
+<li>changes to handling google api key</li>
+</ul>
+<h3 id="1412019">14.1.2019</h3>
+<ul>
+<li>Added cover art search with proper GUI window</li>
+</ul>
+<h3 id="1312019">13.1.2019</h3>
+<ul>
+<li>got rid of the global statements functions do not make a local copying of object as it is done with variables, they simply reference the original object</li>
+<li>major cleanup in locks - most were not needed as they where guarding atomic operations</li>
+<li>marked non-atomic operations on parser object, for now they are without lock since all operations on parser should be done serialy</li>
+<li>major reorganization of tag writing function</li>
+<li>moved wrappers to <strong>init</strong></li>
+</ul>
+<h3 id="1212019">12.1.2019</h3>
+<ul>
+<li>started test for retrieving images in tests/cover_art.py using <a href="https://github.com/hardikvasa/google-images-download#">google-images-download</a>, quite starightforward - need to make only fronted - some popup window</li>
+<li>selected pic will be resized and the copied to clipboard to paste in mp3tag</li>
+<li>do not use tineye - too complicated</li>
+</ul>
+<h3 id="1112019">11.1.2019</h3>
+<ul>
+<li>Added super-duper hack with subclassing QStandarditem so we can display full path in the detail window effortlessly</li>
+<li>codebase for gui PyQt now has ~30% less lines compared to Tkinter</li>
+<li>added button for searching for each track file</li>
+<li>use decorators for exceptions where aplicable</li>
+<li>fixed few bugs caused by differences between Tkiniter and PyQt</li>
+<li>fixed bug - writing tags overides any manually assigned files to tracks</li>
+<li>added setup_qt.py for freezing the Qt version of app</li>
+<li>some code cleanup and reorganizing</li>
+</ul>
+<h3 id="1012019">10.1.2019</h3>
+<ul>
+<li>Continue porting efforts. Much of the things can be done in similar way with only minor alterations</li>
+<li>All methods are now ported to PyQt5</li>
+<li>Need to port some remaining detailes, and fix bugs</li>
+<li>Need to come up with some workarounds or new approaches, since PyQt philosophy is different from Tkiniter, mailny it is not able to track variable changes - use signals and slots instead</li>
+<li>Extensive testing is needed</li>
+</ul>
+<h3 id="912019">9.1.2019</h3>
+<ul>
+<li>started porting to PyQt</li>
+<li>data reading from HDD and sorting in table is now working. Sorting is much more elgant than in tkinter.</li>
+<li>Need to addres the issue with PyQt not tracking variables though.</li>
+<li>This is much simpler in Tkiniter.</li>
+</ul>
+<h3 id="1892018">18.9.2018</h3>
+<ul>
+<li>composers extraction has been completely reworked should be more robust. the function now inputs data directly to tracklist_composeres list</li>
+<li>new method for offline debugging has been implemented reads the wikipedia.page object from picle file on disc</li>
+<li>implemented saving of wikipedia.page to disk with use of pickle</li>
+<li>new re_init method in sync class to avoid overwriting variables at the start of the run</li>
+<li>added signal handler to catch ctrt-C and exit gracefully</li>
+<li>removed tracklist_composeres, now we have only composers which is a 2D list</li>
+<li>started code update to PEP8 style coding</li>
+</ul>
+<h3 id="2782018">27.8.2018</h3>
+<ul>
+<li>improved, more robust methods for extracting genres and release dates</li>
+<li>implemented cover art download from wikipedia</li>
+<li>substantial improvement to wiki page selection</li>
+<li>added removing (bonus track) and similar appended strings in brackets from track names</li>
+<li>added checking track name &lt;--&gt; file name, not against whole path as this caused some wrong matching when album had the same name as one of the tracks</li>
+<li>added thorough check for band name on the found page if other band than the one that was input is found user is asked if he wants to continue the search</li>
+</ul>
+<h3 id="2682018">26.8.2018</h3>
+<ul>
+<li>added workaround when there is no page content</li>
+<li>made json dump optional</li>
+</ul>
+<h3 id="2582018">25.8.2018</h3>
+<ul>
+<li>added copying of NLTK data to build folder to <a href="http://setup.py">setup.py</a> without it program was unable to run on diferent PCs</li>
+<li>now we are able to read tracklists which are not formated in table</li>
+<li>bracket behind track is now checked for special characters like , / \ etc. which indicates that more artists are present. The string is than split on these delimiters and all are checked against aditional personnel</li>
+<li>parser now has its own logger and catches exceptions on lower level which does not halt the main thread</li>
+<li>minor tweak to ID3_tags.py .mp3 files apparently also have lyrics under LYRICS tag same as .m4a</li>
+</ul>
+<h3 id="2482018">24.8.2018</h3>
+<ul>
+<li>some further code reorganize</li>
+<li>added logger to ID3_tags</li>
+<li>hopefully all possible exceptions are now caught and subsequently sent to corespondind logger, displayed in GUI and printed to console</li>
+<li>added log_print function to <a href="http://application.py">application.py</a> which takes care of logging, printing and sending messages to gui</li>
+<li>some gui polishing, either tkinter is worth shit or I am. Working with it is really painful</li>
+</ul>
+<h3 id="2382018">23.8.2018</h3>
+<ul>
+<li>now all modeles that can be, are lazy imported</li>
+<li>some lazy imports had to be omitted as they caused some weird interactions which resulted in throwing exceptions.</li>
+</ul>
+<h3 id="2282018">22.8.2018</h3>
+<ul>
+<li>solved problems with parser import</li>
+<li>package has now new structure</li>
+</ul>
+<h3 id="2182018">21.8.2018</h3>
+<ul>
+<li>finally caught the sneaky bug causing the sys.stdout.flush() exception. It was in multiprocessing.process. stdout apparently can be None in some situations in which case flush of the stream causes attribute error. Thanks to <a href="https://stackoverflow.com/questions/37212551/cx-freeze-using-sys-stdout-flush-and-multiprocessing">https://stackoverflow.com/questions/37212551/cx-freeze-using-sys-stdout-flush-and-multiprocessing</a> I got It.</li>
+<li>the bug is probably related to multiprocessing freeze_support()</li>
+</ul>
+<h3 id="2082018">20.8.2018</h3>
+<ul>
+<li>problems with imports. parser is not imported in spawned processes</li>
+<li>added icons</li>
+</ul>
+<h3 id="1582018">15.8.2018</h3>
+<ul>
+<li>freeze support is now working for the consolee app</li>
+<li>various problems encountered with multiprocessing</li>
+<li>appending correct values sys path so we can load whole module</li>
+<li>non-trivial modifications to lyricsfinder needed in order for it´s imports to work properly</li>
+<li>gui freeze support is partialy working now there is some wild bug in lyrics module</li>
+<li><a href="http://setup.py">setup.py</a> is now one unified file for GUI and console app</li>
+<li>first implementation of logging, this prooves to be mighty usefull for debugging compiled GUI app. Need to use it moooar!!!</li>
+</ul>
+<h3 id="1482018">14.8.2018</h3>
+<ul>
+<li>various bug fixes</li>
+<li>improved search for composer names</li>
+<li>started work on freeze support, cx_freeze was chosen</li>
+</ul>
+<h3 id="1382018">13.8.2018</h3>
+<ul>
+<li>implemented advanced sorting of columns in Tkinter</li>
+<li>lyrics download is now parallel. This gives 1.5x - 2x speed</li>
+<li>GUI now displayes in the title what is going on</li>
+<li>various bug fixes</li>
+<li>implemented sorting when reading data from disc</li>
+</ul>
+<h3 id="1282018">12.8.2018</h3>
+<ul>
+<li>separate lyrics method is now working</li>
+<li>some wild spaces flying around in entries with multiple items separated by commas</li>
+<li>first basic concept of sorting is implemented</li>
+<li>reload from disc now works</li>
+<li>interactive console mode abandoned in favour of gui</li>
+</ul>
+<h3 id="1182018">11.8.2018</h3>
+<ul>
+<li>separate method for downloading lyrics only</li>
+<li>file matching to song titles repaired</li>
+</ul>
+<h3 id="272018">2.7.2018</h3>
+<ul>
+<li>started to develop binding between console app and gui. Its a mess, need to research other methods</li>
+</ul>
+<h3 id="2662018">26.6.2018</h3>
+<ul>
+<li>we have working input there is no output yet</li>
+</ul>
+<h3 id="2462018">24.6.2018</h3>
+<ul>
+<li>works on gui started. Using Tkinter</li>
+</ul>
+<h3 id="2262018">22.6.2018</h3>
+<ul>
+<li>testing of recursive functions to use in parser.COMPLETE method for simplicity, less lines and maybe redability :D</li>
+<li>minor tweaks to how CDs are identified</li>
+<li>artists in columns after tracks are now loaded to artist if header has no corresponding label or to composers if one of the defined labels is found</li>
+</ul>
+<h3 id="2162018">21.6.2018</h3>
+<ul>
+<li>added lazy loading for better startup speed</li>
+<li>addeed some multiprocessing and threading to further impove speed mainly to lyrics dowloading</li>
+<li>some other optimizations and code cleanup</li>
+<li>wikipedia parser class is now loded from <strong>init</strong>.py</li>
+</ul>
+<h3 id="2062018">20.6.2018</h3>
+<ul>
+<li>added json dum so we dont have to dwnolad data all over again</li>
+<li>all variables are now stored in parser object</li>
+<li>fixed ordering of artists</li>
+</ul>
+<h3 id="1752018">17.5.2018</h3>
+<ul>
+<li>compiled taglib, pytaglib and lyricsfinder</li>
+<li>preparations for tag writing and lyrics search</li>
+<li>experiments with GUI libraries. Qt - too complicated, Tkinter will be used</li>
+<li>read disk label for every disk which is in separate table</li>
+<li>use NLTK for extracting composers, considerably better results</li>
+</ul>
+<h3 id="1452018">14.5.2018</h3>
+<ul>
+<li>split code to more files for better orientation</li>
+<li>prepares for GUI</li>
+</ul>
+<h3 id="1052018">10.5.2018</h3>
+<ul>
+<li>starting to implement fuzzywuzzy</li>
+</ul>
+<h3 id="1822018">18.2.2018</h3>
+<ul>
+<li>added ability to search darklyrics to lyricsfinder module + minor changes</li>
+<li>more work done in <a href="http://lyrics.py">lyrics.py</a> a ID3_tags.py</li>
+</ul>
+<h3 id="222018">2.2.2018</h3>
+<ul>
+<li>fixed bug in ordering artists when list length was = 0</li>
+<li>added automatic opening of the folder with output files</li>
+</ul>
+<h3 id="1912018">19.1.2018</h3>
+<ul>
+<li>make automatic test on some ensemble</li>
+<li>started to develop interactive console mode</li>
+</ul>
+<h3 id="912018">9.1.2018</h3>
+<ul>
+<li>fixed - sometimes composer not found</li>
+<li>fixed - sometimes in personel there is bracket at the end</li>
+<li>added extracting composers from bracked following track name</li>
+<li>added extraction of instrumental, acoustic, orchestral ... track types</li>
+</ul>
+<h3 id="20122017">20.12.2017</h3>
+<ul>
+<li>added extraction of release date and genre from wikipedia</li>
+<li>modifications to lyricsfinder. If google custom search does not work then addresses are generated according to template</li>
+</ul>
+<h3 id="septemder-2017">Septemder 2017</h3>
+<ul>
+<li>development start</li>
+</ul>
+
+    </body>
+    </html>

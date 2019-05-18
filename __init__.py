@@ -59,8 +59,8 @@ log_lyrics.addHandler(fh)
 
 # must be here after loggers, otherwise parser imports fail
 # because things that parser imports are not yet initialized
-from libb.wiki_parse import wikipedia_parser  # noqa E402
-parser = wikipedia_parser()
+from libb.wiki_parse import WikipediaParser  # noqa E402
+parser = WikipediaParser()
 
 # load google api key for lyrics search
 _file = os.path.join(module_path(), "files", "google_api_key.txt")

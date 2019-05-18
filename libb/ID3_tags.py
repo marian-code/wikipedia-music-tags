@@ -2,33 +2,54 @@ import package_setup
 import taglib
 from colorama import Fore, init
 from wiki_music import log_tags, shared_vars
+import functools
 
 init(convert=True)
 
 
+def exception(function):
+    """
+    A decorator that wraps the passed in function and logs
+    exceptions should one occur
+    """
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except Exception as e:
+            e = f"Unhandled golbal exception: {e}"
+            print(e)
+            log_tags.exception(e)
+            shared_vars.exception = e
+
+    return wrapper
+
+
+@exception
 def write_tags(data: dict, lyrics_only):
 
     def write(tag, value=None):
         try:
             if value is None:
                 value = data[tag]
-
             if isinstance(value, list):
-                value = ", ".join(value)
-
+                if len(value) == 1:
+                    value = value[0]
+                else:
+                    value = ", ".join(value)
             if isinstance(value, (int, float)):
                 value = str(value)
 
             song.tags[tag] = value
         except AttributeError as e:
             print(Fore.LIGHTRED_EX, "Probably encoding error!", Fore.RESET)
-            print("Couldn´t write tag {} to file {}".format(tag, data["file"]))
+            print(f'Couldn´t write tag {tag} to file {data["file"]}')
             print(e)
             shared_vars.exception = e
             log_tags.exception(e)
         except Exception as e:
             print(Fore.RED, "Error in writing tags!", Fore.RESET)
-            print("Couldn´t write tag {} to file {}".format(tag, data["file"]))
+            print(f'Couldn´t write tag {tag} to file {data["file"]}')
             print(e)
             shared_vars.exception = e
             log_tags.exception(e)
@@ -38,24 +59,34 @@ def write_tags(data: dict, lyrics_only):
               "does not have matching file!" + Fore.RESET)
         return 0
 
-    print(data["file"])
-
     if lyrics_only is False:
-        print(Fore.GREEN + "Writing tags to: " + Fore.RESET, data["file"])
+        print(Fore.GREEN + "Writing tags to:" + Fore.RESET, data["file"])
     else:
-        print(Fore.GREEN + "Writing lyrics to: " + Fore.RESET, data["file"])
+        print(Fore.GREEN + "Writing lyrics to:" + Fore.RESET, data["file"])
 
     try:
         song = taglib.File(data["file"])
     except Exception as e:
-        print("Couldn´t open file {} for writing".format(data["file"]))
+        print(f'Couldn´t open file {data["file"]} for writing')
         print(e)
         shared_vars.exception = e
         log_tags.exception(e)
 
     if lyrics_only is False:
 
-        # easy tags
+        # preprocess data
+        if isinstance(data["ARTIST"], list):
+            data["ARTIST"].append(data["ALBUMARTIST"])
+            data["ARTIST"] = sorted(list(set(data["ARTIST"])))
+        elif isinstance(data["ARTIST"], str):
+            if data["ALBUMARTIST"] != data["ARTIST"] and data["ARTIST"] != "":
+                data["ARTIST"] = f'{data["ALBUMARTIST"]}, {data["ARTIST"]}'
+            else:
+                data["ARTIST"] = data["ALBUMARTIST"]
+        else:
+            raise NotImplementedError("Unsupported data type for ARTIST tag")
+
+        # write tags
         write("ALBUM")
         write("ALBUMARTIST")
         write("COMPOSER")
@@ -63,35 +94,19 @@ def write_tags(data: dict, lyrics_only):
         write("DISCNUMBER")
         write("GENRE")
         write("COMMENT", "")
-        write("TITLE", data["TITLE"] + " " + data["type"])
+        write("TITLE", f'{data["TITLE"]} {data["type"]}')
         write("TRACKNUMBER")
-
-        # complicated tags
-        if isinstance(data["ARTIST"], list):
-            data["ARTIST"].append(data["ALBUMARTIST"])
-            write("ARTIST", sorted(list(set(data["ARTIST"]))))
-        elif isinstance(data["ARTIST"], str):
-            if data["ARTIST"] == "" or data["ARTIST"] == " ":
-                write("ALBUMARTIST")
-            elif data["ALBUMARTIST"] != data["ARTIST"]:
-                write("ARTIST", "{}, {}".format(data["ALBUMARTIST"],
-                                                data["ARTIST"]))
-            else:
-                song.tags["ARTIST"] = [data["ALBUMARTIST"]]
-        else:
-            raise NotImplementedError("Unsupported data type for ARTIST tag")
-    else:
-        pass
+        write("ARTIST")
 
     if ".m4a" in data["file"] or ".mp3" in data["file"]:
         write("LYRICS")
     else:
-            write("UNSYNCEDLYRICS", data["LYRICS"])
+        write("UNSYNCEDLYRICS", data["LYRICS"])
 
     try:
         song.save()
     except Exception as e:
-        print("Couldn´t save file {}".format(data["file"]))
+        print(f'Couldn´t save file {data["file"]}')
         print(e)
         shared_vars.exception = e
         log_tags.exception(e)
@@ -99,6 +114,7 @@ def write_tags(data: dict, lyrics_only):
         print(Fore.GREEN + "Tags written succesfully!", Fore.RESET)
 
 
+@exception
 def read_tags(song_file: str):
 
     def read_tag(TAG_ID):

@@ -113,7 +113,7 @@ def main():
     # !This only needs to run for the first time
     # generate_excludes()
 
-    with open("README", 'r') as f:
+    with open("README.md", 'r') as f:
         long_description = f.read()
 
     with open(r"files\excludes_qt.txt", "r") as f:

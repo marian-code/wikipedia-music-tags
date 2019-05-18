@@ -11,7 +11,7 @@ from threading import Thread
 from PyQt5.QtWidgets import (QMainWindow, QFileDialog, QApplication,
                              QTableWidgetItem, QMessageBox, QAbstractItemView,
                              QInputDialog, QLabel, QVBoxLayout, QTableWidget,
-                             QWidget, QDialog, QStatusBar)
+                             QWidget, QDialog, QStatusBar, QHBoxLayout)
 from PyQt5.QtGui import (QStandardItemModel, QStandardItem, QImage, QPixmap,
                          QIcon, QPainter)
 from PyQt5.QtCore import (Qt, QSortFilterProxyModel, QTimer, pyqtProperty,
@@ -25,16 +25,17 @@ from wiki_music import (log_gui, parser, shared_vars,
                         exception, synchronized)  # noqa: E402
 from wiki_music.google_images_download import google_images_download  # noqa: E402
 
-log_gui.info("started imports")
+log_gui.debug("started imports")
 
 from gui_Qt_base import Ui_MainWindow  # noqa: E402
 from art_dialog_base import Ui_Dialog  # noqa: E402
+from cover_art_base import Ui_cover_art_search  # noqa: E402
 from application import LYRICS, MAIN  # noqa: E402
 from libb.ID3_tags import write_tags  # noqa: E402
 from utils import (list_files, module_path, we_are_frozen, get_music_path,
                    image_handle)  # noqa: E402
 
-log_gui.info("finished imports")
+log_gui.debug("finished imports")
 
 
 class NumberSortModel(QSortFilterProxyModel):
@@ -260,7 +261,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.actionAbout.triggered.connect(self.__do_nothing__)
         self.actionGit.triggered.connect(self.__do_nothing__)
 
-        if we_are_frozen() is True:
+        if we_are_frozen():
             # show switches only if not frozen
             self.offline_debbug_sw.hide()
             self.json_write_sw.hide()
@@ -309,27 +310,32 @@ class Window(QMainWindow, Ui_MainWindow):
 
     # methods for data transfer between gui <--> parser object
     def __parser_to_gui__(self):
-        # TODO non-atomic
-        longest = len(parser.numbers)
 
-        numbers = self.__spawn_rows_cols__(parser.numbers, longest)
-        tracks = self.__spawn_rows_cols__(parser.tracks, longest)
-        types = self.__spawn_rows_cols__(parser.types, longest)
-        disc_num = self.__spawn_rows_cols__(parser.disc_num, longest)
-        artists = self.__spawn_rows_cols__(parser.artists, longest)
-        lyrics = self.__spawn_rows_cols__(parser.lyrics, longest)
-        composers = self.__spawn_rows_cols__(parser.composers, longest)
-        files = self.__spawn_rows_cols__(parser.files, longest)
+        self.genre_entry.setText(parser.selected_genre)
+        self.year_entry.setText(parser.release_date)
+        self.album_entry.setText(parser.album)
+        self.band_entry.setText(parser.band)
+
+        numbers = self.__spawn_rows_cols__(parser.numbers)
+        tracks = self.__spawn_rows_cols__(parser.tracks)
+        types = self.__spawn_rows_cols__(parser.types)
+        disc_num = self.__spawn_rows_cols__(parser.disc_num)
+        artists = self.__spawn_rows_cols__(parser.artists)
+        lyrics = self.__spawn_rows_cols__(parser.lyrics)
+        composers = self.__spawn_rows_cols__(parser.composers)
+        files = self.__spawn_rows_cols__(parser.files)
+
+        # on first display in gui there are no lyrics yet
+        if not lyrics:
+            for _ in numbers:
+                lyrics.append("")
 
         # files must always be at the last place because it uses custom
         # QstandardItem - refer to __update_model__ function
         return [numbers, tracks, types, artists, composers, disc_num, lyrics,
                 files]
 
-    def __spawn_rows_cols__(self, data, longest, cut=False):
-
-        if len(data) == 0:
-            return [""]*longest
+    def __spawn_rows_cols__(self, data):
 
         temp = []
         for i in range(len(data)):
@@ -346,27 +352,27 @@ class Window(QMainWindow, Ui_MainWindow):
         return temp
 
     def __gui_to_parser__(self):
-        # TODO non-atomic
         parser.selected_genre = self.genre_entry.text()
         parser.release_date = self.year_entry.text()
         parser.album = self.album_entry.text()
         parser.band = self.band_entry.text()
 
-        parser.numbers = self.__unspawn_rows_cols__(0, separate=False)
-        parser.tracks = self.__unspawn_rows_cols__(1, separate=False)
-        parser.types = self.__unspawn_rows_cols__(2)
-        parser.disc_num = self.__unspawn_rows_cols__(5, separate=False)
-        parser.artists = self.__unspawn_rows_cols__(3)
-        parser.lyrics = self.__unspawn_rows_cols__(6, separate=False)
-        parser.composers = self.__unspawn_rows_cols__(4)
-        parser.files = self.__unspawn_rows_cols__(7, separate=False)
+        # TODO non-atomic
+        parser.numbers = self.__unspawn_rows_cols__(0)
+        parser.tracks = self.__unspawn_rows_cols__(1)
+        parser.types = self.__unspawn_rows_cols__(2, separate=True)
+        parser.disc_num = self.__unspawn_rows_cols__(5)
+        parser.artists = self.__unspawn_rows_cols__(3, separate=True)
+        parser.lyrics = self.__unspawn_rows_cols__(6)
+        parser.composers = self.__unspawn_rows_cols__(4, separate=True)
+        parser.files = self.__unspawn_rows_cols__(7)
 
-    def __unspawn_rows_cols__(self, col, separate=True):
+    def __unspawn_rows_cols__(self, col, separate=False):
 
         temp = []
         for row in range(self.table.rowCount()):
             temp.append(self.table.item(row, col).text())
-            if "," in temp[row] and separate is True:
+            if "," in temp[row] and separate:
                 temp[row] = [x.strip() for x in temp[row].split(",")]
 
         return temp
@@ -388,7 +394,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.lbl = QLabel(self)
         self.lbl.setPixmap(QPixmap(image))
 
-        if self.picture_visible is False:
+        if not self.picture_visible:
             self.picture_layout.addWidget(self.lbl)
             self.picture_visible = True
 
@@ -402,21 +408,13 @@ class Window(QMainWindow, Ui_MainWindow):
 
         n_entries = len(parser.numbers)
 
-        if n_entries != 0:
+        if n_entries > 0:
 
-            log_gui.info("parser to gui")
-
-            self.genre_entry.setText(parser.selected_genre)
-            self.year_entry.setText(parser.release_date)
-            self.album_entry.setText(parser.album)
-            self.band_entry.setText(parser.band)
-
+            log_gui.debug("parser to gui")
             # TODO non-atomic
-            self.__parser_to_gui__()
             text_var = self.__parser_to_gui__()
 
-            log_gui.info("init entries")
-
+            log_gui.debug("init entries")
             self.table.setRowCount(n_entries)
             for row in range(n_entries):
                 for col, tv in enumerate(text_var):
@@ -431,11 +429,14 @@ class Window(QMainWindow, Ui_MainWindow):
                     self.table.setItem(row, col, item)
 
             self.tableView.update()
+            for col, _ in enumerate(text_var):
+                # resize all but the column with lyrics
+                if col != len(text_var) - 2:
+                    self.tableView.resizeColumnToContents(col)
 
+            log_gui.debug("init entries done")
         else:
-            QTimer.singleShot(200, self.__update_model__)
-
-        log_gui.info("init entries done")
+            QTimer.singleShot(100, self.__update_model__)
 
     @exception(log_gui)
     def __detail__(self, proxy_index):
@@ -464,7 +465,7 @@ class Window(QMainWindow, Ui_MainWindow):
             self.file_detail
         ]
 
-        log_gui.info("connect detail function")
+        log_gui.debug("connect detail function")
 
         for col, e in enumerate(entries):
             if e is not None:
@@ -507,17 +508,17 @@ class Window(QMainWindow, Ui_MainWindow):
             else:
                 return False
 
-        if shared_vars.wait is True:
+        if shared_vars.wait:
 
             if shared_vars.switch == "genres":
 
-                log_gui.info("initialize question window")
+                log_gui.debug("initialize question window")
                 # TODO non-atomic
-                if len(parser.genres) == 0:
+                if not parser.genres:
                     text, ok = QInputDialog.getText(self,
                                                     "Text Input Dialog",
                                                     "Input genre:")
-                    if ok is True:
+                    if ok:
                         parser.selected_genre = text
                     else:
                         parser.selected_genre = "N/A"
@@ -527,16 +528,16 @@ class Window(QMainWindow, Ui_MainWindow):
                                                     "List of genres",
                                                     parser.genres, 0,
                                                     False)
-                    if ok is True:
+                    if ok:
                         parser.selected_genre = item
                     else:
                         parser.selected_genre = "N/A"
 
-            if shared_vars.load is True:
+            if shared_vars.load:
                 QTimer.singleShot(0, self.__update_model__)
 
             if shared_vars.switch == "comp":
-                log_gui.info("ask to copy composers")
+                log_gui.debug("ask to copy composers")
                 msg = QMessageBox(QMessageBox.Question, "Question",
                                   "Do you want to copy artists to composers?",
                                   QMessageBox.Yes | QMessageBox.No)
@@ -544,7 +545,7 @@ class Window(QMainWindow, Ui_MainWindow):
                 shared_vars.assign_artists = msg_to_bool(msg.exec_())
 
             if shared_vars.switch == "lyrics":
-                log_gui.info("ask to find lyrics")
+                log_gui.debug("ask to find lyrics")
                 msg = QMessageBox(QMessageBox.Question, "Question",
                                   "Do you want to find lyrics?",
                                   QMessageBox.Yes | QMessageBox.No)
@@ -555,14 +556,14 @@ class Window(QMainWindow, Ui_MainWindow):
             shared_vars.switch = None
             shared_vars.wait = False
 
-        if shared_vars.done is False:
+        if not shared_vars.done:
             self.conditions_timer.start(200)
         else:
             # announce that gui has reached the barrier
-            log_gui.info("gui reached barrier")
+            log_gui.debug("gui reached barrier")
             shared_vars.barrier.wait()
 
-            log_gui.info("start __update_model__ function")
+            log_gui.debug("start __update_model__ function")
             QTimer.singleShot(0, self.__update_model__)
             self.__display_image__()
 
@@ -624,7 +625,7 @@ class Window(QMainWindow, Ui_MainWindow):
     @exception(log_gui)
     def __save_all__(self, lyrics_only):
         # TODO non-atomic
-        if len(parser.numbers) == 0:
+        if not parser.numbers:
             QMessageBox(QMessageBox.Information, "Info",
                         "You must run the search first!").exec_()
         else:
@@ -636,7 +637,7 @@ class Window(QMainWindow, Ui_MainWindow):
             self.__gui_to_parser__()
             dict_data, writable = parser.data_to_dict(reassign_files=False)
 
-            if writable is True:
+            if writable:
                 for data in dict_data:
                     write_tags(data, lyrics_only=lyrics_only)
             else:
@@ -654,7 +655,7 @@ class Window(QMainWindow, Ui_MainWindow):
     @exception(log_gui)
     def __select_dir__(self):
 
-        if we_are_frozen() is False:
+        if not we_are_frozen():
             start_dir = (r"C:/Users/Marián Rynik/OneDrive/Dokumenty"
                          r"/Visual Studio 2017/Projects/Python"
                          r"/wiki_music/test_music")
@@ -706,6 +707,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
             # TODO non-atomic
             self.__init_parser__()
+            parser.files = list_files(parser.work_dir)
 
             self.__start_checkers__()
 
@@ -735,7 +737,7 @@ class Window(QMainWindow, Ui_MainWindow):
                               args=(self.input_work_dir, True))
             main_app.start()
 
-            log_gui.info("lyrics search started")
+            log_gui.debug("lyrics search started")
 
     @exception(log_gui)
     def __cover_art_search__(self):
@@ -759,10 +761,12 @@ class Window(QMainWindow, Ui_MainWindow):
                         break
                     """
                     self.image_table.add_pic(dim, t)
+                    # TODO not working
+                    image_table_w.progressBar.setValue(new_count / 20)
 
                 self.old_count = new_count
 
-            if self.image_table.isVisible() is False:
+            if not self.cover_art_search.isVisible():
                 self.imd.exit = True
             else:
                 QTimer.singleShot(100, _async_search)
@@ -785,24 +789,35 @@ class Window(QMainWindow, Ui_MainWindow):
             "thumbnail": True
         }
 
-        # TODO add statusbar with load more button
-        # TODO add button to open browser
-        self.image_table = ImageTable()
-        self.image_table.resize(1000, 700)
-        self.image_table.setWindowTitle("Wiki Music - Cover Art search")
-        self.image_table.setWindowIcon(QIcon(os.path.join(module_path(),
-                                                          "files/icon.ico")))
-        # self.image_table.setStatusBar(QStatusBar())
-        # ! X in app doesnt necesarilly mean destroyed() might be only hidden
-        # self.image_table.destroyed.connect(self.__do_nothing__)
-
-        self.image_table.show()
-        self.image_table.cellClicked.connect(self.__select_picture__)
-
+        # init thread that preforms the search
         self.image_search_thread = Thread(target=self.imd.download,
                                           args=(arguments, ))
         self.image_search_thread.daemon = True
         self.image_search_thread.start()
+
+        # init base dialog class
+        self.cover_art_search = QDialog()
+        self.cover_art_search.setWindowTitle("Wiki Music - Cover Art search")
+        self.cover_art_search.setWindowIcon(QIcon(os.path.join(module_path(),
+                                                               "files",
+                                                               "icon.ico")))
+
+        # int table for showing images
+        self.image_table = ImageTable()
+        self.image_table.cellClicked.connect(self.__select_picture__)
+
+        # setup dialog layout and connect to button signals
+        image_table_w = Ui_cover_art_search()
+        image_table_w.setupUi(self.cover_art_search)
+        image_table_w.verticalLayout.insertWidget(0, self.image_table)
+        image_table_w.query.setText(query)
+        image_table_w.load_button.clicked.connect(self.__do_nothing__)
+        image_table_w.search_button.clicked.connect(self.__do_nothing__)
+        image_table_w.browser_button.clicked.connect(self.__do_nothing__)
+        image_table_w.cancel_button.clicked.connect(self.__do_nothing__)
+        image_table_w.progressBar.setValue(0)
+
+        self.cover_art_search.show()
 
         QTimer.singleShot(0, _async_search)
 
@@ -824,7 +839,8 @@ class Window(QMainWindow, Ui_MainWindow):
             cancel = True
 
         # TODO when not nice round numbers - fails because of recursion
-        # these two methods keep calling each other
+        # TODO these two methods keep calling each other
+        # TODO make some function that corrects this
         @exception(log_gui)
         def _aspect_ratio_connect_X(dim_Y):
             value = int(original_ratio * dim_Y)
@@ -878,10 +894,10 @@ class Window(QMainWindow, Ui_MainWindow):
 
         dialog_window.exec_()
 
-        if cancel is True:
+        if cancel:
             return 0
 
-        self.image_table.close()
+        self.cover_art_search.close()
         self.imd.exit = True
         self.__display_image__(self.imd.thumbs[index])
 
@@ -892,7 +908,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if dim == size:
             size = None
 
-        if _file is True:
+        if _file:
             _file = os.path.join(self.input_work_dir, "Folder.jpg")
 
         shared_vars.describe = "Downloading full size cover art"
@@ -911,7 +927,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if size is not None:
             shared_vars.describe = "Cover art resized to: {}x{}".format(*size)
             log_gui.info("Cover art resized to: {}x{}".format(*size))
-        if clipboard is True:
+        if clipboard:
             shared_vars.describe = "Cover art copied to clipboard"
             log_gui.info("Cover art copied to clipboard")
         if _file is not None:
@@ -976,7 +992,7 @@ class Window(QMainWindow, Ui_MainWindow):
         shared_vars.offline_debbug = self.offline_debbug_sw.isChecked()
 
     def __do_nothing__(self):
-        log_gui.info("Not implemented yet")
+        log_gui.warning("Not implemented yet")
         QMessageBox(QMessageBox.Warning,
                     "Info", "Not implemented yet!").exec_()
 

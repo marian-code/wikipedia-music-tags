@@ -148,6 +148,7 @@ There are some TODOs scattered around the code and created issues so thats a goo
 ```
 art_dialog_base.ui
 Qt_layout.ui
+cover_art_base.ui
 ```
 The coresponding python files:
 ```

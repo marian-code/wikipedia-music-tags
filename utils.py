@@ -138,7 +138,7 @@ def bracket(data: list) -> list:
 
     data_tmp = []
     for d in data:
-        if len(d) > 0:
+        if d:
             data_tmp.append("({})".format(d))
         else:
             data_tmp.append("")
@@ -189,9 +189,9 @@ def json_dump(dict_data: list, save_dir: str):
 
 
 def _find_N_dim(array, template):
-    # hepler function for replace_N_dim and delete_N_dim
+    # hepler function for complete_N_dim and replace_N_dim
 
-    if isinstance(array, list) is True:
+    if isinstance(array, list):
         for a in array:
             ret = _find_N_dim(a, template)
             if ret is not None:
@@ -203,31 +203,31 @@ def _find_N_dim(array, template):
                 return array
 
 
-def replace_N_dim(to_replace: list, to_find: list):
-    """ `to_replace` is a list which elements are not complete. Changes to this
+def complete_N_dim(to_complete: list, to_find: list):
+    """ `to_complete` is a list which elements are not complete. Changes to this
     list are made in-place.\n
     `to_find` argument is the list which contains full strings.\n
-    All uncomplete strings in to_replace will be replaced by their
+    All uncomplete strings in to_complete will be replaced by their
     longer version from to_find.\n
 
     Parameters
     ----------
-    to_replace: list
+    to_complete: list
         Input data.
     to_find: list
        Input data.
     """
 
-    if isinstance(to_replace, list) is True:
-        for i in range(len(to_replace)):
-            ret = replace_N_dim(to_replace[i], to_find)
+    if isinstance(to_complete, list):
+        for i, _ in enumerate(to_complete):
+            ret = complete_N_dim(to_complete[i], to_find)
             if ret is not None:
-                to_replace[i] = ret
+                to_complete[i] = ret
     else:
-        return _find_N_dim(to_find, to_replace)
+        return _find_N_dim(to_find, to_complete)
 
 
-def delete_N_dim(to_replace: list, to_find: str):
+def replace_N_dim(to_replace: list, to_find: str):
     """ `to_replace` is a list which elements contain unwanted strings.
     Changes to this list are made in-place.\n
     `to_find` argument is the unwanted string. All unwanted strings will be
@@ -241,13 +241,41 @@ def delete_N_dim(to_replace: list, to_find: str):
        Input data.
     """
 
-    if isinstance(to_replace, list) is True:
-        for i in range(len(to_replace)):
-            ret = delete_N_dim(to_replace[i], to_find)
+    if isinstance(to_replace, list):
+        for i, _ in enumerate(to_replace):
+            ret = replace_N_dim(to_replace[i], to_find)
             if ret is not None:
                 to_replace[i] = ret
     else:
         return re.sub(to_find, "", to_replace).strip()
+
+
+def delete_N_dim(to_delete: list, to_find: list):
+    """ `to_delete` is a list which contains undesired elements.
+    Changes to this list are made in-place.\n
+    `to_find` argument is the list which contains full strings.\n
+    All elements of to_delete with strings matching one of to_find will be
+    deleted.\n
+
+    Parameters
+    ----------
+    to_delete: list
+        Input data.
+    to_find: list
+       Input data.
+    """
+
+    if isinstance(to_delete, list):
+        if to_delete:
+            if isinstance(to_delete[0], list):
+                for i, td in enumerate(to_delete):
+                    to_delete[i] = delete_N_dim(td, to_find)
+            else:
+                return [td for td in to_delete if td not in to_find]
+        else:
+            return []
+    else:
+        raise TypeError("to_delete must be a list instance")
 
 
 def get_max_len(data: list) -> int:
@@ -329,7 +357,7 @@ def win_naming_convetion(string: str, dir_name=False) -> str:
         whether to use aditional normalization for directories
     """
 
-    if dir_name is True:  # windows doesn´t like folders with dots at the end
+    if dir_name:  # windows doesn´t like folders with dots at the end
         string = re.sub(r"\.+$", "", string)
     return re.sub(r"\<|\>|\:|\"|\/|\\|\||\?|\*", "", string)
 
@@ -445,6 +473,7 @@ def image_handle(url: str, size=None, clipboad=True, path=None,
         # get size down to ~300Kb
         disk_size = sys.getsizeof(file_stream)/1024
         _format = Image.registered_extensions()[".jpg"]
+        """
         q = 95
         while disk_size > 300:
             # TODO this is good, but how do the streams work?
@@ -458,11 +487,12 @@ def image_handle(url: str, size=None, clipboad=True, path=None,
                 if log is not None:
                     log.warning("Couldn´t reduce the size under 300 Kb")
                 break
+        """
 
         if path is not None:
             image.save(path, )
 
-        if clipboad is True:
+        if clipboad:
             output = BytesIO()
             image.convert("RGB").save(output, "BMP")
             data = output.getvalue()[14:]

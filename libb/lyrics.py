@@ -53,7 +53,6 @@ def save_lyrics():
 
     if len(parser.tracks) > 1:
 
-        t2 = time.time()
         arg = []
         # starmap takes list of tupples for argument
         for t in parser.tracks:
@@ -64,28 +63,22 @@ def save_lyrics():
 
         pool.close()
         pool.join()
-        t3 = time.time()
-        print("parallel part:", t3 - t2, "s")
 
     else:
-        t2 = time.time()
-        for i, tr in enumerate(parser.tracks):
-            if i == duplicates[i]:
+        for i, (tr, dp) in enumerate(zip(parser.tracks, duplicates)):
+            if i == dp:
                 lyrics_temp.append(get_lyrics(parser.band, parser.album,
                                               tr, google_api_key))
 
-        t3 = time.time()
-        print("serial part:", t3 - t2, "s")
-
     index = 0
-    for i, _ in enumerate(parser.lyrics):
-        if i == duplicates[i]:
+    for i, dp in enumerate(duplicates):
+        if i == dp:
             parser.lyrics[i] = lyrics_temp[index]
             index += 1
 
-    for i, _ in enumerate(parser.lyrics):
-        if parser.lyrics[i] is None:
-            parser.lyrics[i] = parser.lyrics[duplicates[i]]
+    for i, (pl, dp) in enumerate(zip(parser.lyrics, duplicates)):
+        if pl is None:
+            parser.lyrics[i] = parser.lyrics[dp]
 
 
 @exception(log_lyrics)

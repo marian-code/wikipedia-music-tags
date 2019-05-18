@@ -1,10 +1,12 @@
 import package_setup
 import lazy_import
+from threading import Lock
 
-from utils import (colorama_init, count_spaces, delete_N_dim, json_dump,
-                   list_files, normalize, normalize_caseless, replace_N_dim,
-                   write_roman, bracket, win_naming_convetion,
+from utils import (colorama_init, count_spaces, replace_N_dim, json_dump,
+                   list_files, normalize, complete_N_dim,
+                   write_roman, bracket, win_naming_convetion, delete_N_dim,
                    caseless_contains, flatten_set)
+from utils import normalize_caseless as nc
 
 from fuzzywuzzy import process
 from wiki_music import shared_vars, log_parser
@@ -47,7 +49,7 @@ def warning(function):
     return wrapper
 
 
-class wikipedia_parser:
+class WikipediaParser:
 
     def __init__(self):
         colorama_init()
@@ -57,13 +59,11 @@ class wikipedia_parser:
         self.appearences = []
         self.artists = []
         self.band = None
-        self.bracketed_types = []
         self.composers = []
         self.contents = []
         self.disc_num = []
         self.disk_sep = []
         self.disks = []
-        self.files = []
         self.formated_html = None
         self.genres = None
         self.header = []
@@ -78,10 +78,13 @@ class wikipedia_parser:
         self.soup = None
         self.sub_types = []
         self.subtracks = []
-        self.composers = []
         self.tracks = []
         self.types = []
         self.cover_art = None
+
+        # private
+        self._bracketed_types = []
+        self._files = []
 
         # misc
         self.url = None
@@ -92,60 +95,103 @@ class wikipedia_parser:
         self.debug_folder = None
         self.cover_art_file = None
 
-        # TODO control
-        # self.lock = Lock()
+        # control
+        self.lock = Lock()
+
+    @property
+    def bracketed_types(self):
+        if not self._bracketed_types:
+            self._bracketed_types = bracket(self.types)
+            return self._bracketed_types
+        else:
+            return self._bracketed_types
+
+    @property
+    def files(self):
+        if len(self._files) < len(self.tracks):
+            self.reassign_files()
+
+        return self._files
+
+    @files.setter
+    def files(self, files):
+        self._files = files
+
+    # TODO try magic methods
+    def __setitem__(self, key, item):
+        self.lock.acquire()
+        attrs = [self.selected_genre, self.release_date, self.album, self.band,
+                 self.numbers, self.tracks, self.types, self.disc_num,
+                 self.artists, self.lyrics, self.composers, self.files]
+
+        for i, itm in enumerate(item):
+            if isinstance(itm, list):
+                attrs[i][key] = itm
+            else:
+                attrs[i] = itm
+        self.lock.release()
+
+    def __getitem__(self, key):
+        return [self.selected_genre, self.release_date, self.album, self.band,
+                self.numbers[key], self.tracks[key], self.types[key],
+                self.disc_num[key], self.artists[key], self.lyrics[key],
+                self.composers[key], self.files[key]]
+
+    def __enter__(self):
+        # context manager
+        pass
+
+    def __exit__(self, exception_type, exception_val, trace):
+        # context manager
+        pass
 
     @warning
-    def RELEASE_DATE(self):
-
-        self.release_date = ""
+    def get_release_date(self):
 
         for child in self.info_box_html.children:
             if child.find(class_="published") is not None:
                 dates = child.find(class_="published")
+
+                dates = datefinder.find_dates(str(dates))
+                date_year = [d.strftime('%Y') for d in dates]
+                date_year = list(set(date_year))
+
+                self.release_date = date_year[0]
                 break
-
-        dates = datefinder.find_dates(str(dates))
-
-        date_year = [d.strftime('%Y') for d in dates]
-        date_year = list(set(date_year))
-
-        self.release_date = date_year[0]
+        else:
+            self.release_date = ""
 
     @warning
-    def GENRES(self):
-
-        self.genres = []
+    def get_genres(self):
 
         for child in self.info_box_html.children:
             if child.find(class_="category hlist") is not None:
                 genres_html = child.find(class_="category hlist")
+
+                # match "/wiki/SOMETHING" where SOMWETHING is not Music_genre
+                ref = re.compile(r"/wiki/(?!Music_genre)")
+                gndr = (genres_html.findAll(href=ref))
+                self.genres = [g.string for g in gndr]
                 break
-
-        # match "/wiki/SOMETHING" where SOMWETHING is not Music_genre
-        gndr = (genres_html.findAll(href=re.compile(r"/wiki/(?!Music_genre)")))
-        g = [g.string for g in gndr]
-
-        self.genres = g
+        else:
+            self.genres = []
 
     @warning
-    def COVER_ART(self):
+    def get_cover_art(self):
 
-        try:
-            for child in self.info_box_html.children:
-                if child.find("img") is not None:
-                    image = child.find("img")
-                    break
+        for child in self.info_box_html.children:
+            if child.find("img") is not None:
+                image = child.find("img")
+                image_url = f"https:{image['src']}"
 
-            image_url = "https:{}".format(image["src"])
-
-            self.cover_art = requests.get(image_url).content
-        except NameError:
+                self.cover_art = requests.get(image_url).content
+                break
+        else:
             with open("files/Na.jpg", "rb") as imageFile:
                 f = imageFile.read()
                 self.cover_art = bytearray(f)
 
-    def check_BAND(self) -> bool:
+    def check_band(self) -> bool:
 
         try:
             for child in self.info_box_html.children:
@@ -161,8 +207,8 @@ class wikipedia_parser:
             shared_vars.warning = e
             return True
         else:
-            if fuzz.token_set_ratio(normalize_caseless(self.band),
-               normalize_caseless(album_artist)) < 90:
+            if fuzz.token_set_ratio(nc(self.band),
+               nc(album_artist)) < 90:
                 e = ("The Wikipedia entry for album: " + self.album +
                      " belongs to band: " +
                      re.sub(r"[Bb]y|[Ss]tudio album", "",
@@ -178,7 +224,7 @@ class wikipedia_parser:
             else:
                 return True  # band found on page matches input
 
-    def COMPOSERS(self):
+    def get_composers(self):
 
         def check_name_complete(name, text):
 
@@ -273,7 +319,7 @@ class wikipedia_parser:
                             if n not in comp:
                                 self.composers[i].append(n)
 
-    def BASIC_OUT(self):
+    def basic_out(self):
 
         # save page object for offline debbug
         fname = os.path.join(self.debug_folder, 'page.pkl')
@@ -285,18 +331,18 @@ class wikipedia_parser:
 
         fname = os.path.join(self.debug_folder, 'html.txt')
         if not os.path.isfile(fname):
-            with open(fname, 'w', encoding='utf8') as file:
-                file.write(self.raw_html)
+            with open(fname, 'w', encoding='utf8') as outfile:
+                outfile.write(self.raw_html)
 
         # save html converted to text
         self.formated_html = self.soup.get_text()
 
         fname = os.path.join(self.debug_folder, 'plain.txt')
         if not os.path.isfile(fname):
-            with open(fname, 'w', encoding='utf8') as file:
-                file.write(self.formated_html)
+            with open(fname, 'w', encoding='utf8') as outfile:
+                outfile.write(self.formated_html)
 
-    def CONTENTS(self):
+    def get_contents(self):
 
         self.contents = self.soup.find("div", class_="toc")
         try:
@@ -315,7 +361,7 @@ class wikipedia_parser:
             for _id in ids:
                 if self.soup.find(class_="mw-headline", id=_id) is not None:
                     self.contents_raw.append(_id)
-                    self.contents.append("{} {}".format(index, _id))
+                    self.contents.append(f"{index} {_id}")
                     index += 1
 
         else:
@@ -332,22 +378,20 @@ class wikipedia_parser:
                 else:
                     self.contents_raw.append(item.split(' ', 1)[1])
 
-    def PERSONNEL(self):
+    def get_personnel(self):
 
-        stop = None
         for i, item in enumerate(self.contents_raw):
-            if "personnel" in normalize_caseless(item):
+            if "personnel" in nc(item):
                 stop = self.contents_raw[i + 1]
                 break
-            elif "credits" in normalize_caseless(item):
+            elif "credits" in nc(item):
                 stop = self.contents_raw[i + 1]
                 break
-
-        # if pos is not initialized this means
-        # that there is no additional presonel
-        # entry on the page. Thus no info can
-        # be retrieved and the function exits
-        if stop is None:
+        else:
+            # if pos is not initialized this means
+            # that there is no additional presonel
+            # entry on the page. Thus no info can
+            # be retrieved and the function exits
             return [], []
 
         start = int(self.formated_html.find("\nPersonnel"))
@@ -401,7 +445,7 @@ class wikipedia_parser:
                 if fuzz.token_set_ratio(tr, person) > 90:
                     temp.append(str(i))
 
-            if len(temp) > 0 and temp is not None:
+            if temp and temp is not None:
                 self.appearences.append(temp)
             else:
                 self.appearences.append([])
@@ -431,13 +475,13 @@ class wikipedia_parser:
                         if not ta:
                             self.appearences[i].extend(ta)
 
-        num_length = int(len(self.numbers))
+        num_length = len(self.numbers)
         for i, app in enumerate(self.appearences):
             self.appearences[i] = list(map(int, app))
         for i, app in enumerate(self.appearences):
             self.appearences[i] = list(filter(lambda x: x <= num_length, app))
 
-    def TRACKS(self):
+    def get_tracks(self):
 
         # should match strings containing "tracklist"
         tables = self.soup.findAll("table", class_=re.compile("tracklist"))
@@ -480,7 +524,7 @@ class wikipedia_parser:
             self.data_collect.append(data)
 
         # if tracklist is not in table - fall back to this method of extraction
-        if len(self.data_collect) == 0:
+        if not self.data_collect:
 
             try:
                 tables = self.soup.find(id="Track_listing").parent
@@ -498,10 +542,7 @@ class wikipedia_parser:
                 table = tables.find_next_sibling("ul")
 
             try:
-                rows = []
-                for child in table.children:
-                    if child.string != "\n":
-                        rows.append(child.string)
+                rows = [ch for ch in table.children if ch.string != "\n"]
             except AttributeError as e:
                 print(e)
                 log_parser.warning(e)
@@ -536,7 +577,7 @@ class wikipedia_parser:
 
             self.data_collect.append(data)
 
-    def process_TRACKS(self):
+    def process_tracks(self):
 
         def TR(data):
 
@@ -559,12 +600,10 @@ class wikipedia_parser:
                     end = tmp.find(")", start)
                     # odstranenie zatvoriek s casom
                     if tmp[start + 1:end].replace(":", "").isdigit():
-                        temp[j] = tmp[:start] + tmp[end + 1:]
-                        temp[j] = tmp.strip()
+                        temp[j] = tmp[:start] + tmp[end + 1:].strip()
                     # odstranenie bonus track
-                    if "bonus" in normalize_caseless(tmp[start + 1:end]):
-                        temp[j] = tmp[:start] + tmp[end + 1:]
-                        temp[j] = tmp.strip()
+                    if "bonus" in nc(tmp[start + 1:end]):
+                        temp[j] = tmp[:start] + tmp[end + 1:].strip()
 
             tracks.append(temp[0].strip())
             subtracks.append(temp[1:len(temp)])
@@ -573,10 +612,7 @@ class wikipedia_parser:
 
         def ART(data):
             temp = re.split(",|&", data)
-            for j, tmp in enumerate(temp):
-                temp[j] = (re.sub(",", "", tmp)).strip()
-
-            return temp
+            return [(re.sub(",", "", tmp)).strip() for tmp in temp]
 
         header_cat = ["lyrics", "text", "music", "compose"]
 
@@ -585,18 +621,17 @@ class wikipedia_parser:
         index = 1
         for CD_data in self.data_collect:
 
-            self.disks.append([self.album + " CD " +
-                               str(index), len(self.numbers)])
+            self.disks.append([f"{self.album} CD {index}", len(self.numbers)])
             index += 1
             for row in CD_data:
-                if "no" in normalize_caseless(row[0]):
+                if "no" in nc(row[0]):
                     # table header - possibly use in future
                     # posladny stlpec je length a ten väčšinou netreba
-                    if "length" in normalize_caseless(row[-1]):
+                    if "length" in nc(row[-1]):
                         self.header.append(row[:-1])
                     else:
                         self.header.append(row)
-                elif row[0].replace(".", "").isdigit() is True:
+                elif row[0].replace(".", "").isdigit():
                     self.numbers.append(row[0].replace(".", ""))
                     tmp1, tmp2 = TR(row[1])
                     self.tracks.extend(tmp1)
@@ -616,7 +651,7 @@ class wikipedia_parser:
                                                            header_cat,
                                                            score_cutoff=90,
                                                            scorer=fuzz.ratio)
-                                if score is True:
+                                if score:
                                     self.composers[-1].extend(ART(row[i]))
                                 else:
                                     self.artists[-1].extend(ART(row[i]))
@@ -625,7 +660,7 @@ class wikipedia_parser:
                     else:
                         self.artists.append([]*1)
                         self.composers.append([]*1)
-                elif "total" in normalize_caseless(row[0]):
+                elif "total" in nc(row[0]):
                     # total length summary
                     pass
                 else:
@@ -633,10 +668,7 @@ class wikipedia_parser:
                     self.disks[-1] = [row[0], len(self.numbers)]
 
         # bonus track are sometimes marked as another disc
-        disks_filtered = []
-        for disc in self.disks:
-            if "bonus" not in normalize_caseless(disc[0]):
-                disks_filtered.append(disc)
+        disks_filtered = [d for d in self.disks if "bonus" not in nc(d[0])]
 
         self.disk_sep = [i[1] for i in disks_filtered]
         self.disk_sep.append(len(self.numbers))
@@ -648,7 +680,7 @@ class wikipedia_parser:
                 if self.disk_sep[j] <= i and i < self.disk_sep[j + 1]:
                     self.disc_num.append(j + 1)
 
-    def info_TRACKS(self):
+    def info_tracks(self):
 
         def_types = ["Instrumental", "Acoustic", "Orchestral", "Live",
                      "Piano Version"]
@@ -675,7 +707,7 @@ class wikipedia_parser:
                 artist = re.sub("[,:]", "", tr[start + 1:end])
 
                 for td in to_delete:
-                    if td in normalize_caseless(artist):
+                    if td in nc(artist):
                         self.tracks[i] = (tr[:start - 1] +
                                           tr[end + 1:]).strip()
                         break
@@ -709,7 +741,7 @@ class wikipedia_parser:
                         tr = tr[:start] + tr[end + 1:]
                         self.tracks[i] = tr.strip()
 
-            if len(self.subtracks) > 0:
+            if self.subtracks:
                 for j, sbtr in enumerate(self.subtracks[i]):
 
                     self.sub_types[i] = [""] * len(sbtr)
@@ -739,41 +771,39 @@ class wikipedia_parser:
                                 self.subtracks[i][j] = sbtr.strip()
 
         # get rid of artists duplicates
-        for i, art in enumerate(self.artists):
-            self.artists[i] = sorted(list(set(art)))
+        for art in self.artists:
+            art = sorted(list(set(art)))
 
-    def COMPLETE(self):
+    def complete(self):
 
         to_complete = [self.composers, self.artists, self.personnel]
-        unwanted = ["featuring", "feat.", "feat"]
+        unwanted = ["featuring", "feat.", "feat", "naration by"]
+        delete = ["", " "]
 
         # complete everything with everything
-        for i in range(len(to_complete)):
-            for j in range(len(to_complete)):
-                replace_N_dim(to_complete[i], to_complete[j])
+        for to_replace in to_complete:
+            for to_find in to_complete:
+                complete_N_dim(to_replace, to_find)
 
         # sort artist alphabeticaly
-        if len(self.artists) > 0:
-            for i, _ in enumerate(self.artists):
-                self.artists[i].sort()
+        if self.artists:
+            for a in self.artists:
+                a.sort()
 
-        # sort tracklist composers alphabeticaly
-        # if len(self.tracklist_composers) > 0:
-        #    for i in range(len(self.tracklist_composers)):
-        #        self.tracklist_composers[i].sort()
+        for tc in to_complete:
+            delete_N_dim(tc, delete)      
 
         # get rid of feat., faeturing ...
-        for i in range(len(to_complete)):
+        for tc in to_complete:
             for un in unwanted:
-                delete_N_dim(to_complete[i], un)
+                replace_N_dim(tc, un)
 
     # TODO implement timeout error
-    def WIKI(self):
+    def get_wiki(self):
 
-        
-        nc = normalize_caseless
-        searches = ["{} ({} album)".format(self.album, self.band),
-                    self.album, "{} (album)".format(self.album)]
+        searches = [f"{self.album} ({self.band} album)",
+                    f"{self.album} (album)",
+                    self.album]
 
         try:
             for query in searches:
@@ -821,144 +851,101 @@ class wikipedia_parser:
                                             class_="infobox vevent haudio")
 
         # check if the album belongs to band that was requested
-        self.check_BAND()
+        self.check_band()
 
-    def DISK_WRITE(self):
+    # TODO try asyncio for disk write (https://github.com/Tinche/aiofiles)
+    # TODO and for getters 
+    def disk_write(self):
 
-        self.bracketed_types = bracket(self.types)
-
-        # compute number of spaces
-        spaces, _ = count_spaces(self.tracks, self.bracketed_types)
-
-        if len(self.artists) == 0:
-            self.artists = [""]
-
-        # write to file
-        for j, dsk in enumerate(self.disks):
-
-            fname = self.debug_folder + '/tracklist_{}.txt'.format(j)
-            with open(fname, 'w', encoding='utf-8') as f:
-                f.write(dsk + u'\n')
-                for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
-                    f.write("{:>2}.  {} {}{}{}\n".format(self.numbers[i],
-                                                         self.tracks[i],
-                                                         self.bracketed_types[i],
-                                                         spaces[i],
-                                                         ", ".join(self.artists[i])))
-
-                    for k, (s_tr, s_tp) in enumerate(zip(self.subtracks[i],
-                                                         self.sub_types[i])):
-                        f.write("  {:2}. {} {}\n".format(write_roman(k + 1),
-                                                         s_tr, s_tp))
+        for i, tracklist in enumerate(self.tracklist_2_str(to_file=True), 1):
+            fname = os.path.join(self.debug_folder, f"tracklist_{i}.txt")
+            with open(fname, "w", encoding="utf-8") as f:
+                f.write(tracklist)
 
         # save found personel to file
-        with open(self.debug_folder + '/personnel.txt',
-                  'w', encoding='utf8') as f:
+        with open(os.path.join(self.debug_folder, "personnel.txt"),
+                  "w", encoding="utf8") as f:
 
-            for pers, app in zip(self.personnel, self.appearences):
+            f.write(self.personnel_2_str())
 
-                if len(app) > 0:
-                    f.write(pers + " - ")
-                    temp = 50
-
-                    for k, a in enumerate(app):
-                        for j, _ in enumerate(self.disk_sep[:-1]):
-
-                            if (int(a) > self.disk_sep[j] and
-                                int(a) < self.disk_sep[j + 1]):  # noqa E129
-                                break
-
-                        try:
-                            j
-                        # this is triggered if no tracklist was loaded
-                        except NameError as e:
-                            print(e)
-                            log_parser.exception(e)
-                            shared_vars.exception = e
-                            continue
-
-                        if j != temp:
-                            f.write("{}: {}".format(self.disks[j],
-                                                    self.numbers[int(a)]))
-                            temp = j
-                        else:
-                            f.write(self.numbers[int(a)])
-
-                        if k != len(app) - 1:
-                            f.write(", ")
-                    f.write(u'\n')
-                else:
-                    f.write(pers + u'\n')
-
-    def print_tracklist(self):
+    def tracklist_2_str(self, to_file=True):
 
         # compute number of spaces
         spaces, length = count_spaces(self.tracks, self.bracketed_types)
 
-        # print to console
+        if not to_file:
+            G = Fore.GREEN
+            LG = Fore.LIGHTGREEN_EX
+            R = Fore.RESET
+        else:
+            G = ""
+            LG = ""
+            R = ""
+
+        # convert to string
+        tracklists = []
         for j, (ds, hd) in enumerate(zip(self.disks, self.header)):
-            print("\n" + Fore.GREEN + "{}. Disk: ".format(j + 1) +
-                  Fore.RESET, ds)
+            s = ""
+            s += f"{G}\n{j + 1}. Disk:{R} {ds}"
             if len(hd) >= 2:
-                print(Fore.LIGHTGREEN_EX + hd[0] + " " + hd[1], end="")
+                s += f" {LG}{hd[0]} {hd[1]}"
             if len(hd) >= 3:
-                print(" "*(length + len(hd[1])) + hd[2], end="")
+                s += f"{' '*(length + len(hd[1]))}{hd[2]}"
             if len(hd) >= 4:
-                print(", " + hd[3], end="")
-            print(Fore.RESET)
+                s += f", {hd[3]}"
+            s += R
 
             for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
-                print("{:>2}. {} {}{} {}".format(self.numbers[i],
-                                                 self.tracks[i],
-                                                 self.bracketed_types[i],
-                                                 spaces[i],
-                                                 ", ".join(self.artists[i] +
-                                                           self.composers[i])))
+                s += (f"{self.numbers[i]:>2}. {self.tracks[i]} "
+                      f"{self.bracketed_types[i]}{spaces[i]} "
+                      f"{', '.join(self.artists[i] + self.composers[i])}\n")
 
                 for k, (sbtr, sbtp) in enumerate(zip(self.subtracks[i],
                                                      self.sub_types[i])):
-                    print("  {}. {} {}".format(write_roman(k + 1), sbtr, sbtp))
+                    s += (f"  {write_roman(k + 1)}. {sbtr} {sbtp}\n")
 
-    def print_personnel(self):
+            tracklists.append(s)
 
-        if len(self.personnel) == 0:
-            print("---\n")
+        return tracklists
+
+    def print_tracklist(self):
+        print("\n".join(self.tracklist_2_str(to_file=False)))
+
+    def personnel_2_str(self):
+
+        s = ""
+        if not self.personnel:
+            s += "---\n"
 
         for pers, app in zip(self.personnel, self.appearences):
 
-            if len(app) > 0:
-                print(pers + " - ", end="")
+            if app:
+                s += pers + " - "
                 temp = 50
 
                 for k, a in enumerate(app):
                     for j, _ in enumerate(self.disk_sep[:-1]):
 
-                        if (int(a) > self.disk_sep[j] and
-                            int(a) < self.disk_sep[j + 1]):  # noqa E129
-                            break
+                        if (a > self.disk_sep[j] and
+                            a < self.disk_sep[j + 1]):  # noqa E129
 
-                    try:
-                        j
-                    # this is triggered if no tracklist was loaded
-                    except NameError as e:
-                        print(e)
-                        log_parser.exception(e)
-                        shared_vars.exception = e
+                            if j != temp:
+                                s += f"{self.disks[j]}: {self.numbers[a]}"
+                                temp = j
+                            else:
+                                s += self.numbers[a]
+
+                            if k != len(app) - 1:
+                                s += ", "
+                            break
+                    else:
                         continue
 
-                    if j != temp:
-                        print("Disc {}: {}".format(j + 1,
-                                                   self.numbers[int(a)]),
-                              end="")
-                        temp = j
-                    else:
-                        print(self.numbers[int(a)], end="")
-
-                    if k != len(app) - 1:
-                        print(", ", end="")
-                print("")
+                s += u'\n'
             else:
-                print(pers)
+                s += pers + u'\n'
+
+        return s
 
     def merge_artist_personnel(self):
 
@@ -966,46 +953,42 @@ class wikipedia_parser:
             for a in appear:
                 self.artists[a].append(person)
 
-    def data_to_dict(self, reassign_files=True):
+    def reassign_files(self):
 
-        self.bracketed_types = bracket(self.types)
-        nc = normalize_caseless
         wnc = win_naming_convetion
 
-        if reassign_files is True:
-            max_length = len(max(self.tracks, key=len))
+        max_length = len(max(self.tracks, key=len))
 
-            # write data to ID3 tags
-            files = list_files(self.work_dir)
+        # write data to ID3 tags
+        disk_files = list_files(self.work_dir)
+        files = []
 
-            print(Fore.GREEN + "\nFound files:" + Fore.RESET)
-            print("\n".join(files), "\n")
-            print(Fore.GREEN + "Assigning files to tracks:" + Fore.RESET)
+        print(Fore.GREEN + "\nFound files:" + Fore.RESET)
+        print("\n".join(disk_files), "\n")
+        print(Fore.GREEN + "Assigning files to tracks:" + Fore.RESET)
 
-            for i, tr in enumerate(self.tracks):
-                self.tracks[i] = tr.strip()
-                found = False
+        for i, tr in enumerate(self.tracks):
+            self.tracks[i] = tr.strip()
 
-                for path in files:
-                    f = os.path.split(path)[1]
-                    if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
+            for path in disk_files:
+                f = os.path.split(path)[1]
+                if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
 
-                        found = True
-                        break
-
-                if found is True:
                     print(Fore.LIGHTYELLOW_EX + tr + Fore.RESET,
                           "-"*(1 + max_length - len(tr)) + ">",
                           path)
+                    files.append(path)
+                    break
+            else:
+                print(Fore.LIGHTBLUE_EX + tr + Fore.RESET,
+                      "."*(2 + max_length - len(tr)),
+                      "Does not have a matching file!")
 
-                    self.files.append(path)
+                files.append("")
 
-                elif found is False:
-                    print(Fore.LIGHTBLUE_EX + tr + Fore.RESET,
-                          "."*(2 + max_length - len(tr)),
-                          "Does not have a matching file!")
+        self.files = files
 
-                    self.files.append("")
+    def data_to_dict(self):
 
         file_counter = 0
         dict_data = []
@@ -1017,7 +1000,7 @@ class wikipedia_parser:
             else:
                 f = self.files[i]
 
-            dict = {
+            dictionary = {
                     "ALBUM": self.album,
                     "ALBUMARTIST": self.band,
                     "ARTIST": self.artists[i],
@@ -1032,9 +1015,9 @@ class wikipedia_parser:
                     "type": self.bracketed_types[i],
                 }
 
-            dict_data.append(dict)
+            dict_data.append(dictionary)
 
-        if shared_vars.write_json is True:
+        if shared_vars.write_json:
             json_dump(dict_data, self.work_dir)
             print("Saved!")
 
@@ -1086,7 +1069,7 @@ class wikipedia_parser:
         self.tracks = tracks_data
 
         # common tags
-        if len(self.files) != 0:
+        if self.files:
             self.album = album
             self.band = band
             self.selected_genre = genre
@@ -1099,23 +1082,23 @@ class wikipedia_parser:
 
         # look for aditional artists in brackets behind track names and
         # complete artists names again with new info
-        self.info_TRACKS()
+        self.info_tracks()
 
-        # put song types in brackets
-        self.bracketed_types = bracket(self.types)
-
-        if len(self.files) == 0:
+        if not self.files:
             shared_vars.describe = "No music files to Load"
         else:
             shared_vars.describe = "Files loaded sucesfully"
 
     def extract_names(self):
 
+        # TODO do some preparatory phases after loading html to speed up
         # pass to NLTK only relevant part of page
-        stop = self.contents_raw[-1]
-        for i, item in enumerate(self.contents_raw):
-            if "references" in normalize_caseless(item):
+        for item in self.contents_raw:
+            if "references" in nc(item):
                 stop = item
+                break
+        else:
+            stop = self.contents_raw[-1]
 
         start = int(self.formated_html.find("\nTrack listing"))
         end = int(self.formated_html.find("\n" + stop))
@@ -1156,10 +1139,7 @@ class wikipedia_parser:
         """
 
         # filter out already found tracks
-
-        filtered_names = []
-        for n in names:
-            if fuzz.token_set_ratio(n, self.tracks) < 90:
-                filtered_names.append(n)
+        filtered_names = [n for n in names
+                          if fuzz.token_set_ratio(n, self.tracks) < 90]
 
         self.NLTK_names = filtered_names

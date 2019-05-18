@@ -17,6 +17,7 @@
 - add support for PySide2 and PyQt4
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
+- try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 
 ###  Individual problem cases 
@@ -25,6 +26,23 @@
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
 
 # Change Log
+
+### 18.5.2019
+- more strict PEP8 adherance
+- minor bug fixes
+
+### 28.4.2019
+- added for/else clauses for readability
+- use f-strings instead of format() function
+- parser function names to lowercase according to PEP8 guidelines
+- merge most parts of disk write and console printing
+
+### 19.2.2019
+- minor bug fixes to lyrics writing
+- some use of f-strings
+
+### 27.1.2019
+- cover art search dialog now has its own base class created in qt designer
 
 ### 26.1.2019
 - numerous bug fixes

@@ -45,14 +45,14 @@ def artists_assign(composers: list, artists: list) -> (list, list):
         composers[i] = composers[i] + artists[i]
         # filter empty entries and sort
         composers[i] = sorted(list(filter(None, set(composers[i]))))
-    artists = [[""] for _ in range(len(composers))]
+    artists = [[""] for _ in composers]
 
     return composers, artists
 
 
 def genre_select(genres: list, GUI: bool) -> str:
 
-    if len(genres) == 0:
+    if not genres:
         print("\nInput genre:", Fore.CYAN, end="")
         genre = input()
         print(Fore.RESET)
@@ -73,14 +73,14 @@ def genre_select(genres: list, GUI: bool) -> str:
 
 def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False):
 
-    if we_are_frozen() is False and print_out is True:
+    if not we_are_frozen() and print_out:
         if msg_GREEN != "":
             print(Fore.GREEN + "\n" + msg_GREEN + Fore.RESET)
         if msg_WHITE != "":
             print(msg_WHITE)
 
     log_app.info(msg_GREEN)
-    if describe_both is False:
+    if not describe_both:
         shared_vars.describe = msg_GREEN
     else:
         shared_vars.describe = msg_GREEN + msg_WHITE
@@ -112,7 +112,7 @@ def MAIN(band, album, work_dir, GUI):
     parser.debug_folder = win_naming_convetion(parser.album, dir_name=True)
 
     # download wikiedia page
-    if shared_vars.offline_debbug is False:
+    if not shared_vars.offline_debbug:
         print("Accessing Wikipedia...")
         shared_vars.describe = "Accessing Wikipedia"
 
@@ -121,7 +121,7 @@ def MAIN(band, album, work_dir, GUI):
         shared_vars.describe = ("Searching for: " + parser.album +
                                 " by " + parser.band)
 
-        parser.WIKI()
+        parser.get_wiki()
 
         log_print(msg_GREEN="Found at: ",
                   msg_WHITE=str(parser.url),
@@ -138,39 +138,39 @@ def MAIN(band, album, work_dir, GUI):
             shared_vars.exception = e
             sys.exit(0)
 
-        log_print(msg_GREEN="Using offline file insted of web page")
+        log_print(msg_GREEN="Using offline cached page insted of web page")
 
     log_print(msg_WHITE="Cooking Soup")
     parser.cook_soup()
     log_print(msg_WHITE="Soup ready")
 
-    if parser.check_BAND() is False:
+    if not parser.check_band():
         shared_vars.wait_exit = True
-        while shared_vars.wait_exit is True:
+        while shared_vars.wait_exit:
             time.sleep(0.01)
 
         # If user wants to terminate program, the GUI
         #  makes the application thread throw exception and exit
-        assert shared_vars.terminate_app is False
+        assert not shared_vars.terminate_app
     else:
         log_print(msg_WHITE="Band check OK, parsing")
 
     # find release date
-    parser.RELEASE_DATE()
+    parser.get_release_date()
     log_print(msg_GREEN="Found release date",
               msg_WHITE=parser.release_date)
 
     # find list of genres
-    parser.GENRES()
+    parser.get_genres()
     log_print(msg_GREEN="Found genre(s)",
               msg_WHITE="\n".join(parser.genres))
 
-    if GUI is True:
+    if GUI:
         # download cover art from wikipedia
-        parser.COVER_ART()
+        parser.get_cover_art()
         log_print(msg_GREEN="Found cover art")
 
-    if we_are_frozen() is False:
+    if not we_are_frozen():
         print("Creating directory to store results")
         shared_vars.describe = "Creating directory to store results"
 
@@ -179,60 +179,60 @@ def MAIN(band, album, work_dir, GUI):
             os.makedirs(parser.debug_folder)
 
         # basic html textout for debug
-        parser.BASIC_OUT()
+        parser.basic_out()
 
     # get page contents
-    parser.CONTENTS()
+    parser.get_contents()
 
     # print out page contents
     log_print(msg_GREEN="Found page contents",
               msg_WHITE="\n".join(parser.contents))
 
     # extract track list
-    parser.TRACKS()
+    parser.get_tracks()
 
     # print out tracklist
     log_print(msg_GREEN="Found Track list(s)")
 
     for i, data in enumerate(parser.data_collect):
-        print("Tracklist " + str(i + 1) + ": " + data[0][0])
+        print(f"Tracklist {i + 1}: {data[0][0]}")
 
     # process track list
     log_print(msg_GREEN="Processing tracks", print_out=False)
-    parser.process_TRACKS()
+    parser.process_tracks()
 
     # extract personel names
     log_print(msg_GREEN="Extracting additional personnel", print_out=False)
-    parser.PERSONNEL()
+    parser.get_personnel()
 
     # print out additional personnel
     log_print(msg_GREEN="Found aditional personel")
-    if we_are_frozen() is False:
-        parser.print_personnel()
+    if not we_are_frozen():
+        print(parser.personnel_2_str())
 
     # complete artists names
     log_app.info("complete 1")
-    parser.COMPLETE()
+    parser.complete()
 
     # look for aditional artists in brackets behind track names and
     # complete artists names again with new info
     log_app.info("info tracks")
-    parser.info_TRACKS()
+    parser.info_tracks()
 
     # extract writers, composers
     log_print(msg_GREEN="Extracting composers", print_out=False)
-    parser.COMPOSERS()
+    parser.get_composers()
     log_print(msg_GREEN="Found composers",
               msg_WHITE="\n".join(flatten_set(parser.composers)))
 
     # complete artists names
     log_app.info("complete 2")
-    parser.COMPLETE()
+    parser.complete()
 
-    if we_are_frozen() is False:
+    if not we_are_frozen():
         # save to files
         log_app.info("disc write")
-        parser.DISK_WRITE()
+        parser.disk_write()
 
         # print out found tracklist
         log_print(msg_GREEN="Found Track list(s)")
@@ -247,10 +247,10 @@ def MAIN(band, album, work_dir, GUI):
     # select genre
     if len(parser.genres) == 1:
         parser.selected_genre = parser.genres[0]
-    elif GUI is False:
+    elif not GUI:
         parser.selected_genre = genre_select(parser.genres, GUI=GUI)
     else:
-        if len(parser.genres) == 0:
+        if not parser.genres:
             shared_vars.describe = "Input genre"
         else:
             shared_vars.describe = "Select genre"
@@ -259,12 +259,12 @@ def MAIN(band, album, work_dir, GUI):
         shared_vars.wait = True
         log_app.info("waiting for input from gui")
 
-        while shared_vars.wait is True:
+        while shared_vars.wait:
             time.sleep(0.1)
 
     log_app.info("decide artists")
     # decide what to do with artists
-    if GUI is False:
+    if not GUI:
         print(Fore.CYAN +
               "Do you want to assign artists to composers? (y/n)",
               Fore.RESET, end=" ")
@@ -278,21 +278,21 @@ def MAIN(band, album, work_dir, GUI):
         shared_vars.wait = True
         shared_vars.load = True
 
-        while shared_vars.wait is True:
+        while shared_vars.wait:
             time.sleep(0.1)
 
         shared_vars.switch = "comp"
         shared_vars.wait = True
-        while shared_vars.wait is True:
+        while shared_vars.wait:
             time.sleep(0.1)
 
-    if shared_vars.assign_artists is True:
+    if shared_vars.assign_artists:
         parser.composers, parser.artists = artists_assign(parser.composers,
                                                           parser.artists)
 
     log_app.info("decide lyrics")
     # decide if you want to find lyrics
-    if GUI is False:
+    if not GUI:
         print(Fore.CYAN +
               "\nDo you want to find and save lyrics? (y/n): " +
               Fore.RESET, end="")
@@ -302,11 +302,11 @@ def MAIN(band, album, work_dir, GUI):
         shared_vars.describe = "Searching for Lyrics"
         shared_vars.switch = "lyrics"
         shared_vars.wait = True
-        while shared_vars.wait is True:
+        while shared_vars.wait:
             time.sleep(0.1)
 
     # download lyrics
-    if shared_vars.write_lyrics is True:
+    if shared_vars.write_lyrics:
         save_lyrics()
     else:
         parser.lyrics = [""]*len(parser.tracks)
@@ -317,22 +317,22 @@ def MAIN(band, album, work_dir, GUI):
     dict_data, writeable = parser.data_to_dict()
 
     # announce that main app thread has reached the barrier
-    if GUI is True:
+    if GUI:
         shared_vars.barrier.wait()
 
-    if writeable is True and GUI is False:
+    if writeable and not GUI:
         print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
               Fore.RESET, end="")
         write = to_bool(input())
 
-        if write is True:
+        if write:
             # write data to ID3 tags
             for data in dict_data:
                 write_tags(data, lyrics_only=False)
 
     log_print(msg_GREEN="Done")
 
-    if we_are_frozen() is True and GUI is False:
+    if we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
     return 0
 
@@ -373,17 +373,17 @@ def LYRICS(work_dir, GUI):
     log_app.info("wait barrier")
 
     # announce that main app thread has reached the barrier
-    if GUI is True:
+    if GUI:
         shared_vars.barrier.wait()
 
     log_app.info("write data to tags")
 
-    if writeable is True and GUI is False:
+    if writeable and not GUI:
         print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
               Fore.RESET, end="")
         write = to_bool(input())
 
-        if write is True:
+        if write:
 
             # write data to ID3 tags
             for data in dict_data:
@@ -391,7 +391,7 @@ def LYRICS(work_dir, GUI):
 
     log_print(msg_GREEN="Done")
 
-    if we_are_frozen() is True and GUI is False:
+    if we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
 
     return 0
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     parser.work_dir = os.getcwd()
     parser.files = list_files(parser.work_dir)
 
-    if to_bool(only_lyrics) is True:
+    if to_bool(only_lyrics):
         LYRICS(parser.work_dir, GUI=False)
     else:
         print("Enter album name: " + Fore.GREEN, end="")
