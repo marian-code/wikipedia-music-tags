@@ -15,5 +15,11 @@ wiki_music_setup.log
 # build dir
 build/
 
+# dir for file output
+output/
+
+# profiling stats
+profiling/
+
 # unique user files
 files/google_api_key.txt

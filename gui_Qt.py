@@ -7,7 +7,7 @@ import sys
 import time
 import webbrowser
 import ctypes
-from threading import Thread
+from threading import Thread, current_thread
 from PyQt5.QtWidgets import (QMainWindow, QFileDialog, QApplication,
                              QTableWidgetItem, QMessageBox, QAbstractItemView,
                              QInputDialog, QLabel, QVBoxLayout, QTableWidget,
@@ -30,10 +30,10 @@ log_gui.debug("started imports")
 from gui_Qt_base import Ui_MainWindow  # noqa: E402
 from art_dialog_base import Ui_Dialog  # noqa: E402
 from cover_art_base import Ui_cover_art_search  # noqa: E402
-from application import LYRICS, MAIN  # noqa: E402
+from application import get_lyrics, get_wiki  # noqa: E402
 from libb.ID3_tags import write_tags  # noqa: E402
 from utils import (list_files, module_path, we_are_frozen, get_music_path,
-                   image_handle)  # noqa: E402
+                   image_handle, ThreadWithTrace)  # noqa: E402
 
 log_gui.debug("finished imports")
 
@@ -169,146 +169,10 @@ class ImageTable(QTableWidget):
         self.resizeRowsToContents()
 
 
-# inherit base from QMainWindow and lyaout from Ui_MainWindow
-class Window(QMainWindow, Ui_MainWindow):
-
-    def __init__(self):
-        # call QMainWindow __init__ method
-        super(Window, self).__init__()
-        # call Ui_MainWindow user interface setup method
-        super(Window, self).setupUi(self)
-
-        # initialize
-        self.__initUI__()
-
-        # misc
-        self.input_work_dir = ""
-        self.input_album = ""
-        self.input_band = ""
-        self.write_json = False
-        self.offline_debbug = False
-        self.picture_visible = False
-
-        # tag related variables
-        self.files_prewiew = []
-
-        # init checker
-        self.remember = None
-        self.__init_checkers__()
-        self.__start_checkers__()
-
-        # * PyQt5 Native
-        # set overlay functions
-        self.__setup_overlay__()
-
-    # setup methods
-    def __setup_overlay__(self):
-
-        # map buttons to functions
-        # must use lambda otherwise wrapper doesnt work correctly
-        self.browse_button.clicked.connect(lambda: self.__select_dir__())
-        self.wiki_search_button.clicked.connect(lambda: self.__run_search__())
-        self.coverArt.clicked.connect(lambda: self.__cover_art_search__())
-        self.lyrics_button.clicked.connect(
-            lambda: self.__run_lyrics_search__()
-            )
-        self.toolButton.clicked.connect(lambda: self.__select_file__())
-        self.band_entry_input.textChanged.connect(self.__entry_band__)
-        self.album_entry_input.textChanged.connect(self.__entry_album__)
-
-        # create table to hold the data
-        self.table = QStandardItemModel()
-        self.__table_headers__()
-
-        # create table-proxy mapping for sorting
-        self.proxy = NumberSortModel()
-        self.proxy.setSourceModel(self.table)
-        self.tableView.setModel(self.proxy)
-        self.tableView.setSortingEnabled(True)
-
-        # show table
-        self.tableView.show()
-
-        # enable drag and drop ordering of columns in table
-        self.tableView.horizontalHeader().setSectionsMovable(True)
-        self.tableView.horizontalHeader().setDragEnabled(True)
-        self.tableView.horizontalHeader().setDragDropMode(
-            QAbstractItemView.InternalMove
-            )
-
-        # connect to signal that is emited when table cell is clicked
-        self.tableView.clicked.connect(self.__detail__)
-
-        # connect menubar actions to functions
-        # must use lambda otherwise wrapper doesnt work correctly
-        self.actionDirectory.triggered.connect(lambda: self.__open_dir__())
-        self.actionWikipedia.triggered.connect(lambda: self.__open_browser__())
-        self.actionMp3_Tag.triggered.connect(lambda: self.__run_Mp3tag__())
-
-        # connect menubar actions to functions
-        self.actionAll_Tags.triggered.connect(lambda: self.__save_all__(False))
-        self.actionOnly_Lyrics.triggered.connect(
-            lambda: self.__save_all__(True)
-            )
-
-        # menubar buttons taht are not implemented
-        self.actionNew.triggered.connect(self.__do_nothing__)
-        self.actionOpen.triggered.connect(self.__do_nothing__)
-        self.actionExit.triggered.connect(self.__do_nothing__)
-        self.actionSave.triggered.connect(self.__do_nothing__)
-
-        self.actionHelp_Index.triggered.connect(self.__do_nothing__)
-        self.actionAbout.triggered.connect(self.__do_nothing__)
-        self.actionGit.triggered.connect(self.__do_nothing__)
-
-        if we_are_frozen():
-            # show switches only if not frozen
-            self.offline_debbug_sw.hide()
-            self.json_write_sw.hide()
-        else:
-            # connect switches to functions
-            self.offline_debbug_sw.stateChanged.connect(
-                self.__select_offline_debbug__
-                )
-            self.json_write_sw.stateChanged.connect(self.__select_json__)
-
-    def __initUI__(self):
-        self.setWindowTitle("Wiki Music")
-        myappid = "WikiMusic"
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-        self.setWindowIcon(QIcon(os.path.join(module_path(),
-                                              "files/icon.ico")))
-
-    def __table_headers__(self):
-        _headers = ["Number:", "Name:", "Type:", "Artists:", "Composers:",
-                    "Discnumber:", "Lyrics:", "File:"]
-        self.table.setHorizontalHeaderLabels(_headers)
-
-    def __init_parser__(self):
-        # TODO non-atomic
-        parser.__init__()
-        parser.work_dir = self.input_work_dir
-        shared_vars.re_init()
-
-    def __init_checkers__(self):
-        self.description_timer = QTimer()
-        self.description_timer.timeout.connect(self.__description_checker__)
-        self.description_timer.setSingleShot(True)
-
-        self.exception_timer = QTimer()
-        self.exception_timer.timeout.connect(self.__exception_check__)
-        self.exception_timer.setSingleShot(True)
-
-        self.conditions_timer = QTimer()
-        self.conditions_timer.timeout.connect(self.__conditions_check__)
-        self.conditions_timer.setSingleShot(True)
-
-    def __start_checkers__(self):
-        self.description_timer.start(200)
-        self.exception_timer.start(500)
-        self.conditions_timer.start(400)
-
+# these method don't work alone, they must be inherited by Window class
+class Gui2Parser:
     # methods for data transfer between gui <--> parser object
+
     def __parser_to_gui__(self):
 
         self.genre_entry.setText(parser.selected_genre)
@@ -398,6 +262,8 @@ class Window(QMainWindow, Ui_MainWindow):
             self.picture_layout.addWidget(self.lbl)
             self.picture_visible = True
 
+
+class DataModel:
     # methods for managing gui data model
     @exception(log_gui)
     def __update_model__(self):
@@ -493,6 +359,27 @@ class Window(QMainWindow, Ui_MainWindow):
                 item = QStandardItem(text)
 
         self.table.setItem(row, col, item)
+
+
+class Checkers(DataModel):
+
+    def __init_checkers__(self):
+        self.description_timer = QTimer()
+        self.description_timer.timeout.connect(self.__description_checker__)
+        self.description_timer.setSingleShot(True)
+
+        self.exception_timer = QTimer()
+        self.exception_timer.timeout.connect(self.__exception_check__)
+        self.exception_timer.setSingleShot(True)
+
+        self.conditions_timer = QTimer()
+        self.conditions_timer.timeout.connect(self.__conditions_check__)
+        self.conditions_timer.setSingleShot(True)
+
+    def __start_checkers__(self):
+        self.description_timer.start(200)
+        self.exception_timer.start(500)
+        self.conditions_timer.start(400)
 
     # periodically checking methods
     @exception(log_gui)
@@ -621,6 +508,199 @@ class Window(QMainWindow, Ui_MainWindow):
         else:
             self.statusbar.showMessage("")
 
+
+class Buttons:
+
+    @exception(log_gui)
+    def __open_dir__(self):
+
+        if not self.input_work_dir:
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must select directory first!").exec_()
+
+        else:
+            print("Opening folder...")
+            os.startfile(self.input_work_dir)
+            """
+            if sys.platform == "linux" or sys.platform == "linux2":
+                subprocess.check_call(['xdg-open',
+                                        self.input_work_dir.get()])
+            elif sys.platform == "win32":
+                #subprocess.Popen('explorer "self.input_work_dir.get()"')
+            """
+
+    def __select_file__(self):
+        _file = QFileDialog.getOpenFileName(self,
+                                            "Select song file",
+                                            self.input_work_dir,
+                                            "Audio files (*.mp3 *.flac *.m4a)"
+                                            ";;All files (*)")
+
+        self.file_detail.setText(_file[0])
+
+    @exception(log_gui)
+    def __open_browser__(self):
+
+        if parser.url is not None:
+            webbrowser.open_new_tab(parser.url)
+        else:
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must run the search first!").exec_()
+
+    @exception(log_gui)
+    def __run_Mp3tag__(self):
+        if not self.input_work_dir:
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must select directory first!").exec_()
+        else:
+            subprocess.Popen([r"C:\Program Files (x86)\Mp3tag\Mp3tag.exe",
+                              r'/fp:' + self.input_work_dir])
+
+    def __entry_band__(self, text):
+        parser.band = text
+
+    def __entry_album__(self, text):
+        parser.album = text
+
+    def __select_json__(self):
+        shared_vars.write_json = self.json_write_sw.isChecked()
+
+    def __select_offline_debbug__(self):
+        shared_vars.offline_debbug = self.offline_debbug_sw.isChecked()
+        if shared_vars.offline_debbug:
+            parser.preload_stop = True
+
+    def __do_nothing__(self):
+        log_gui.warning("Not implemented yet")
+        QMessageBox(QMessageBox.Warning,
+                    "Info", "Not implemented yet!").exec_()
+
+
+# inherit base from QMainWindow and lyaout from Ui_MainWindow
+class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
+
+    def __init__(self):
+        # call QMainWindow __init__ method
+        super(Window, self).__init__()
+        # call Ui_MainWindow user interface setup method
+        super(Window, self).setupUi(self)
+
+        # initialize
+        self.__initUI__()
+
+        # misc
+        self.input_work_dir = ""
+        self.input_album = ""
+        self.input_band = ""
+        self.write_json = False
+        self.offline_debbug = False
+        self.picture_visible = False
+
+        # tag related variables
+        self.files_prewiew = []
+
+        # init checker
+        self.remember = None
+        self.__init_checkers__()
+        self.__start_checkers__()
+
+        # * PyQt5 Native
+        # set overlay functions
+        self.__setup_overlay__()
+
+    # setup methods
+    def __setup_overlay__(self):
+
+        # map buttons to functions
+        # must use lambda otherwise wrapper doesnt work correctly
+        self.browse_button.clicked.connect(lambda: self.__select_dir__())
+        self.wiki_search_button.clicked.connect(lambda: self.__run_search__())
+        self.coverArt.clicked.connect(lambda: self.__cover_art_search__())
+        self.lyrics_button.clicked.connect(
+            lambda: self.__run_lyrics_search__()
+            )
+        self.toolButton.clicked.connect(lambda: self.__select_file__())
+        self.band_entry_input.textChanged.connect(self.__entry_band__)
+        self.album_entry_input.textChanged.connect(self.__entry_album__)
+
+        # connect the album and band entry field to preload function
+        self.band_entry.textChanged.connect(lambda: self.__preload__())
+        self.album_entry.textChanged.connect(lambda: self.__preload__())
+
+        # create table to hold the data
+        self.table = QStandardItemModel()
+        self.__table_headers__()
+
+        # create table-proxy mapping for sorting
+        self.proxy = NumberSortModel()
+        self.proxy.setSourceModel(self.table)
+        self.tableView.setModel(self.proxy)
+        self.tableView.setSortingEnabled(True)
+
+        # show table
+        self.tableView.show()
+
+        # enable drag and drop ordering of columns in table
+        self.tableView.horizontalHeader().setSectionsMovable(True)
+        self.tableView.horizontalHeader().setDragEnabled(True)
+        self.tableView.horizontalHeader().setDragDropMode(
+            QAbstractItemView.InternalMove
+            )
+
+        # connect to signal that is emited when table cell is clicked
+        self.tableView.clicked.connect(self.__detail__)
+
+        # connect menubar actions to functions
+        # must use lambda otherwise wrapper doesnt work correctly
+        self.actionDirectory.triggered.connect(lambda: self.__open_dir__())
+        self.actionWikipedia.triggered.connect(lambda: self.__open_browser__())
+        self.actionMp3_Tag.triggered.connect(lambda: self.__run_Mp3tag__())
+
+        # connect menubar actions to functions
+        self.actionAll_Tags.triggered.connect(lambda: self.__save_all__(False))
+        self.actionOnly_Lyrics.triggered.connect(
+            lambda: self.__save_all__(True)
+            )
+
+        # menubar buttons taht are not implemented
+        self.actionNew.triggered.connect(self.__do_nothing__)
+        self.actionOpen.triggered.connect(self.__do_nothing__)
+        self.actionExit.triggered.connect(self.__do_nothing__)
+        self.actionSave.triggered.connect(self.__do_nothing__)
+
+        self.actionHelp_Index.triggered.connect(self.__do_nothing__)
+        self.actionAbout.triggered.connect(self.__do_nothing__)
+        self.actionGit.triggered.connect(self.__do_nothing__)
+
+        if we_are_frozen():
+            # show switches only if not frozen
+            self.offline_debbug_sw.hide()
+            self.json_write_sw.hide()
+        else:
+            # connect switches to functions
+            self.offline_debbug_sw.stateChanged.connect(
+                self.__select_offline_debbug__
+                )
+            self.json_write_sw.stateChanged.connect(self.__select_json__)
+
+    def __initUI__(self):
+        self.setWindowTitle("Wiki Music")
+        myappid = "WikiMusic"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        self.setWindowIcon(QIcon(os.path.join(module_path(),
+                                              "files/icon.ico")))
+
+    def __table_headers__(self):
+        _headers = ["Number:", "Name:", "Type:", "Artists:", "Composers:",
+                    "Discnumber:", "Lyrics:", "File:"]
+        self.table.setHorizontalHeaderLabels(_headers)
+
+    def __init_parser__(self):
+        # TODO non-atomic
+        parser.__init__(protected_vars=False)
+        parser.work_dir = self.input_work_dir
+        shared_vars.re_init()
+
     # methods that bind to gui elements
     @exception(log_gui)
     def __save_all__(self, lyrics_only):
@@ -635,7 +715,7 @@ class Window(QMainWindow, Ui_MainWindow):
                 return None
 
             self.__gui_to_parser__()
-            dict_data, writable = parser.data_to_dict(reassign_files=False)
+            dict_data, writable = parser.data_to_dict()
 
             if writable:
                 for data in dict_data:
@@ -647,7 +727,6 @@ class Window(QMainWindow, Ui_MainWindow):
 
             # reload files from disc after save
             self.__init_parser__()
-            parser.files = list_files(self.input_work_dir)
             parser.read_files()
             self.__update_model__()
 
@@ -668,20 +747,48 @@ class Window(QMainWindow, Ui_MainWindow):
         parser.work_dir = self.input_work_dir
 
         # TODO non-atomic
-        parser.files = list_files(parser.work_dir)
         parser.read_files()
 
         self.input_album = parser.album
         self.input_band = parser.band
 
+        self.band_entry_input.setText(self.input_band)
+        self.album_entry_input.setText(self.input_album)
+        self.__preload__(first=True)
+
         self.display_dir.setText(self.input_work_dir)
         self.band_entry.setText(self.input_band)
         self.album_entry.setText(self.input_album)
 
-        self.band_entry_input.setText(self.input_band)
-        self.album_entry_input.setText(self.input_album)
-
         self.__update_model__()
+
+    # TODO try thread with trace
+    # TODO disconnect after search starts
+    def __preload__(self, first=False):
+        album = self.album_entry_input.text()
+        band = self.band_entry_input.text()
+
+        # if no changes occured and this is not the first call,
+        # return imediately
+        if not first:
+            if self.input_album == album and self.input_band == band:
+                return
+
+        self.input_album = album
+        self.input_band = band
+
+        # offline debug must be dissabled
+        if not shared_vars.offline_debbug:
+            # band and album entry must be non-empty strings
+            if self.input_band and self.input_album:
+                # if preload is already running, kill the thread
+                if parser.preload_running:
+                    shared_vars.preload.kill()
+                    shared_vars.preload.join()
+                log_gui.debug("Starting wikipedia preload...")
+                shared_vars.preload = ThreadWithTrace(target=parser.preload,
+                                                      name="WikiPreload")
+                shared_vars.preload.start()
 
     @exception(log_gui)
     def __run_search__(self, *args):
@@ -713,16 +820,15 @@ class Window(QMainWindow, Ui_MainWindow):
 
             self.input_band = self.band_entry_input.text()
             self.input_album = self.album_entry_input.text()
-            main_app = Thread(target=MAIN,
-                              args=(str(self.input_band),
-                                    str(self.input_album),
-                                    self.input_work_dir,
-                                    True))
+            main_app = Thread(target=get_wiki, name="WikiSearch", args=(True,))
             main_app.daemon = True
             main_app.start()
 
     @exception(log_gui)
     def __run_lyrics_search__(self, *args):
+
+        shared_vars.preload.kill()
+        shared_vars.preload.join()
 
         if str(self.input_work_dir) == "":
             QMessageBox(QMessageBox.Information, "Message",
@@ -733,8 +839,8 @@ class Window(QMainWindow, Ui_MainWindow):
             log_gui.info("starting lyrics search")
 
             self.__start_checkers__()
-            main_app = Thread(target=LYRICS,
-                              args=(self.input_work_dir, True))
+            main_app = Thread(target=get_lyrics, name="LyricsSearch",
+                              args=(True,))
             main_app.start()
 
             log_gui.debug("lyrics search started")
@@ -791,7 +897,8 @@ class Window(QMainWindow, Ui_MainWindow):
 
         # init thread that preforms the search
         self.image_search_thread = Thread(target=self.imd.download,
-                                          args=(arguments, ))
+                                          args=(arguments, ),
+                                          name="ImageSearch")
         self.image_search_thread.daemon = True
         self.image_search_thread.start()
 
@@ -934,70 +1041,9 @@ class Window(QMainWindow, Ui_MainWindow):
             shared_vars.describe = "Cover art saved to file"
             log_gui.info("Cover art saved to file")
 
-    @exception(log_gui)
-    def __open_dir__(self):
-
-        if self.input_work_dir == "":
-            QMessageBox(QMessageBox.Information, "Message",
-                        "You must select directory first!").exec_()
-
-        else:
-            print("Opening folder...")
-            os.startfile(self.input_work_dir)
-            """
-            if sys.platform == "linux" or sys.platform == "linux2":
-                subprocess.check_call(['xdg-open',
-                                        self.input_work_dir.get()])
-            elif sys.platform == "win32":
-                #subprocess.Popen('explorer "self.input_work_dir.get()"')
-            """
-
-    def __select_file__(self):
-        _file = QFileDialog.getOpenFileName(self,
-                                            "Select song file",
-                                            self.input_work_dir,
-                                            "Audio files (*.mp3 *.flac *.m4a)"
-                                            ";;All files (*)")
-
-        self.file_detail.setText(_file[0])
-
-    @exception(log_gui)
-    def __open_browser__(self):
-
-        if parser.url is not None:
-            webbrowser.open_new_tab(parser.url)
-        else:
-            QMessageBox(QMessageBox.Information, "Message",
-                        "You must run the search first!").exec_()
-
-    @exception(log_gui)
-    def __run_Mp3tag__(self):
-        if self.input_work_dir == "":
-            QMessageBox(QMessageBox.Information, "Message",
-                        "You must select directory first!").exec_()
-        else:
-            subprocess.Popen([r"C:\Program Files (x86)\Mp3tag\Mp3tag.exe",
-                              r'/fp:'+self.input_work_dir])
-
-    def __entry_band__(self, text):
-        parser.band = text
-
-    def __entry_album__(self, text):
-        parser.album = text
-
-    def __select_json__(self):
-        shared_vars.write_json = self.json_write_sw.isChecked()
-
-    def __select_offline_debbug__(self):
-        shared_vars.offline_debbug = self.offline_debbug_sw.isChecked()
-
-    def __do_nothing__(self):
-        log_gui.warning("Not implemented yet")
-        QMessageBox(QMessageBox.Warning,
-                    "Info", "Not implemented yet!").exec_()
 
 if __name__ == "__main__":
-    import sys
+    current_thread().name = "GuiThread"
     app = QApplication(sys.argv)
     ui = Window()
     ui.show()

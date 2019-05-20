@@ -2,17 +2,18 @@ import package_setup
 import taglib
 from colorama import Fore, init
 from wiki_music import log_tags, shared_vars
-import functools
+from functools import wraps
 
 init(convert=True)
 
+__all__ = ["read_tags", "write_tags"]
 
 def exception(function):
     """
     A decorator that wraps the passed in function and logs
     exceptions should one occur
     """
-    @functools.wraps(function)
+    @wraps(function)
     def wrapper(*args, **kwargs):
         try:
             return function(*args, **kwargs)

@@ -1,12 +1,18 @@
 import package_setup
+
 import unicodedata
+from functools import wraps
+from time import perf_counter
+from urllib.request import urlopen
 
 import lazy_import
-from fuzzywuzzy import fuzz
-from colorama import Fore
-from urllib.request import urlopen
-from PIL import ImageFile, Image
 import win32clipboard
+from colorama import Fore
+from fuzzywuzzy import fuzz
+from PIL import Image, ImageFile
+from threading import current_thread
+import trace
+from threading import Thread
 
 init = lazy_import.lazy_callable("colorama.init")
 BeautifulSoup = lazy_import.lazy_callable("bs4.BeautifulSoup")
@@ -20,11 +26,84 @@ re = lazy_import.lazy_module("re")
 winreg = lazy_import.lazy_module("winreg")
 requests = lazy_import.lazy_module("requests")
 
-__all__ = ['write_roman', 'roman_num', "normalize", "normalize_caseless",
-           "caseless_equal", "count_spaces", "bracket",
-           "colorama_init", "json_dump", "to_bool", "win_naming_convetion",
-           "we_are_frozen", "caseless_contains", "get_music_path",
-           "image_handle"]  # , "nth"]
+__all__ = ["ThreadWithTrace", "Timer", "time_methods", "for_all_methods",
+           "write_roman", "roman_num", "normalize", "normalize_caseless",
+           "caseless_equal", "caseless_contains", "count_spaces", "bracket",
+           "colorama_init", "list_files", "json_dump", "complete_N_dim",
+           "replace_N_dim", "delete_N_dim", "get_max_len", "to_bool",
+           "we_are_frozen", "module_path", "clean_logs",
+           "win_naming_convetion", "flatten_set", "get_music_path",
+           "get_sizes", "image_handle"]
+
+
+class ThreadWithTrace(Thread):
+    def __init__(self, *args, **keywords):
+        Thread.__init__(self, *args, **keywords)
+        self.killed = False
+
+    def start(self):
+        self.__run_backup = self.run
+        self.run = self.__run
+        Thread.start(self)
+
+    def __run(self):
+        sys.settrace(self.globaltrace)
+        self.__run_backup()
+        self.run = self.__run_backup
+
+    def globaltrace(self, frame, event, arg): 
+        if event == 'call': 
+            return self.localtrace
+        else: 
+            return None
+    
+    def localtrace(self, frame, event, arg): 
+        if self.killed:
+            if event == 'line':
+                raise SystemExit()
+        return self.localtrace
+
+    def kill(self):
+        self.killed = True
+
+
+class Timer:
+
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def __enter__(self):
+        self.start = perf_counter()
+        return self
+
+    def __exit__(self, *args):
+        self.end = perf_counter()
+        with open(os.path.join("profiling", "timing_stats.txt"), "a") as f:
+            f.write(f"{current_thread().name:15} --> {self.function_name:30}"
+                    f"{(self.end - self.start):8.4f}s\n")
+
+
+def time_methods(function):
+    """ A decorator that wraps the passed in function and function exec time.
+    """
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        with Timer(function.__name__):
+            return function(*args, **kwargs)
+
+    return wrapper
+
+
+def for_all_methods(decorator, exclude=[]):
+    """ Decorates class methods, except the ones in excluded list. """
+
+    @wraps(decorator)
+    def decorate(cls):
+        for attr in cls.__dict__:
+            if callable(getattr(cls, attr)) and attr not in exclude:
+                setattr(cls, attr, decorator(getattr(cls, attr)))
+        return cls
+    return decorate
 
 
 def write_roman(num: int):
@@ -87,20 +166,6 @@ def caseless_contains(string: str, in_text: str) -> bool:
         return True
     else:
         return False
-
-
-# TODO probably not used
-"""
-def nth(n: int, string: str) -> int:
-    if n < 0:
-        pos = -1
-    else:
-        try:
-            pos = [m.start() for m in re.finditer(r" ", string)][n]
-        except IndexError:
-            pos = len(string) - 2
-    return pos
-"""
 
 
 def count_spaces(tracks: list, types: list) -> (list, int):
@@ -182,9 +247,9 @@ def json_dump(dict_data: list, save_dir: str):
         directory to save to
     """
 
-    _path = os.path.join(save_dir, 'database.json')
+    _path = os.path.join(save_dir, "database.json")
     print(Fore.GREEN + "\nSaving JSON file: " + Fore.RESET + _path + "\n")
-    with open(_path, 'w') as outfile:
+    with open(_path, "w") as outfile:
         json.dump(dict_data, outfile, indent=4)
 
 
@@ -338,7 +403,7 @@ def clean_logs():
 
     # remove previous log(s)
     try:
-        os.mkdir('logs')
+        os.mkdir("logs")
     except FileExistsError as e:
         print(e)
     except PermissionError as e:
@@ -377,10 +442,10 @@ def flatten_set(array: list) -> set:
 def get_music_path() -> str:
     """Returns the default music path for linux or windows"""
 
-    if os.name == 'nt':
+    if os.name == "nt":
         sub_key = (r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
                    r"\Shell Folders")
-        music_guid = '{4BD8D571-6D19-48D3-BE97-422220080E43}'
+        music_guid = "{4BD8D571-6D19-48D3-BE97-422220080E43}"
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
                 location = winreg.QueryValueEx(key, music_guid)[0]
@@ -389,7 +454,7 @@ def get_music_path() -> str:
             return "~"
 
     else:
-        return os.path.join(os.path.expanduser('~'), 'music')
+        return os.path.join(os.path.expanduser("~"), "music")
 
 
 def get_sizes(uri):

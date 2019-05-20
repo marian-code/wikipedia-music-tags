@@ -6,10 +6,12 @@ from threading import Barrier, Lock
 #
 # info_exchange class provides means to synchronize some
 # variables between gui and application, it serves to pass
-# the questions asked in application to to Tkinter frontend.
+# the questions asked in application to to PyQt (Tkinter) frontend.
+
+__all__ = ["InfoExchange"]
 
 
-class info_exchange():
+class InfoExchange:
 
     def __init__(self):
         self.__set_default_values__()
@@ -44,6 +46,10 @@ class info_exchange():
         # switches
         self.wait_exit = False
         self.terminate_app = False
+
+        # threads
+        self.preload = None
+        self.parser_running = False
 
     @property
     def exception(self):

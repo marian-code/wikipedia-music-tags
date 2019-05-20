@@ -5,20 +5,19 @@ Anime Lyrics, AZLyrics, Genius, Lyricsmode, \
 Lyrical Nonsense, Musixmatch, darklyrics
 """
 import package_setup
-import lazy_import
+from lazy_import import lazy_callable, lazy_module
 from utils import we_are_frozen
 from wiki_music import log_lyrics, parser, exception, google_api_key
 
-if we_are_frozen() is False:
+if not we_are_frozen():
     log_lyrics.propagate = False
 
-lyricsfinder = lazy_import.lazy_module("lyricsfinder")
-time = lazy_import.lazy_module("time")
-Pool = lazy_import.lazy_callable("multiprocessing.Pool")
-Fore = lazy_import.lazy_callable("colorama.Fore")
-fuzz = lazy_import.lazy_callable("fuzzywuzzy.fuzz")
-colorama_init = lazy_import.lazy_callable("utils.colorama_init")
-normalize = lazy_import.lazy_callable("utils.normalize")
+lyricsfinder = lazy_module("lyricsfinder")
+Pool = lazy_callable("multiprocessing.Pool")
+Fore = lazy_callable("colorama.Fore")
+fuzz = lazy_callable("fuzzywuzzy.fuzz")
+colorama_init = lazy_callable("utils.colorama_init")
+normalize = lazy_callable("utils.normalize")
 
 colorama_init()
 
@@ -98,7 +97,6 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
     else:
         lyrics_data = lyrics.to_dict()
         lyrics_data["filename"] = lyrics.save_name
-        lyrics_data["timestamp"] = time.time()
 
         print(Fore.GREEN + "Saved lyrics for: ",
               Fore.RESET, artist + " - " + song)
@@ -114,8 +112,7 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
             # replace \n with \r\n if there is no \r in front of \n
             "lyrics": (normalize(lyrics_data["lyrics"]
                        .replace("\r", "").replace("\n", "\r\n"))),
-            "origin": lyrics_data["origin"],
-            "timestamp": lyrics_data["timestamp"]
+            "origin": lyrics_data["origin"]
         }
 
     log_lyrics.info("done")

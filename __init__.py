@@ -5,8 +5,8 @@ from package_setup import we_are_frozen
 from functools import wraps
 from utils import module_path
 
-from sync import info_exchange
-shared_vars = info_exchange()
+from sync import InfoExchange
+shared_vars = InfoExchange()
 
 # logger formater
 formatter = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "

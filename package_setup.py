@@ -15,11 +15,10 @@ def module_path():
 
 sys.path.append(os.path.join(module_path(), ".."))
 
-if we_are_frozen() is True:
+if we_are_frozen():
     from multiprocessing import freeze_support
     freeze_support()
 
-if we_are_frozen() is True:
     f = open(os.devnull, 'w')
     sys.stdout = f
     sys.stderr = f

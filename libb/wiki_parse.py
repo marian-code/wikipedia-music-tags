@@ -1,32 +1,43 @@
 import package_setup
-import lazy_import
-from threading import Lock
 
-from utils import (colorama_init, count_spaces, replace_N_dim, json_dump,
-                   list_files, normalize, complete_N_dim,
-                   write_roman, bracket, win_naming_convetion, delete_N_dim,
-                   caseless_contains, flatten_set)
-from utils import normalize_caseless as nc
+from threading import Thread
+from time import sleep
 
 from fuzzywuzzy import process
-from wiki_music import shared_vars, log_parser
+from lazy_import import lazy_callable, lazy_module
 
-fuzz = lazy_import.lazy_callable("fuzzywuzzy.fuzz")
-Fore = lazy_import.lazy_callable("colorama.Fore")
-BeautifulSoup = lazy_import.lazy_callable("bs4.BeautifulSoup")
-read_tags = lazy_import.lazy_callable("libb.ID3_tags.read_tags")
+from utils import (bracket, caseless_contains, colorama_init, complete_N_dim,
+                   count_spaces, delete_N_dim, flatten_set, for_all_methods,
+                   json_dump, list_files, normalize)
+from utils import normalize_caseless as nc
+from utils import (replace_N_dim, time_methods, win_naming_convetion,
+                   write_roman)
+from wiki_music import log_parser, shared_vars
 
-codecs = lazy_import.lazy_module("codecs")
-datefinder = lazy_import.lazy_module("datefinder")
-dt = lazy_import.lazy_module("datetime")
-nltk = lazy_import.lazy_module("nltk")
-os = lazy_import.lazy_module("os")
-re = lazy_import.lazy_module("re")
-requests = lazy_import.lazy_module("requests")
-sys = lazy_import.lazy_module("sys")
-wiki = lazy_import.lazy_module("wikipedia")
-pickle = lazy_import.lazy_module("pickle")
-functools = lazy_import.lazy_module("functools")
+fuzz = lazy_callable("fuzzywuzzy.fuzz")
+Fore = lazy_callable("colorama.Fore")
+BeautifulSoup = lazy_callable("bs4.BeautifulSoup")
+read_tags = lazy_callable("libb.ID3_tags.read_tags")
+
+codecs = lazy_module("codecs")
+datefinder = lazy_module("datefinder")
+dt = lazy_module("datetime")
+os = lazy_module("os")
+re = lazy_module("re")
+requests = lazy_module("requests")
+sys = lazy_module("sys")
+wiki = lazy_module("wikipedia")
+pickle = lazy_module("pickle")
+functools = lazy_module("functools")
+nltk = None  # will be imported im separate thread for speed
+
+
+__all__ = ["WikipediaParser"]
+
+
+def NLTK_importer(*args):
+    global nltk
+    import nltk
 
 
 def warning(function):
@@ -49,54 +60,63 @@ def warning(function):
     return wrapper
 
 
+@for_all_methods(time_methods)
 class WikipediaParser:
 
-    def __init__(self):
+    def __init__(self, protected_vars=True):
         colorama_init()
 
-        # define variables
-        self.album = None
-        self.appearences = []
-        self.artists = []
-        self.band = None
-        self.composers = []
+        # lists 1D
         self.contents = []
+        self.tracks = []
+        self.types = []
         self.disc_num = []
         self.disk_sep = []
         self.disks = []
-        self.formated_html = None
-        self.genres = None
+        self.genres = []
         self.header = []
         self.lyrics = []
         self.NLTK_names = []
         self.numbers = []
-        self.page = None
         self.personnel = []
-        self.raw_html = None
-        self.release_date = None
-        self.selected_genre = None
-        self.soup = None
+        self._bracketed_types = []
+
+        # lists 2D
+        self.appearences = []
+        self.artists = []
+        self.composers = []
         self.sub_types = []
         self.subtracks = []
-        self.tracks = []
-        self.types = []
+        self.data_collect = None
+
+        # bytearray
         self.cover_art = None
 
-        # private
-        self._bracketed_types = []
-        self._files = []
-
-        # misc
-        self.url = None
+        # strings
         self.work_dir = None
-        self.info_box_html = None
-        self.data_collect = None
-        self.contents_raw = []
-        self.debug_folder = None
-        self.cover_art_file = None
+        self.release_date = None
+        self.selected_genre = None
+        self._debug_folder = None
+        self._url = None
 
-        # control
-        self.lock = Lock()
+        # atributes protected from GUIs reinit when new search is started
+        if protected_vars:
+            # control
+            self.getting_wiki = False
+            self.cooking_soup = False
+            self.wiki_downloaded = False
+            self.soup_ready = False
+            self.preload_running = False
+            self.preload_stop = False
+
+            # variables
+            self.album = ""
+            self.band = ""
+            self.formated_html = None
+            self.info_box_html = None
+            self.page = None
+            self.soup = None
+            self._files = []
 
     @property
     def bracketed_types(self):
@@ -105,6 +125,21 @@ class WikipediaParser:
             return self._bracketed_types
         else:
             return self._bracketed_types
+
+    @property
+    def debug_folder(self):
+        if self._debug_folder is None:
+            self._debug_folder = win_naming_convetion("output", self.album,
+                                                      dir_name=True)
+
+        return self._debug_folder
+
+    @property
+    def url(self):
+        if self._url is None:
+            self._url = self.page.url
+
+        return self._url
 
     @property
     def files(self):
@@ -116,6 +151,10 @@ class WikipediaParser:
     @files.setter
     def files(self, files):
         self._files = files
+
+    def list_files(self):
+
+        self.files = list_files(self.work_dir)
 
     # TODO try magic methods
     def __setitem__(self, key, item):
@@ -136,14 +175,6 @@ class WikipediaParser:
                 self.numbers[key], self.tracks[key], self.types[key],
                 self.disc_num[key], self.artists[key], self.lyrics[key],
                 self.composers[key], self.files[key]]
-
-    def __enter__(self):
-        # context manager
-        pass
-
-    def __exit__(self, exception_type, exception_val, trace):
-        # context manager
-        pass
 
     @warning
     def get_release_date(self):
@@ -179,17 +210,23 @@ class WikipediaParser:
     @warning
     def get_cover_art(self):
 
-        for child in self.info_box_html.children:
-            if child.find("img") is not None:
-                image = child.find("img")
-                image_url = f"https:{image['src']}"
+        # self.cover_art is not protected by lock, parser shoul have more than
+        # enough time to get it before GUI requests it
+        def cover_art_getter():
 
-                self.cover_art = requests.get(image_url).content
-                break
-        else:
-            with open("files/Na.jpg", "rb") as imageFile:
-                f = imageFile.read()
-                self.cover_art = bytearray(f)
+            for child in self.info_box_html.children:
+                if child.find("img") is not None:
+                    image = child.find("img")
+                    image_url = f"https:{image['src']}"
+
+                    self.cover_art = requests.get(image_url).content
+                    break
+            else:
+                with open("files/Na.jpg", "rb") as imageFile:
+                    f = imageFile.read()
+                    self.cover_art = bytearray(f)
+
+        Thread(target=cover_art_getter, name="CoverArtGetter").start()
 
     def check_band(self) -> bool:
 
@@ -327,16 +364,14 @@ class WikipediaParser:
             pickle.dump(self.page, output, pickle.HIGHEST_PROTOCOL)
 
         # save formated html to file
-        self.raw_html = self.soup.prettify()
+        html = self.soup.prettify()
 
         fname = os.path.join(self.debug_folder, 'html.txt')
         if not os.path.isfile(fname):
             with open(fname, 'w', encoding='utf8') as outfile:
-                outfile.write(self.raw_html)
+                outfile.write(html)
 
         # save html converted to text
-        self.formated_html = self.soup.get_text()
-
         fname = os.path.join(self.debug_folder, 'plain.txt')
         if not os.path.isfile(fname):
             with open(fname, 'w', encoding='utf8') as outfile:
@@ -344,48 +379,46 @@ class WikipediaParser:
 
     def get_contents(self):
 
-        self.contents = self.soup.find("div", class_="toc")
+        contents = self.soup.find("div", class_="toc")
         try:
-            self.contents = self.contents.get_text()
+            contents = contents.get_text()
         except AttributeError as e:
             print(e)
             log_parser.warning(e)
             shared_vars.warning = e
 
-            self.contents = []
-            self.contents_raw = []
+            contents = []
 
             ids = ["Track_listing", "Personnel", "Credits", "References"]
 
             index = 1
             for _id in ids:
                 if self.soup.find(class_="mw-headline", id=_id) is not None:
-                    self.contents_raw.append(_id)
-                    self.contents.append(f"{index} {_id}")
+                    self.contents.append(_id)
+                    contents.append(f"{index} {_id}")
                     index += 1
 
         else:
-            self.contents = self.contents.split("\n")
-            self.contents = list(filter(None, self.contents))
+            contents = contents.split("\n")
+            contents = list(filter(None, contents))
 
-            if "Contents" in self.contents[0]:
-                self.contents.pop(0)
+            if "Contents" in contents[0]:
+                contents.pop(0)
 
-            self.contents_raw = []
-            for item in self.contents:
+            for item in contents:
                 if len(re.findall(r'\d+', item)) > 1:
-                    item = "   " + item
+                    item = f"   {item}"
                 else:
-                    self.contents_raw.append(item.split(' ', 1)[1])
+                    self.contents.append(item.split(' ', 1)[1])
 
     def get_personnel(self):
 
-        for i, item in enumerate(self.contents_raw):
+        for i, item in enumerate(self.contents):
             if "personnel" in nc(item):
-                stop = self.contents_raw[i + 1]
+                stop = self.contents[i + 1]
                 break
             elif "credits" in nc(item):
-                stop = self.contents_raw[i + 1]
+                stop = self.contents[i + 1]
                 break
         else:
             # if pos is not initialized this means
@@ -401,8 +434,6 @@ class WikipediaParser:
         end = int(self.formated_html.find("\n" + stop, start))
 
         self.personnel = self.formated_html[start:end]
-
-        self.appearences = []
         self.personnel = self.personnel.split("\n")
 
         f = [" (", " | "]
@@ -438,8 +469,7 @@ class WikipediaParser:
                 else:
                     temp_new.append(tmp)
 
-            temp = list(map(int, temp_new))
-            temp = [i - 1 for i in temp]
+            temp = [int(t) - 1 for t in temp_new]
 
             for i, tr in enumerate(self.tracks):
                 if fuzz.token_set_ratio(tr, person) > 90:
@@ -798,8 +828,33 @@ class WikipediaParser:
             for un in unwanted:
                 replace_N_dim(tc, un)
 
+    def preload(self):
+
+        if self.album and self.band:
+            self.preload_running = True
+            self.get_wiki()
+            if self.preload_stop:
+                self.preload_running = False
+                log_parser.debug("Preload aborted")
+                return
+            self.cook_soup()
+            self.preload_running = False
+        else:
+            log_parser.debug("Input fields empty, aborting preload")
+
     # TODO implement timeout error
     def get_wiki(self):
+
+        # if GUI already started downloading page wait for finish and than exit
+        while self.getting_wiki:
+            sleep(0.05)
+            if not self.getting_wiki:
+                return
+
+        self.getting_wiki = True
+
+        # load NLTK in separate thread
+        Thread(target=NLTK_importer, name="ImportNLTK").start()
 
         searches = [f"{self.album} ({self.band} album)",
                     f"{self.album} (album)",
@@ -839,19 +894,38 @@ class WikipediaParser:
                                      "poor internet connetion")
             sys.exit()
 
-        self.url = self.page.url
+        self.getting_wiki = False
+        self.wiki_downloaded = True
 
     def cook_soup(self):
 
+        # TODO preparation for preloading
+        # if GUI already started downloading page wait for finish and than exit
+        while self.cooking_soup:
+            sleep(0.05)
+            if not self.cooking_soup:
+                return
+
+        self.cooking_soup = True
+
         # make BeautifulSoup black magic
-        self.raw_html = str(self.page.html())
-        self.soup = BeautifulSoup(self.raw_html, "lxml")
+        self.soup = BeautifulSoup(self.page.html(), "lxml")
         self.formated_html = self.soup.get_text()
         self.info_box_html = self.soup.find("table",
                                             class_="infobox vevent haudio")
 
         # check if the album belongs to band that was requested
-        self.check_band()
+        if not self.check_band():
+            shared_vars.wait_exit = True
+            while shared_vars.wait_exit:
+                sleep(0.01)
+
+            # If user wants to terminate program, the GUI
+            #  makes the application thread throw exception and exit
+            assert not shared_vars.terminate_app
+
+        self.cooking_soup = False
+        self.soup_ready = True
 
     # TODO try asyncio for disk write (https://github.com/Tinche/aiofiles)
     # TODO and for getters 
@@ -956,7 +1030,6 @@ class WikipediaParser:
     def reassign_files(self):
 
         wnc = win_naming_convetion
-
         max_length = len(max(self.tracks, key=len))
 
         # write data to ID3 tags
@@ -1032,6 +1105,8 @@ class WikipediaParser:
 
     def read_files(self):
 
+        self.list_files()
+
         file_names = []
         artists_data = []
         composers_data = []
@@ -1091,24 +1166,22 @@ class WikipediaParser:
 
     def extract_names(self):
 
-        # TODO do some preparatory phases after loading html to speed up
         # pass to NLTK only relevant part of page
-        for item in self.contents_raw:
+        for item in self.contents:
             if "references" in nc(item):
                 stop = item
                 break
         else:
-            stop = self.contents_raw[-1]
+            stop = self.contents[-1]
 
-        start = int(self.formated_html.find("\nTrack listing"))
-        end = int(self.formated_html.find("\n" + stop))
+        start = self.formated_html.find("\nTrack listing")
+        end = self.formated_html.find(f"\n{stop}")
         document = self.formated_html[start:end]
 
-        # NLTK extraction
         stop = nltk.corpus.stopwords.words('english')
 
         document = ' '.join([i for i in document.split() if i not in stop])
-        sentences = nltk.sent_tokenize(document)
+        sentences = nltk.tokenize.sent_tokenize(document)
         sentences = [nltk.word_tokenize(sent) for sent in sentences]
         sentences = [nltk.pos_tag(sent) for sent in sentences]
 
@@ -1143,3 +1216,6 @@ class WikipediaParser:
                           if fuzz.token_set_ratio(n, self.tracks) < 90]
 
         self.NLTK_names = filtered_names
+
+if __name__ == "__main__":
+    pass

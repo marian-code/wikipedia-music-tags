@@ -5,7 +5,6 @@
 - still no json load
 - potentialy separate scripts from lib and make lib a standalone package!!! this should solve all sorts of problems with imports ...
 - try Pool.starmap_Async to load lyrics while other things are done - introduces more complexity and reduces code readability - maybe not a great idea
-- need to reevaluate speed and possibly get rid of lazy imports - sometimes they cause weird interactions
 - frozen code doesnt run on x86 systems, need 32bit python installation to build 32bit app
 - implement timeout errors - cannot seem to cath it probably originates from other module
 - parser probably should have its own lock - access to its variables should be guarded - see 13.1.2019 entry in changelog
@@ -18,6 +17,7 @@
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
+- consoidate flags into dict
 
 
 ###  Individual problem cases 
@@ -27,9 +27,16 @@
 
 # Change Log
 
+### 20.5.2019
+- edits to preload method gui is now split to multiple classes which are then
+  inherited by the main
+- implemented killable thread for preload
+
 ### 18.5.2019
 - more strict PEP8 adherance
 - minor bug fixes
+- significant speedups by moving some data processing to other threads
+- implemented preloading of wiki page for aditional speedup
 
 ### 28.4.2019
 - added for/else clauses for readability

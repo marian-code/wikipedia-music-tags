@@ -8,7 +8,7 @@ if __name__ == '__main__':
     from utils import clean_logs
     clean_logs()
 
-from wiki_music import parser, shared_vars, log_app, info_exchange  # noqa: E402
+from wiki_music import parser, shared_vars, log_app  # noqa: E402
 
 
 # add signal handler to exit gracefully
@@ -35,6 +35,8 @@ read_tags = lazy_import.lazy_callable("libb.ID3_tags.read_tags")
 save_lyrics = lazy_import.lazy_callable("libb.lyrics.save_lyrics")
 
 init(convert=True)
+
+__all__ = ["get_lyrics", "get_wiki"]
 
 log_app.info("finished imports")
 
@@ -105,13 +107,12 @@ def exception(function):
 
 
 @exception
-def MAIN(band, album, work_dir, GUI):
+def get_wiki(GUI):
 
-    parser.album = album.title()
-    parser.band = band.title()
-    parser.debug_folder = win_naming_convetion(parser.album, dir_name=True)
+    while parser.preload_running:
+        time.sleep(0.05)
 
-    # download wikiedia page
+    # download wikipedia page
     if not shared_vars.offline_debbug:
         print("Accessing Wikipedia...")
         shared_vars.describe = "Accessing Wikipedia"
@@ -121,10 +122,10 @@ def MAIN(band, album, work_dir, GUI):
         shared_vars.describe = ("Searching for: " + parser.album +
                                 " by " + parser.band)
 
-        parser.get_wiki()
+        if not parser.wiki_downloaded:
+            parser.get_wiki()
 
-        log_print(msg_GREEN="Found at: ",
-                  msg_WHITE=str(parser.url),
+        log_print(msg_GREEN="Found at: ", msg_WHITE=str(parser.url),
                   describe_both=True)
 
     else:
@@ -141,19 +142,12 @@ def MAIN(band, album, work_dir, GUI):
         log_print(msg_GREEN="Using offline cached page insted of web page")
 
     log_print(msg_WHITE="Cooking Soup")
-    parser.cook_soup()
+    if not parser.soup_ready:
+        parser.cook_soup()
     log_print(msg_WHITE="Soup ready")
 
-    if not parser.check_band():
-        shared_vars.wait_exit = True
-        while shared_vars.wait_exit:
-            time.sleep(0.01)
-
-        # If user wants to terminate program, the GUI
-        #  makes the application thread throw exception and exit
-        assert not shared_vars.terminate_app
-    else:
-        log_print(msg_WHITE="Band check OK, parsing")
+    # get page contents
+    parser.get_contents()
 
     # find release date
     parser.get_release_date()
@@ -180,9 +174,6 @@ def MAIN(band, album, work_dir, GUI):
 
         # basic html textout for debug
         parser.basic_out()
-
-    # get page contents
-    parser.get_contents()
 
     # print out page contents
     log_print(msg_GREEN="Found page contents",
@@ -338,11 +329,12 @@ def MAIN(band, album, work_dir, GUI):
 
 
 @exception
-def LYRICS(work_dir, GUI):
+def get_lyrics(GUI):
 
-    log_app.info("starting LYRICS function")
+    log_app.info("starting get_lyrics function")
 
-    parser.read_files()
+    if not GUI:
+        parser.read_files()
 
     if parser.album == "" or parser.album == " " or parser.album is None:
         print("No album tag was found, enter album name: " +
@@ -409,11 +401,11 @@ if __name__ == "__main__":
     parser.files = list_files(parser.work_dir)
 
     if to_bool(only_lyrics):
-        LYRICS(parser.work_dir, GUI=False)
+        get_lyrics(GUI=False)
     else:
         print("Enter album name: " + Fore.GREEN, end="")
-        album = str(input())
+        parser.album = str(input())
         print(Fore.RESET + "Enter band name: " + Fore.GREEN, end="")
-        band = str(input())
+        parser.band = str(input())
         print(Fore.RESET)
-        MAIN(band, album, parser.work_dir, GUI=False)
+        get_wiki(GUI=False)
