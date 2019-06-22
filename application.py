@@ -1,14 +1,18 @@
 import package_setup
-import lazy_import
-import signal
-from utils import (list_files, to_bool, we_are_frozen,
-                   win_naming_convetion, flatten_set)
 
-if __name__ == '__main__':
-    from utils import clean_logs
+if __name__ == "__main__":
+    from utilities.utils import clean_logs
     clean_logs()
 
-from wiki_music import parser, shared_vars, log_app  # noqa: E402
+import lazy_import
+import signal
+from utilities.utils import (list_files, to_bool, we_are_frozen,
+                             win_naming_convetion, flatten_set)
+
+from utilities.loggers import log_app
+from utilities.sync import SharedVars
+from utilities.wrappers import exception
+from wiki_music import parser
 
 
 # add signal handler to exit gracefully
@@ -30,9 +34,9 @@ sys = lazy_import.lazy_module("sys")
 pickle = lazy_import.lazy_module("pickle")
 functools = lazy_import.lazy_module("functools")
 
-write_tags = lazy_import.lazy_callable("libb.ID3_tags.write_tags")
-read_tags = lazy_import.lazy_callable("libb.ID3_tags.read_tags")
-save_lyrics = lazy_import.lazy_callable("libb.lyrics.save_lyrics")
+write_tags = lazy_import.lazy_callable("library.write_tags")
+read_tags = lazy_import.lazy_callable("library.read_tags")
+save_lyrics = lazy_import.lazy_callable("library.save_lyrics")
 
 init(convert=True)
 
@@ -83,43 +87,25 @@ def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False):
 
     log_app.info(msg_GREEN)
     if not describe_both:
-        shared_vars.describe = msg_GREEN
+        SharedVars.describe = msg_GREEN
     else:
-        shared_vars.describe = msg_GREEN + msg_WHITE
+        SharedVars.describe = msg_GREEN + msg_WHITE
 
 
-def exception(function):
-    """
-    A decorator that wraps the passed in function and logs
-    exceptions should one occur
-    """
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        try:
-            return function(*args, **kwargs)
-        except Exception as e:
-            e = "Unhandled golbal exception: " + str(e)
-            print(e)
-            log_app.exception(e)
-            shared_vars.exception = e
-
-    return wrapper
-
-
-@exception
+@exception(log_app)
 def get_wiki(GUI):
 
     while parser.preload_running:
         time.sleep(0.05)
 
     # download wikipedia page
-    if not shared_vars.offline_debbug:
+    if not SharedVars.offline_debbug:
         print("Accessing Wikipedia...")
-        shared_vars.describe = "Accessing Wikipedia"
+        SharedVars.describe = "Accessing Wikipedia"
 
         print("Searching for: " + Fore.GREEN + parser.album + Fore.WHITE +
               " by " + Fore.GREEN + parser.band + Fore.WHITE)
-        shared_vars.describe = ("Searching for: " + parser.album +
+        SharedVars.describe = ("Searching for: " + parser.album +
                                 " by " + parser.band)
 
         if not parser.wiki_downloaded:
@@ -136,7 +122,7 @@ def get_wiki(GUI):
         except FileNotFoundError as e:
             print(e)
             log_app.exception(e)
-            shared_vars.exception = e
+            SharedVars.exception = e
             sys.exit(0)
 
         log_print(msg_GREEN="Using offline cached page insted of web page")
@@ -166,7 +152,7 @@ def get_wiki(GUI):
 
     if not we_are_frozen():
         print("Creating directory to store results")
-        shared_vars.describe = "Creating directory to store results"
+        SharedVars.describe = "Creating directory to store results"
 
         # create work dir
         if not os.path.exists(parser.debug_folder):
@@ -242,15 +228,15 @@ def get_wiki(GUI):
         parser.selected_genre = genre_select(parser.genres, GUI=GUI)
     else:
         if not parser.genres:
-            shared_vars.describe = "Input genre"
+            SharedVars.describe = "Input genre"
         else:
-            shared_vars.describe = "Select genre"
+            SharedVars.describe = "Select genre"
 
-        shared_vars.switch = "genres"
-        shared_vars.wait = True
+        SharedVars.switch = "genres"
+        SharedVars.wait = True
         log_app.info("waiting for input from gui")
 
-        while shared_vars.wait:
+        while SharedVars.wait:
             time.sleep(0.1)
 
     log_app.info("decide artists")
@@ -259,25 +245,25 @@ def get_wiki(GUI):
         print(Fore.CYAN +
               "Do you want to assign artists to composers? (y/n)",
               Fore.RESET, end=" ")
-        shared_vars.assign_artists = to_bool(input())
+        SharedVars.assign_artists = to_bool(input())
     else:
-        shared_vars.describe = "Assign artists to composers"
+        SharedVars.describe = "Assign artists to composers"
 
         # first load already known values to GUI
         # wait must be set before load,
         # otherwise if statement in gui wont be entered
-        shared_vars.wait = True
-        shared_vars.load = True
+        SharedVars.wait = True
+        SharedVars.load = True
 
-        while shared_vars.wait:
+        while SharedVars.wait:
             time.sleep(0.1)
 
-        shared_vars.switch = "comp"
-        shared_vars.wait = True
-        while shared_vars.wait:
+        SharedVars.switch = "comp"
+        SharedVars.wait = True
+        while SharedVars.wait:
             time.sleep(0.1)
 
-    if shared_vars.assign_artists:
+    if SharedVars.assign_artists:
         parser.composers, parser.artists = artists_assign(parser.composers,
                                                           parser.artists)
 
@@ -287,29 +273,29 @@ def get_wiki(GUI):
         print(Fore.CYAN +
               "\nDo you want to find and save lyrics? (y/n): " +
               Fore.RESET, end="")
-        shared_vars.write_lyrics = to_bool(input())
+        SharedVars.write_lyrics = to_bool(input())
     else:
         print("\n")
-        shared_vars.describe = "Searching for Lyrics"
-        shared_vars.switch = "lyrics"
-        shared_vars.wait = True
-        while shared_vars.wait:
+        SharedVars.describe = "Searching for Lyrics"
+        SharedVars.switch = "lyrics"
+        SharedVars.wait = True
+        while SharedVars.wait:
             time.sleep(0.1)
 
     # download lyrics
-    if shared_vars.write_lyrics:
-        save_lyrics()
+    if SharedVars.write_lyrics:
+        save_lyrics(parser)
     else:
         parser.lyrics = [""]*len(parser.tracks)
 
-    shared_vars.done = True
+    SharedVars.done = True
 
     # put data to list of dicts
     dict_data, writeable = parser.data_to_dict()
 
     # announce that main app thread has reached the barrier
     if GUI:
-        shared_vars.barrier.wait()
+        SharedVars.barrier.wait()
 
     if writeable and not GUI:
         print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
@@ -328,7 +314,7 @@ def get_wiki(GUI):
     return 0
 
 
-@exception
+@exception(log_app)
 def get_lyrics(GUI):
 
     log_app.info("starting get_lyrics function")
@@ -350,7 +336,7 @@ def get_lyrics(GUI):
     # find lyrics
     log_print(msg_GREEN="Searching for lyrics")
 
-    save_lyrics()
+    save_lyrics(parser)
 
     log_app.info("data to dict")
 
@@ -358,15 +344,15 @@ def get_lyrics(GUI):
     dict_data, writeable = parser.data_to_dict()
 
     log_app.info("announcing done")
-    shared_vars.describe = "Done"
+    SharedVars.describe = "Done"
 
-    shared_vars.done = True
+    SharedVars.done = True
 
     log_app.info("wait barrier")
 
     # announce that main app thread has reached the barrier
     if GUI:
-        shared_vars.barrier.wait()
+        SharedVars.barrier.wait()
 
     log_app.info("write data to tags")
 
@@ -393,9 +379,9 @@ if __name__ == "__main__":
     print(Fore.CYAN + "Download only lyrics? (y/n)", Fore.RESET, end="")
     only_lyrics = str(input())
     print(Fore.CYAN + "Write json save file? (y/n)", Fore.RESET, end="")
-    shared_vars.write_json = to_bool(input())
+    SharedVars.write_json = to_bool(input())
     print(Fore.CYAN + "Offline debbug? (y/n)", Fore.RESET, end="")
-    shared_vars.offline_debbug = to_bool(input())
+    SharedVars.offline_debbug = to_bool(input())
 
     parser.work_dir = os.getcwd()
     parser.files = list_files(parser.work_dir)

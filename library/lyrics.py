@@ -4,20 +4,23 @@ Get lyrics from:
 Anime Lyrics, AZLyrics, Genius, Lyricsmode, \
 Lyrical Nonsense, Musixmatch, darklyrics
 """
-import package_setup
-from lazy_import import lazy_callable, lazy_module
-from utils import we_are_frozen
-from wiki_music import log_lyrics, parser, exception, google_api_key
+
+from lazy_import import lazy_callable
+from utilities.utils import we_are_frozen, get_google_api_key
+from utilities.loggers import log_lyrics
+from utilities.wrappers import exception
 
 if not we_are_frozen():
     log_lyrics.propagate = False
 
-lyricsfinder = lazy_module("lyricsfinder")
+search_lyrics = lazy_callable("lyricsfinder.search_lyrics")
 Pool = lazy_callable("multiprocessing.Pool")
 Fore = lazy_callable("colorama.Fore")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
-colorama_init = lazy_callable("utils.colorama_init")
-normalize = lazy_callable("utils.normalize")
+colorama_init = lazy_callable("utilities.utils.colorama_init")
+normalize = lazy_callable("utilities.utils.normalize")
+
+google_api_key = get_google_api_key()
 
 colorama_init()
 
@@ -26,7 +29,7 @@ log_lyrics.info("imports done")
 __all__ = ["save_lyrics", "get_lyrics"]
 
 
-def save_lyrics():
+def save_lyrics(parser):
 
     log_lyrics.info("starting save lyrics")
 
@@ -85,9 +88,8 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
 
     log_lyrics.info("starting lyricsfinder ")
 
-    lyrics = next(lyricsfinder.search_lyrics(song, album, artist,
-                                             google_api_key=google_api_key),
-                  None)
+    lyrics = next(search_lyrics(song, album, artist,
+                                google_api_key=google_api_key), None)
 
     if not lyrics:
         return {

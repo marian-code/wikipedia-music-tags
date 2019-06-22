@@ -6,7 +6,7 @@
 
 # Import Libraries
 import package_setup
-from utils import get_sizes
+from utilities.utils import get_sizes
 import sys
 import time  # Importing the time library to check the time of code execution
 import os

@@ -3,7 +3,6 @@
 - acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels
 - maybe bypass the dict method of passing data to save function
 - still no json load
-- potentialy separate scripts from lib and make lib a standalone package!!! this should solve all sorts of problems with imports ...
 - try Pool.starmap_Async to load lyrics while other things are done - introduces more complexity and reduces code readability - maybe not a great idea
 - frozen code doesnt run on x86 systems, need 32bit python installation to build 32bit app
 - implement timeout errors - cannot seem to cath it probably originates from other module
@@ -17,7 +16,7 @@
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
-- consoidate flags into dict
+- consolidate flags into dict
 
 
 ###  Individual problem cases 
@@ -26,6 +25,22 @@
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
 
 # Change Log
+
+### 22.6.2019
+- major restructure of package. Now it is more comprehensible.
+- transformed class in sync.py, now all attributes belog to class. This solves
+  many import problems
+- helper methods are moved to utilities directory
+- major simplification of package __init__.py file - import simplification
+- utils.py module is split to 3 modules, one for GUI, one for parser and
+  one general
+- UI base classes now have their own directory
+- library imports are fixed and work OK now
+- loggers have their own module now located in utilities
+- all imports have been revised, resulting in great simplification and
+  readability improvement
+- nltk importer thread now implements its own lock so nltk lib cannot be
+  accessed before it is imported
 
 ### 20.5.2019
 - edits to preload method gui is now split to multiple classes which are then

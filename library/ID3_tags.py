@@ -1,32 +1,15 @@
-import package_setup
 import taglib
 from colorama import Fore, init
-from wiki_music import log_tags, shared_vars
-from functools import wraps
+from utilities.sync import SharedVars
+from utilities.wrappers import exception
+from utilities.loggers import log_tags
 
 init(convert=True)
 
 __all__ = ["read_tags", "write_tags"]
 
-def exception(function):
-    """
-    A decorator that wraps the passed in function and logs
-    exceptions should one occur
-    """
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        try:
-            return function(*args, **kwargs)
-        except Exception as e:
-            e = f"Unhandled golbal exception: {e}"
-            print(e)
-            log_tags.exception(e)
-            shared_vars.exception = e
 
-    return wrapper
-
-
-@exception
+@exception(log_tags)
 def write_tags(data: dict, lyrics_only):
 
     def write(tag, value=None):
@@ -46,13 +29,13 @@ def write_tags(data: dict, lyrics_only):
             print(Fore.LIGHTRED_EX, "Probably encoding error!", Fore.RESET)
             print(f'Couldn´t write tag {tag} to file {data["file"]}')
             print(e)
-            shared_vars.exception = e
+            SharedVars.exception = e
             log_tags.exception(e)
         except Exception as e:
             print(Fore.RED, "Error in writing tags!", Fore.RESET)
             print(f'Couldn´t write tag {tag} to file {data["file"]}')
             print(e)
-            shared_vars.exception = e
+            SharedVars.exception = e
             log_tags.exception(e)
 
     if data["file"] is None:
@@ -70,7 +53,7 @@ def write_tags(data: dict, lyrics_only):
     except Exception as e:
         print(f'Couldn´t open file {data["file"]} for writing')
         print(e)
-        shared_vars.exception = e
+        SharedVars.exception = e
         log_tags.exception(e)
 
     if lyrics_only is False:
@@ -109,13 +92,13 @@ def write_tags(data: dict, lyrics_only):
     except Exception as e:
         print(f'Couldn´t save file {data["file"]}')
         print(e)
-        shared_vars.exception = e
+        SharedVars.exception = e
         log_tags.exception(e)
     else:
         print(Fore.GREEN + "Tags written succesfully!", Fore.RESET)
 
 
-@exception
+@exception(log_tags)
 def read_tags(song_file: str):
 
     def read_tag(TAG_ID):
@@ -130,8 +113,8 @@ def read_tags(song_file: str):
         song = taglib.File(song_file)
     except Exception as error:
         print(Fore.RED + "Can not read file:\n" + Fore.RESET + song_file)
-        from wiki_music import shared_vars
-        shared_vars.exception = str(error)
+        from wiki_music import SharedVars
+        SharedVars.exception = str(error)
         log_tags.exception(error)
     else:
         album = read_tag("ALBUM")

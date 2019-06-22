@@ -1,6 +1,10 @@
 # pylint: disable=no-name-in-module
 import package_setup
 
+if __name__ == "__main__":
+    from utilities.utils import clean_logs
+    clean_logs()
+
 import os
 import subprocess
 import sys
@@ -17,23 +21,21 @@ from PyQt5.QtGui import (QStandardItemModel, QStandardItem, QImage, QPixmap,
 from PyQt5.QtCore import (Qt, QSortFilterProxyModel, QTimer, pyqtProperty,
                           pyqtSlot)
 
-if __name__ == '__main__':
-    from utils import clean_logs
-    clean_logs()
-
-from wiki_music import (log_gui, parser, shared_vars,
-                        exception, synchronized)  # noqa: E402
-from wiki_music.google_images_download import google_images_download  # noqa: E402
+from utilities.loggers import log_gui
 
 log_gui.debug("started imports")
 
-from gui_Qt_base import Ui_MainWindow  # noqa: E402
-from art_dialog_base import Ui_Dialog  # noqa: E402
-from cover_art_base import Ui_cover_art_search  # noqa: E402
-from application import get_lyrics, get_wiki  # noqa: E402
-from libb.ID3_tags import write_tags  # noqa: E402
-from utils import (list_files, module_path, we_are_frozen, get_music_path,
-                   image_handle, ThreadWithTrace)  # noqa: E402
+from wiki_music import parser
+from wiki_music.google_images_download import google_images_download
+from wiki_music.ui.gui_Qt_base import Ui_MainWindow
+from wiki_music.ui.art_dialog_base import Ui_Dialog
+from wiki_music.ui.cover_art_base import Ui_cover_art_search
+from wiki_music.application import get_lyrics, get_wiki
+from wiki_music.library import write_tags
+from wiki_music.utilities.utils import list_files, we_are_frozen, module_path
+from wiki_music.utilities.gui_utils import *
+from utilities.sync import SharedVars
+from utilities.wrappers import exception, synchronized
 
 log_gui.debug("finished imports")
 
@@ -395,9 +397,9 @@ class Checkers(DataModel):
             else:
                 return False
 
-        if shared_vars.wait:
+        if SharedVars.wait:
 
-            if shared_vars.switch == "genres":
+            if SharedVars.switch == "genres":
 
                 log_gui.debug("initialize question window")
                 # TODO non-atomic
@@ -420,91 +422,91 @@ class Checkers(DataModel):
                     else:
                         parser.selected_genre = "N/A"
 
-            if shared_vars.load:
+            if SharedVars.load:
                 QTimer.singleShot(0, self.__update_model__)
 
-            if shared_vars.switch == "comp":
+            if SharedVars.switch == "comp":
                 log_gui.debug("ask to copy composers")
                 msg = QMessageBox(QMessageBox.Question, "Question",
                                   "Do you want to copy artists to composers?",
                                   QMessageBox.Yes | QMessageBox.No)
 
-                shared_vars.assign_artists = msg_to_bool(msg.exec_())
+                SharedVars.assign_artists = msg_to_bool(msg.exec_())
 
-            if shared_vars.switch == "lyrics":
+            if SharedVars.switch == "lyrics":
                 log_gui.debug("ask to find lyrics")
                 msg = QMessageBox(QMessageBox.Question, "Question",
                                   "Do you want to find lyrics?",
                                   QMessageBox.Yes | QMessageBox.No)
 
-                shared_vars.write_lyrics = msg_to_bool(msg.exec_())
+                SharedVars.write_lyrics = msg_to_bool(msg.exec_())
 
-            shared_vars.load = False
-            shared_vars.switch = None
-            shared_vars.wait = False
+            SharedVars.load = False
+            SharedVars.switch = None
+            SharedVars.wait = False
 
-        if not shared_vars.done:
+        if not SharedVars.done:
             self.conditions_timer.start(200)
         else:
             # announce that gui has reached the barrier
             log_gui.debug("gui reached barrier")
-            shared_vars.barrier.wait()
+            SharedVars.barrier.wait()
 
             log_gui.debug("start __update_model__ function")
             QTimer.singleShot(0, self.__update_model__)
             self.__display_image__()
 
     def __exception_check__(self):
-        if shared_vars.exception is not None:
+        if SharedVars.exception is not None:
             msg = QMessageBox(QMessageBox.Critical, "Exception",
-                              shared_vars.exception)
+                              SharedVars.exception)
             msg.setDetailedText(open(r"logs/wiki_music_parser.log",
                                      "r").read())
             msg.exec_()
-            shared_vars.exception = None
+            SharedVars.exception = None
 
-        if shared_vars.warning is not None:
+        if SharedVars.warning is not None:
             QMessageBox(QMessageBox.Warning, "Warning",
-                        shared_vars.warning).exec_()
-            shared_vars.warning = None
+                        SharedVars.warning).exec_()
+            SharedVars.warning = None
 
-        if shared_vars.ask_exit is not None:
+        if SharedVars.ask_exit is not None:
             msg = QMessageBox(QMessageBox.Question, "Warning",
                               "Do you want to stop the search?",
                               QMessageBox.Yes | QMessageBox.No)
-            msg.setInformativeText(shared_vars.ask_exit)
+            msg.setInformativeText(SharedVars.ask_exit)
             terminate = msg.exec_()
 
             if terminate == QMessageBox.Yes:
-                shared_vars.wait_exit = False
-                shared_vars.terminate_app = True
+                SharedVars.wait_exit = False
+                SharedVars.terminate_app = True
 
                 time.sleep(0.03)
                 # TODO not working
                 sys.exit(self.exec_())  # TODO untested
             else:
-                shared_vars.wait_exit = False
-                shared_vars.ask_exit = None
+                SharedVars.wait_exit = False
+                SharedVars.ask_exit = None
 
         self.exception_timer.start(500)
 
     # lock must be here because there are non atomic operations i.e. +=
     @exception(log_gui)
-    @synchronized(shared_vars.lock)
+    @synchronized(SharedVars.lock)
     def __description_checker__(self):
 
         self.description_timer.start(400)
 
-        if " . . ." in shared_vars.describe:
-            shared_vars.describe = shared_vars.describe.replace(" . . .", "")
+        if " . . ." in SharedVars.describe:
+            SharedVars.describe = SharedVars.describe.replace(" . . .", "")
 
-        self.remember = shared_vars.describe
+        self.remember = SharedVars.describe
 
-        if shared_vars.describe != " " and shared_vars.describe != "":
-            if (self.remember == shared_vars.describe and
-                "Done" not in shared_vars.describe):  # noqa E129
-                shared_vars.describe += " ."
-            self.statusbar.showMessage(shared_vars.describe)
+        if SharedVars.describe != " " and SharedVars.describe != "":
+            if (self.remember == SharedVars.describe and
+                "Done" not in SharedVars.describe):  # noqa E129
+                SharedVars.describe += " ."
+            self.statusbar.showMessage(SharedVars.describe)
         else:
             self.statusbar.showMessage("")
 
@@ -549,6 +551,7 @@ class Buttons:
 
     @exception(log_gui)
     def __run_Mp3tag__(self):
+
         if not self.input_work_dir:
             QMessageBox(QMessageBox.Information, "Message",
                         "You must select directory first!").exec_()
@@ -563,11 +566,11 @@ class Buttons:
         parser.album = text
 
     def __select_json__(self):
-        shared_vars.write_json = self.json_write_sw.isChecked()
+        SharedVars.write_json = self.json_write_sw.isChecked()
 
     def __select_offline_debbug__(self):
-        shared_vars.offline_debbug = self.offline_debbug_sw.isChecked()
-        if shared_vars.offline_debbug:
+        SharedVars.offline_debbug = self.offline_debbug_sw.isChecked()
+        if SharedVars.offline_debbug:
             parser.preload_stop = True
 
     def __do_nothing__(self):
@@ -699,7 +702,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         # TODO non-atomic
         parser.__init__(protected_vars=False)
         parser.work_dir = self.input_work_dir
-        shared_vars.re_init()
+        SharedVars.re_init()
 
     # methods that bind to gui elements
     @exception(log_gui)
@@ -778,17 +781,17 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         self.input_band = band
 
         # offline debug must be dissabled
-        if not shared_vars.offline_debbug:
+        if not SharedVars.offline_debbug:
             # band and album entry must be non-empty strings
             if self.input_band and self.input_album:
                 # if preload is already running, kill the thread
                 if parser.preload_running:
-                    shared_vars.preload.kill()
-                    shared_vars.preload.join()
+                    SharedVars.preload.kill()
+                    SharedVars.preload.join()
                 log_gui.debug("Starting wikipedia preload...")
-                shared_vars.preload = ThreadWithTrace(target=parser.preload,
+                SharedVars.preload = ThreadWithTrace(target=parser.preload,
                                                       name="WikiPreload")
-                shared_vars.preload.start()
+                SharedVars.preload.start()
 
     @exception(log_gui)
     def __run_search__(self, *args):
@@ -827,8 +830,8 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     @exception(log_gui)
     def __run_lyrics_search__(self, *args):
 
-        shared_vars.preload.kill()
-        shared_vars.preload.join()
+        SharedVars.preload.kill()
+        SharedVars.preload.join()
 
         if str(self.input_work_dir) == "":
             QMessageBox(QMessageBox.Information, "Message",
@@ -928,7 +931,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
 
         QTimer.singleShot(0, _async_search)
 
-        shared_vars.describe = "Searching for Cover Art"
+        SharedVars.describe = "Searching for Cover Art"
 
     @exception(log_gui)
     def __select_picture__(self, row, col):
@@ -1018,7 +1021,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         if _file:
             _file = os.path.join(self.input_work_dir, "Folder.jpg")
 
-        shared_vars.describe = "Downloading full size cover art"
+        SharedVars.describe = "Downloading full size cover art"
         log_gui.info("Downloading full size cover art from: "
                      "{}".format(self.imd.fullsize_url[index]))
 
@@ -1026,19 +1029,19 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
                               clipboad=clipboard, path=_file, log=log_gui)
 
         if result is not True:
-            shared_vars.exception = ("Error in processing Cover Art "
+            SharedVars.exception = ("Error in processing Cover Art "
                                      "{}".format(result))
             log_gui.exception(result)
             return 0
 
         if size is not None:
-            shared_vars.describe = "Cover art resized to: {}x{}".format(*size)
+            SharedVars.describe = "Cover art resized to: {}x{}".format(*size)
             log_gui.info("Cover art resized to: {}x{}".format(*size))
         if clipboard:
-            shared_vars.describe = "Cover art copied to clipboard"
+            SharedVars.describe = "Cover art copied to clipboard"
             log_gui.info("Cover art copied to clipboard")
         if _file is not None:
-            shared_vars.describe = "Cover art saved to file"
+            SharedVars.describe = "Cover art saved to file"
             log_gui.info("Cover art saved to file")
 
 

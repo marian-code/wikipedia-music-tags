@@ -1,25 +1,22 @@
-import package_setup
-
-from threading import Thread
 from time import sleep
 
 from fuzzywuzzy import process
 from lazy_import import lazy_callable, lazy_module
 
-from utils import (bracket, caseless_contains, colorama_init, complete_N_dim,
-                   count_spaces, delete_N_dim, flatten_set, for_all_methods,
-                   json_dump, list_files, normalize)
-from utils import normalize_caseless as nc
-from utils import (replace_N_dim, time_methods, win_naming_convetion,
-                   write_roman)
-from wiki_music import log_parser, shared_vars
+from utilities.parser_utils import *
+from utilities.utils import *
+nc = normalize_caseless
 
+from utilities.loggers import log_parser
+from utilities.sync import SharedVars
+from utilities.wrappers import warning, time_methods, for_all_methods
+from .ID3_tags import read_tags
+
+Thread = lazy_callable("threading.Thread")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
 Fore = lazy_callable("colorama.Fore")
 BeautifulSoup = lazy_callable("bs4.BeautifulSoup")
-read_tags = lazy_callable("libb.ID3_tags.read_tags")
 
-codecs = lazy_module("codecs")
 datefinder = lazy_module("datefinder")
 dt = lazy_module("datetime")
 os = lazy_module("os")
@@ -28,36 +25,9 @@ requests = lazy_module("requests")
 sys = lazy_module("sys")
 wiki = lazy_module("wikipedia")
 pickle = lazy_module("pickle")
-functools = lazy_module("functools")
-nltk = None  # will be imported im separate thread for speed
-
+NLTK.run_import()  # imports nltk to global variables in separate thread
 
 __all__ = ["WikipediaParser"]
-
-
-def NLTK_importer(*args):
-    global nltk
-    import nltk
-
-
-def warning(function):
-    """ A decorator that wraps the passed in function and logs
-    exceptions should one occur
-    """
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        try:
-            return function(*args, **kwargs)
-        except AttributeError as e:
-            print(e)
-            log_parser.warning(e)
-            shared_vars.warning = e
-        except Exception as e:
-            print(e)
-            log_parser.warning(e)
-            shared_vars.warning = e
-
-    return wrapper
 
 
 @for_all_methods(time_methods)
@@ -129,8 +99,9 @@ class WikipediaParser:
     @property
     def debug_folder(self):
         if self._debug_folder is None:
-            self._debug_folder = win_naming_convetion("output", self.album,
-                                                      dir_name=True)
+            self._debug_folder = os.path.join("output",
+                                              win_naming_convetion(self.album,
+                                                dir_name=True))
 
         return self._debug_folder
 
@@ -176,7 +147,7 @@ class WikipediaParser:
                 self.disc_num[key], self.artists[key], self.lyrics[key],
                 self.composers[key], self.files[key]]
 
-    @warning
+    @warning(log_parser)
     def get_release_date(self):
 
         for child in self.info_box_html.children:
@@ -192,7 +163,7 @@ class WikipediaParser:
         else:
             self.release_date = ""
 
-    @warning
+    @warning(log_parser)
     def get_genres(self):
 
         for child in self.info_box_html.children:
@@ -207,7 +178,7 @@ class WikipediaParser:
         else:
             self.genres = []
 
-    @warning
+    @warning(log_parser)
     def get_cover_art(self):
 
         # self.cover_art is not protected by lock, parser shoul have more than
@@ -241,7 +212,7 @@ class WikipediaParser:
         except AttributeError as e:
             print(e)
             log_parser.warning(e)
-            shared_vars.warning = e
+            SharedVars.warning = e
             return True
         else:
             if fuzz.token_set_ratio(nc(self.band),
@@ -255,7 +226,7 @@ class WikipediaParser:
                      " by " + self.band + " does not exist.")
                 print(e)
                 log_parser.warning(e)
-                shared_vars.ask_exit = e
+                SharedVars.ask_exit = e
 
                 return False
             else:
@@ -293,7 +264,7 @@ class WikipediaParser:
         except Exception as e:
             print(e)
             log_parser.exception(e)
-            shared_vars.exception = e
+            SharedVars.exception = e
             self.NLTK_names = []
 
         self.NLTK_names = set(self.NLTK_names + self.personnel)
@@ -385,7 +356,7 @@ class WikipediaParser:
         except AttributeError as e:
             print(e)
             log_parser.warning(e)
-            shared_vars.warning = e
+            SharedVars.warning = e
 
             contents = []
 
@@ -561,7 +532,7 @@ class WikipediaParser:
             except AttributeError as e:
                 print(e)
                 log_parser.warning(e)
-                shared_vars.warning = ("No tracklist found!\nURL: " +
+                SharedVars.warning = ("No tracklist found!\nURL: " +
                                        self.url +
                                        "\nprobably doesn´t belong to album:" +
                                        " " + self.album + " by " + self.band)
@@ -576,7 +547,7 @@ class WikipediaParser:
             except AttributeError as e:
                 print(e)
                 log_parser.warning(e)
-                shared_vars.warning = ("No tracklist found!\nIt is probaly"
+                SharedVars.warning = ("No tracklist found!\nIt is probaly"
                                        "contained in some unknown format")
                 sys.exit()
 
@@ -853,9 +824,6 @@ class WikipediaParser:
 
         self.getting_wiki = True
 
-        # load NLTK in separate thread
-        Thread(target=NLTK_importer, name="ImportNLTK").start()
-
         searches = [f"{self.album} ({self.band} album)",
                     f"{self.album} (album)",
                     self.album]
@@ -882,7 +850,7 @@ class WikipediaParser:
                 self.page = wiki.page(self.album + " " + self.band)
             except wiki.exceptions.PageError as e:
                 log_parser.warning(e)
-                shared_vars.warning = "Album was not found!!"
+                SharedVars.warning = "Album was not found!!"
                 print(Fore.LIGHTYELLOW_EX + "Album was not found!!" +
                       Fore.RESET)
                 sys.exit()
@@ -890,7 +858,7 @@ class WikipediaParser:
         except wiki.exceptions.HTTPTimeoutError as e:
             print(e)
             log_parser.exception(e)
-            shared_vars.exception = ("Search failed probably due to"
+            SharedVars.exception = ("Search failed probably due to"
                                      "poor internet connetion")
             sys.exit()
 
@@ -916,13 +884,13 @@ class WikipediaParser:
 
         # check if the album belongs to band that was requested
         if not self.check_band():
-            shared_vars.wait_exit = True
-            while shared_vars.wait_exit:
+            SharedVars.wait_exit = True
+            while SharedVars.wait_exit:
                 sleep(0.01)
 
             # If user wants to terminate program, the GUI
             #  makes the application thread throw exception and exit
-            assert not shared_vars.terminate_app
+            assert not SharedVars.terminate_app
 
         self.cooking_soup = False
         self.soup_ready = True
@@ -1090,7 +1058,7 @@ class WikipediaParser:
 
             dict_data.append(dictionary)
 
-        if shared_vars.write_json:
+        if SharedVars.write_json:
             json_dump(dict_data, self.work_dir)
             print("Saved!")
 
@@ -1160,9 +1128,9 @@ class WikipediaParser:
         self.info_tracks()
 
         if not self.files:
-            shared_vars.describe = "No music files to Load"
+            SharedVars.describe = "No music files to Load"
         else:
-            shared_vars.describe = "Files loaded sucesfully"
+            SharedVars.describe = "Files loaded sucesfully"
 
     def extract_names(self):
 
@@ -1178,17 +1146,17 @@ class WikipediaParser:
         end = self.formated_html.find(f"\n{stop}")
         document = self.formated_html[start:end]
 
-        stop = nltk.corpus.stopwords.words('english')
+        stop = NLTK.nltk.corpus.stopwords.words('english')
 
         document = ' '.join([i for i in document.split() if i not in stop])
-        sentences = nltk.tokenize.sent_tokenize(document)
-        sentences = [nltk.word_tokenize(sent) for sent in sentences]
-        sentences = [nltk.pos_tag(sent) for sent in sentences]
+        sentences = NLTK.nltk.tokenize.sent_tokenize(document)
+        sentences = [NLTK.nltk.word_tokenize(sent) for sent in sentences]
+        sentences = [NLTK.nltk.pos_tag(sent) for sent in sentences]
 
         names = []
         for tagged_sentence in sentences:
-            for chunk in nltk.ne_chunk(tagged_sentence):
-                if type(chunk) == nltk.tree.Tree:
+            for chunk in NLTK.nltk.ne_chunk(tagged_sentence):
+                if type(chunk) == NLTK.nltk.tree.Tree:
                     if chunk.label() == 'PERSON':
                         names.append(' '.join([c[0] for c in chunk]))
 
