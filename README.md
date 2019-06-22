@@ -73,13 +73,13 @@ If you want to utilize lyrics search you will have to get a [Google Developer AP
 ### Installing
 
 There´s no installing yet but the module can be packaged with cx_Freeze 
-although it is still moderately buggy.
+although it is still considerably buggy.
 So to get it just:
 
 ```
 git clone <repo address>
 ```
-If you don´t want to package the module, skpi to the next section
+If you don´t want to package the module, skip to the next section
 
 You can package the script with cx_Freeze but in this stage it is still kind of buggy. If you decide to do so, before the first run of the respective setup script uncomment the line:
 ```
@@ -132,7 +132,7 @@ python gui_Qt.py
 ```
 python gui.py
 ```
-**libb** can also be used as a library for getting music tags, lyrics and writing them to files
+**library** can also be used as a library for getting music tags, lyrics and writing them to files
 
 ## Running the tests
 
