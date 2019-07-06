@@ -1,4 +1,4 @@
-import taglib
+from pytaglib import taglib
 from colorama import Fore, init
 from utilities.sync import SharedVars
 from utilities.wrappers import exception
@@ -113,7 +113,6 @@ def read_tags(song_file: str):
         song = taglib.File(song_file)
     except Exception as error:
         print(Fore.RED + "Can not read file:\n" + Fore.RESET + song_file)
-        from wiki_music import SharedVars
         SharedVars.exception = str(error)
         log_tags.exception(error)
     else:

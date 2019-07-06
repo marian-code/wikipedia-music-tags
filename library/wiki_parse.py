@@ -3,8 +3,8 @@ from time import sleep
 from fuzzywuzzy import process
 from lazy_import import lazy_callable, lazy_module
 
-from utilities.parser_utils import *
-from utilities.utils import *
+from utilities.parser_utils import *  # pylint: disable=unused-wildcard-import
+from utilities.utils import *  # pylint: disable=unused-wildcard-import
 nc = normalize_caseless
 
 from utilities.loggers import log_parser
@@ -25,13 +25,159 @@ requests = lazy_module("requests")
 sys = lazy_module("sys")
 wiki = lazy_module("wikipedia")
 pickle = lazy_module("pickle")
-NLTK.run_import()  # imports nltk to global variables in separate thread
+NLTK.run_import()  # imports nltk in separate thread
 
 __all__ = ["WikipediaParser"]
 
+settings_dict = yaml_load(os.path.join(module_path(), "..", "settings",
+                                       "constants.yaml"))
+DEF_TYPES = settings_dict["DEF_TYPES"]
+UNWANTED = settings_dict["UNWANTED"]
+TO_DELETE = settings_dict["TO_DELETE"]
+DELIMITERS = settings_dict["DELIMITERS"]
+CONTENTS_IDS = settings_dict["CONTENTS_IDS"]
+HEADER_CATEGORY = settings_dict["HEADER_CATEGORY"]
 
-@for_all_methods(time_methods)
-class WikipediaParser:
+
+class DataExtractors:
+    """ Extracts various table formats from wikipedia. """
+
+    @classmethod
+    def _from_table(cls, tables: list) -> list:
+
+        data_collect = []
+        for table in tables:
+
+            # preinit list of lists
+            rows = table.findAll("tr")
+            row_lengths = [len(r.findAll(['th', 'td'])) for r in rows]
+            ncols = max(row_lengths)
+            nrows = len(rows)
+            data = []
+
+            for _ in rows:
+                rowD = []
+                for _ in range(ncols):
+                    rowD.append('')
+                data.append(rowD)
+
+            # process html
+            for i, row in enumerate(rows):
+                cells = row.findAll(["td", "th"])
+
+                for j, cell in enumerate(cells):
+                    # lots of cells span cols and rows so lets deal with that
+                    # row can probably span other subrows when there are
+                    # subracks
+                    cspan = int(cell.get('colspan', 1))
+                    rspan = int(cell.get('rowspan', 1))
+
+                    for k in range(rspan):
+                        for l in range(cspan):
+                            # sometimes cell is devided to subsells, so lets
+                            # deal with this first
+                            subcells = cell.find("div",
+                                                 class_=re.compile("^hlist"))
+                            if subcells is not None:
+                                c = ", ".join([s.text for s in
+                                               subcells.findAll("li")])
+                            else:
+                                c = cell.text
+                            data[i + k][j + l] += c
+
+            for i in range(nrows):
+                data[i] = list(filter(None, data[i]))
+            data = list(filter(None, data))
+            data_collect.append(data)
+
+        return data_collect
+
+    @classmethod
+    def _from_list(cls, tables: list) -> list:
+
+        table = tables.find_next_sibling("ol")
+        if table is None:
+            table = tables.find_next_sibling("ul")
+
+        try:
+            rows = [ch for ch in table.children if ch.string != "\n"]
+        except AttributeError as e:
+            print(e)
+            log_parser.warning(e)
+            SharedVars.warning = ("No tracklist found!\nIt is probaly"
+                                  "contained in some unknown format")
+            sys.exit()
+
+        data = []
+        for i, row in enumerate(rows):
+            data.append([])
+
+            try:
+                number = re.search(r"\d+\.", row).group()
+            except AttributeError:
+                number = str(i + 1)
+            else:
+                rows[i] = row.replace(number, "")
+            finally:
+                number = re.sub(r"^0|\.", "", number.strip())
+                data[-1].append(number)
+
+            try:
+                time = re.search(r"\d+\:\d+", row).group()
+            except AttributeError:
+                data[-1].append(row.strip())
+            else:
+                rows[i] = re.sub(r"\s*–?-?\s*" + time, "", row)
+                rows[i] = row.replace(time, "")
+                rows[i] = re.sub(r"\"", "", row)
+                data[-1].append(row.strip())
+                data[-1].append(time)
+
+        return data
+
+    @classmethod
+    def get_track(cls, data):
+
+        tracks = []
+        subtracks = []
+
+        # extract tracks and subtracks
+        temp = data.split("\n")
+        for j, tmp in enumerate(temp):
+            if j > 0:
+                # replace " with space, delete empty spaces,
+                # remove numbering if there is any
+                temp[j] = (tmp.replace("\"", "").strip().split(' ', 1)[1])
+            else:
+                temp[j] = tmp.replace("\"", "").strip()
+
+            if "(" in tmp:
+                start = tmp.find("(")
+                end = tmp.find(")", start)
+                # odstranenie zatvoriek s casom
+                if tmp[start + 1:end].replace(":", "").isdigit():
+                    temp[j] = cls.cut_out(tmp, start, end)
+                # odstranenie bonus track
+                if "bonus" in nc(tmp[start + 1:end]):
+                    temp[j] = cls.cut_out(tmp, start, end)
+
+        tracks.append(temp[0].strip())
+        subtracks.append(temp[1:len(temp)])
+
+        return tracks, subtracks
+
+    @classmethod
+    def get_artist(cls, data):
+        temp = re.split(",|&", data)
+        return [tmp.replace(",", "").strip() for tmp in temp]
+
+    @classmethod
+    def cut_out(cls, string: str, start: int, end: int) ->str:
+        return (string[:start] + string[end + 1:]).strip()
+
+
+@for_all_methods(time_methods, exclude=["cut_out"])
+class WikipediaParser(DataExtractors):
 
     def __init__(self, protected_vars=True):
         colorama_init()
@@ -69,7 +215,8 @@ class WikipediaParser:
         self._debug_folder = None
         self._url = None
 
-        # atributes protected from GUIs reinit when new search is started
+        # atributes protected from GUIs reinit method
+        # when new search is started
         if protected_vars:
             # control
             self.getting_wiki = False
@@ -101,7 +248,7 @@ class WikipediaParser:
         if self._debug_folder is None:
             self._debug_folder = os.path.join("output",
                                               win_naming_convetion(self.album,
-                                                dir_name=True))
+                                              dir_name=True))
 
         return self._debug_folder
 
@@ -124,28 +271,7 @@ class WikipediaParser:
         self._files = files
 
     def list_files(self):
-
         self.files = list_files(self.work_dir)
-
-    # TODO try magic methods
-    def __setitem__(self, key, item):
-        self.lock.acquire()
-        attrs = [self.selected_genre, self.release_date, self.album, self.band,
-                 self.numbers, self.tracks, self.types, self.disc_num,
-                 self.artists, self.lyrics, self.composers, self.files]
-
-        for i, itm in enumerate(item):
-            if isinstance(itm, list):
-                attrs[i][key] = itm
-            else:
-                attrs[i] = itm
-        self.lock.release()
-
-    def __getitem__(self, key):
-        return [self.selected_genre, self.release_date, self.album, self.band,
-                self.numbers[key], self.tracks[key], self.types[key],
-                self.disc_num[key], self.artists[key], self.lyrics[key],
-                self.composers[key], self.files[key]]
 
     @warning(log_parser)
     def get_release_date(self):
@@ -291,11 +417,9 @@ class WikipediaParser:
         # find NLTK names that occure in sentence after specified phrases
         # split to sentences
         sentences = []
-        delimiters = ["written by", "composed by", "lyrics by", "music by",
-                      "arrangements by", "vocal lines by"]
 
         for sentence in html.split("."):
-            for d in delimiters:
+            for d in DELIMITERS:
                 if re.search(d, sentence, re.IGNORECASE):
                     sentences.append(sentence)
 
@@ -336,14 +460,13 @@ class WikipediaParser:
 
         # save formated html to file
         html = self.soup.prettify()
-
-        fname = os.path.join(self.debug_folder, 'html.txt')
+        fname = os.path.join(self.debug_folder, 'page.html')
         if not os.path.isfile(fname):
             with open(fname, 'w', encoding='utf8') as outfile:
                 outfile.write(html)
 
         # save html converted to text
-        fname = os.path.join(self.debug_folder, 'plain.txt')
+        fname = os.path.join(self.debug_folder, 'page.txt')
         if not os.path.isfile(fname):
             with open(fname, 'w', encoding='utf8') as outfile:
                 outfile.write(self.formated_html)
@@ -360,10 +483,8 @@ class WikipediaParser:
 
             contents = []
 
-            ids = ["Track_listing", "Personnel", "Credits", "References"]
-
             index = 1
-            for _id in ids:
+            for _id in CONTENTS_IDS:
                 if self.soup.find(class_="mw-headline", id=_id) is not None:
                     self.contents.append(_id)
                     contents.append(f"{index} {_id}")
@@ -430,11 +551,11 @@ class WikipediaParser:
             temp_new = []
             for i, tmp in enumerate(temp):
                 # zbavit sa cisel referencii
-                if (person.rfind("[", 0,   pos[i]) != -1 and
+                if (person.rfind("[", 0, pos[i]) != -1 and
                    person.find("]", pos[i]) != -1):
                     pass
                 # odstranit ak je cislo obsiahnute v nazve skladby
-                elif (person.rfind("\"", 0,   pos[i]) != -1 and
+                elif (person.rfind("\"", 0, pos[i]) != -1 and
                       person.find("\"", pos[i]) != -1):
                     pass
                 else:
@@ -484,138 +605,24 @@ class WikipediaParser:
 
     def get_tracks(self):
 
-        # should match strings containing "tracklist"
-        tables = self.soup.findAll("table", class_=re.compile("tracklist"))
+        tables = self.soup.findAll("table", class_="tracklist")
 
-        self.data_collect = []
-        for table in tables:
-
-            # preinit list of lists
-            rows = table.findAll("tr")
-            row_lengths = [len(r.findAll(['th', 'td'])) for r in rows]
-            ncols = max(row_lengths)
-            nrows = len(rows)
-            data = []
-
-            for _ in rows:
-                rowD = []
-                for _ in range(ncols):
-                    rowD.append('')
-                data.append(rowD)
-
-            # process html
-            for i, row in enumerate(rows):
-                rowD = []
-                cells = row.findAll(["td", "th"])
-
-                for j, cell in enumerate(cells):
-                    # lots of cells span cols and rows so lets deal with that
-                    cspan = int(cell.get('colspan', 1))
-                    rspan = int(cell.get('rowspan', 1))
-
-                    for k in range(rspan):
-                        for l in range(cspan):
-                            data[i+k][j+l] += cell.text
-
-                data.append(rowD)
-
-            for i in range(nrows):
-                data[i] = list(filter(None, data[i]))
-            data = list(filter(None, data))
-            self.data_collect.append(data)
-
-        # if tracklist is not in table - fall back to this method of extraction
-        if not self.data_collect:
-
+        if tables is not None:
+            self.data_collect = self._from_table(tables)
+        else:
             try:
                 tables = self.soup.find(id="Track_listing").parent
             except AttributeError as e:
                 print(e)
                 log_parser.warning(e)
-                SharedVars.warning = ("No tracklist found!\nURL: " +
-                                       self.url +
-                                       "\nprobably doesn´t belong to album:" +
-                                       " " + self.album + " by " + self.band)
+                SharedVars.warning = (f"No tracklist found!\nURL: {self.url}"
+                                      f"\nprobably doesn´t belong to album: "
+                                      f"{self.album} by {self.band}")
                 sys.exit()
-
-            table = tables.find_next_sibling("ol")
-            if table is None:
-                table = tables.find_next_sibling("ul")
-
-            try:
-                rows = [ch for ch in table.children if ch.string != "\n"]
-            except AttributeError as e:
-                print(e)
-                log_parser.warning(e)
-                SharedVars.warning = ("No tracklist found!\nIt is probaly"
-                                       "contained in some unknown format")
-                sys.exit()
-
-            data = []
-            for i, row in enumerate(rows):
-                data.append([])
-
-                try:
-                    number = re.search(r"\d+\.", row).group()
-                except AttributeError:
-                    number = str(i + 1)
-                else:
-                    rows[i] = row.replace(number, "")
-                finally:
-                    number = re.sub(r"^0|\.", "", number.strip())
-                    data[-1].append(number)
-
-                try:
-                    time = re.search(r"\d+\:\d+", row).group()
-                except AttributeError:
-                    data[-1].append(row.strip())
-                else:
-                    rows[i] = re.sub(r"\s*–?-?\s*" + time, "", row)
-                    rows[i] = row.replace(time, "")
-                    rows[i] = re.sub(r"\"", "", row)
-                    data[-1].append(row.strip())
-                    data[-1].append(time)
-
-            self.data_collect.append(data)
+            else:
+                self.data_collect = self._from_list(tables)
 
     def process_tracks(self):
-
-        def TR(data):
-
-            tracks = []
-            subtracks = []
-
-            # extract tracks and subtracks
-            temp = data.split("\n")
-            for j, tmp in enumerate(temp):
-                if j > 0:
-                    # replace " with space, delete empty spaces,
-                    # remove numbering if there is any
-                    temp[j] = (tmp.replace("\"", "")
-                               .strip().split(' ', 1)[1])
-                else:
-                    temp[j] = tmp.replace("\"", "").strip()
-
-                if "(" in tmp:
-                    start = tmp.find("(")
-                    end = tmp.find(")", start)
-                    # odstranenie zatvoriek s casom
-                    if tmp[start + 1:end].replace(":", "").isdigit():
-                        temp[j] = tmp[:start] + tmp[end + 1:].strip()
-                    # odstranenie bonus track
-                    if "bonus" in nc(tmp[start + 1:end]):
-                        temp[j] = tmp[:start] + tmp[end + 1:].strip()
-
-            tracks.append(temp[0].strip())
-            subtracks.append(temp[1:len(temp)])
-
-            return tracks, subtracks
-
-        def ART(data):
-            temp = re.split(",|&", data)
-            return [(re.sub(",", "", tmp)).strip() for tmp in temp]
-
-        header_cat = ["lyrics", "text", "music", "compose"]
 
         self.disk_sep.append(0)
 
@@ -634,7 +641,7 @@ class WikipediaParser:
                         self.header.append(row)
                 elif row[0].replace(".", "").isdigit():
                     self.numbers.append(row[0].replace(".", ""))
-                    tmp1, tmp2 = TR(row[1])
+                    tmp1, tmp2 = self.get_track(row[1])
                     self.tracks.extend(tmp1)
                     self.subtracks.extend(tmp2)
 
@@ -647,20 +654,22 @@ class WikipediaParser:
                         # artists we assign them to artists or composers
                         # based on label in header
                         for i in range(2, cols - 1):
+                            a = self.get_artist(row[i])
                             try:
                                 score = process.extractOne(self.header[-1][i],
-                                                           header_cat,
+                                                           HEADER_CATEGORY,
                                                            score_cutoff=90,
                                                            scorer=fuzz.ratio)
-                                if score:
-                                    self.composers[-1].extend(ART(row[i]))
-                                else:
-                                    self.artists[-1].extend(ART(row[i]))
                             except:
-                                self.artists[-1].extend(ART(row[i]))
+                                self.artists[-1].extend(a)
+                            else:
+                                if score:
+                                    self.composers[-1].extend(a)
+                                else:
+                                    self.artists[-1].extend(a)
                     else:
-                        self.artists.append([]*1)
-                        self.composers.append([]*1)
+                        self.artists.append([] * 1)
+                        self.composers.append([] * 1)
                 elif "total" in nc(row[0]):
                     # total length summary
                     pass
@@ -683,11 +692,6 @@ class WikipediaParser:
 
     def info_tracks(self):
 
-        def_types = ["Instrumental", "Acoustic", "Orchestral", "Live",
-                     "Piano Version"]
-        unwanted = ["featuring", "feat.", "feat", "narration by", "narration"]
-        to_delete = ["bonus track", "bonus"]
-
         self.types = []
         self.sub_types = []
 
@@ -707,40 +711,35 @@ class WikipediaParser:
 
                 artist = re.sub("[,:]", "", tr[start + 1:end])
 
-                for td in to_delete:
+                for td in TO_DELETE:
                     if td in nc(artist):
-                        self.tracks[i] = (tr[:start - 1] +
-                                          tr[end + 1:]).strip()
+                        self.tracks[i] = self.cut_out(tr, start, end)
                         break
 
                 artist = re.split(r",|\/|\\", artist)
 
                 for art in artist:
-                    for un in unwanted:
-                        art = art.replace(un, "").strip()
-                        art = art.replace(un.capitalize(), "").strip()
+                    for un in UNWANTED:
+                        art = re.sub(un, "", art, flags=re.IGNORECASE)
 
                     # check against additional personnel
                     for person in self.personnel:
                         if fuzz.token_set_ratio(art, person) > 90:
                             self.artists[i].append(person)
-                            tr = (tr[:start] + tr[end + 1:])
-                            self.tracks[i] = tr.strip()
+                            self.tracks[i] = self.cut_out(tr, start, end)
 
                     # check agains composers
                     for comp in comp_flat:
                         if fuzz.token_set_ratio(art, comp) > 90:
                             self.artists[i].append(comp)
-                            tr = (tr[:start] + tr[end + 1:])
-                            self.tracks[i] = tr.strip()
+                            self.tracks[i] = self.cut_out(tr, start, end)
 
                     # check if instrumental, ...
                     _type, score = process.extractOne(
-                        art, def_types, scorer=fuzz.token_sort_ratio)
+                        art, DEF_TYPES, scorer=fuzz.token_sort_ratio)
                     if score > 90:
-                        self.types[i] = _type
-                        tr = tr[:start] + tr[end + 1:]
-                        self.tracks[i] = tr.strip()
+                        self.types[i] = art  # _type
+                        self.tracks[i] = self.cut_out(tr, start, end)
 
             if self.subtracks:
                 for j, sbtr in enumerate(self.subtracks[i]):
@@ -760,25 +759,20 @@ class WikipediaParser:
                             for person in self.personnel:
                                 if fuzz.token_set_ratio(a, person) > 90:
                                     self.artists[i].append(person)
-                                    sbtr = sbtr[:start] + sbtr[end + 1:]
-                                    self.subtracks[i][j] = sbtr.strip()
+                                    sbtr = self.cut_out(sbtr, start, end)
+                                    self.subtracks[i][j] = sbtr
 
                             # check if instrumental, ...
                             _type, score = process.extractOne(
-                                a, def_types, scorer=fuzz.token_sort_ratio)
+                                a, DEF_TYPES, scorer=fuzz.token_sort_ratio)
                             if score > 90:
                                 self.sub_types[i][j] = _type
-                                sbtr = sbtr[:start] + sbtr[end + 1:]
-                                self.subtracks[i][j] = sbtr.strip()
-
-        # get rid of artists duplicates
-        for art in self.artists:
-            art = sorted(list(set(art)))
+                                sbtr = self.cut_out(sbtr, start, end)
+                                self.subtracks[i][j] = sbtr
 
     def complete(self):
 
         to_complete = [self.composers, self.artists, self.personnel]
-        unwanted = ["featuring", "feat.", "feat", "naration by"]
         delete = ["", " "]
 
         # complete everything with everything
@@ -792,12 +786,18 @@ class WikipediaParser:
                 a.sort()
 
         for tc in to_complete:
-            delete_N_dim(tc, delete)      
+            delete_N_dim(tc, delete)
 
         # get rid of feat., faeturing ...
         for tc in to_complete:
-            for un in unwanted:
+            for un in UNWANTED:
                 replace_N_dim(tc, un)
+
+        # get rid of artists duplicates
+        for tc in to_complete:
+            for i, t in enumerate(tc):
+                if isinstance(t, list):
+                    tc[i] = sorted(list(set(t)))
 
     def preload(self):
 
@@ -858,8 +858,8 @@ class WikipediaParser:
         except wiki.exceptions.HTTPTimeoutError as e:
             print(e)
             log_parser.exception(e)
-            SharedVars.exception = ("Search failed probably due to"
-                                     "poor internet connetion")
+            SharedVars.exception = ("Search failed probably due to "
+                                    "poor internet connetion")
             sys.exit()
 
         self.getting_wiki = False
@@ -896,7 +896,7 @@ class WikipediaParser:
         self.soup_ready = True
 
     # TODO try asyncio for disk write (https://github.com/Tinche/aiofiles)
-    # TODO and for getters 
+    # TODO and for getters
     def disk_write(self):
 
         for i, tracklist in enumerate(self.tracklist_2_str(to_file=True), 1):
@@ -935,7 +935,7 @@ class WikipediaParser:
                 s += f"{' '*(length + len(hd[1]))}{hd[2]}"
             if len(hd) >= 4:
                 s += f", {hd[3]}"
-            s += R
+            s += f"{R}\n"
 
             for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
                 s += (f"{self.numbers[i]:>2}. {self.tracks[i]} "
@@ -1016,13 +1016,13 @@ class WikipediaParser:
                 if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
 
                     print(Fore.LIGHTYELLOW_EX + tr + Fore.RESET,
-                          "-"*(1 + max_length - len(tr)) + ">",
+                          "-" * (1 + max_length - len(tr)) + ">",
                           path)
                     files.append(path)
                     break
             else:
                 print(Fore.LIGHTBLUE_EX + tr + Fore.RESET,
-                      "."*(2 + max_length - len(tr)),
+                      "." * (2 + max_length - len(tr)),
                       "Does not have a matching file!")
 
                 files.append("")
@@ -1035,31 +1035,31 @@ class WikipediaParser:
         dict_data = []
         for i, _ in enumerate(self.tracks):
 
-            if self.files[i] == "" or self.files[i] == " ":
+            if self.files[i].strip() == "":
                 f = None
                 file_counter += 1
             else:
                 f = self.files[i]
 
             dictionary = {
-                    "ALBUM": self.album,
-                    "ALBUMARTIST": self.band,
-                    "ARTIST": self.artists[i],
-                    "COMPOSER": self.composers[i],
-                    "DATE": self.release_date,
-                    "DISCNUMBER": self.disc_num[i],
-                    "file": f,
-                    "GENRE": self.selected_genre,
-                    "LYRICS": self.lyrics[i],
-                    "TITLE": self.tracks[i],
-                    "TRACKNUMBER": self.numbers[i],
-                    "type": self.bracketed_types[i],
-                }
+                "ALBUM": self.album,
+                "ALBUMARTIST": self.band,
+                "ARTIST": self.artists[i],
+                "COMPOSER": self.composers[i],
+                "DATE": self.release_date,
+                "DISCNUMBER": self.disc_num[i],
+                "file": f,
+                "GENRE": self.selected_genre,
+                "LYRICS": self.lyrics[i],
+                "TITLE": self.tracks[i],
+                "TRACKNUMBER": self.numbers[i],
+                "type": self.bracketed_types[i]
+            }
 
             dict_data.append(dictionary)
 
         if SharedVars.write_json:
-            json_dump(dict_data, self.work_dir)
+            yaml_dump(dict_data, self.work_dir)
             print("Saved!")
 
         if file_counter == len(self.tracks):

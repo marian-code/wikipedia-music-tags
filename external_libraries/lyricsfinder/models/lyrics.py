@@ -7,7 +7,6 @@ from typing import Any, Dict, Union
 from .. import utils
 
 
-
 class LyricsOrigin:
     """Represents a place where lyrics come from."""
 
@@ -75,7 +74,7 @@ class Lyrics:
             "origin": self.origin.to_dict()
         }
 
-    def save(self, f: Union[str, TextIOBase] = None) -> TextIOBase:
+    def save(self, f: Union[str, TextIOBase]=None) -> TextIOBase:
         """Save the lyrics."""
         if isinstance(f, TextIOBase):
             d = f

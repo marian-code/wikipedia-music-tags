@@ -14,6 +14,7 @@ def module_path():
     return os.path.dirname(__file__)
 
 
+# append package parent directory to path
 sys.path.append(os.path.realpath(os.path.join(module_path(), "..")))
 
 if we_are_frozen():

@@ -8,7 +8,7 @@ from threading import Barrier, Lock
 # variables between gui and application, it serves to pass
 # the questions asked in application to to PyQt (Tkinter) frontend.
 
-__all__ = ["InfoExchange"]
+__all__ = ["SharedVars"]
 
 
 class SharedVars:

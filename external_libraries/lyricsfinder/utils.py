@@ -47,6 +47,7 @@ class UrlData:
             self._bs = BeautifulSoup(self.html, self.html_parser)
         return self._bs
 
+
 def search(query: str, api_key: str) -> List:
     """Return search results."""
     params = {
@@ -90,7 +91,7 @@ def generate_url(artist: str, album: str, song: str) -> List:
     # Musixmatch
     song = song.split()
     # the list of words that arte not capitalized, may not be exhaustive!!
-    do_not_capitatize =["on","at","by", "or","a","an", "of", "and","but"]
+    do_not_capitatize =["on", "at", "by", "or", "a", "an", "of", "and", "but"]
     # no = ["under","between", "over", "after","without","until", "because","every","this","those", "many", ]
     # maybe = ["and","but",]
     song[0] = song[0].capitalize()
@@ -103,6 +104,7 @@ def generate_url(artist: str, album: str, song: str) -> List:
     urls.append({"link": "https://www.musixmatch.com/lyrics/" + artist.strip().upper().replace(" ", "-") + "/" + song})
 
     return urls
+
 
 def safe_filename(name: str, file_ending: str = ".json") -> str:
     """Return a safe version of name + file_type."""

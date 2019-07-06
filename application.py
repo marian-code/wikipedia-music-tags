@@ -95,18 +95,19 @@ def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False):
 @exception(log_app)
 def get_wiki(GUI):
 
-    while parser.preload_running:
-        time.sleep(0.05)
-
     # download wikipedia page
     if not SharedVars.offline_debbug:
+
+        while parser.preload_running:
+            time.sleep(0.05)
+
         print("Accessing Wikipedia...")
         SharedVars.describe = "Accessing Wikipedia"
 
         print("Searching for: " + Fore.GREEN + parser.album + Fore.WHITE +
               " by " + Fore.GREEN + parser.band + Fore.WHITE)
         SharedVars.describe = ("Searching for: " + parser.album +
-                                " by " + parser.band)
+                               " by " + parser.band)
 
         if not parser.wiki_downloaded:
             parser.get_wiki()
@@ -115,17 +116,19 @@ def get_wiki(GUI):
                   describe_both=True)
 
     else:
-        fname = os.path.join(parser.album, 'page.pkl')
-        try:
+        fname = os.path.join("output", parser.album, 'page.pkl')
+        if os.path.isfile(fname):
             infile = open(fname, 'rb')
             parser.page = pickle.load(infile)
-        except FileNotFoundError as e:
-            print(e)
-            log_app.exception(e)
-            SharedVars.exception = e
-            sys.exit(0)
-
-        log_print(msg_GREEN="Using offline cached page insted of web page")
+            log_print(msg_GREEN="Using offline cached page insted of web page")
+        else:
+            msg = ("Cannot find cached offline version of page. "
+                   "Trying to get online version...")
+            log_app.warning(msg)
+            SharedVars.warning = msg
+            log_print(msg_GREEN=msg)
+            SharedVars.offline_debbug = False
+            get_wiki(GUI)
 
     log_print(msg_WHITE="Cooking Soup")
     if not parser.soup_ready:
@@ -137,13 +140,11 @@ def get_wiki(GUI):
 
     # find release date
     parser.get_release_date()
-    log_print(msg_GREEN="Found release date",
-              msg_WHITE=parser.release_date)
+    log_print(msg_GREEN="Found release date", msg_WHITE=parser.release_date)
 
     # find list of genres
     parser.get_genres()
-    log_print(msg_GREEN="Found genre(s)",
-              msg_WHITE="\n".join(parser.genres))
+    log_print(msg_GREEN="Found genre(s)", msg_WHITE="\n".join(parser.genres))
 
     if GUI:
         # download cover art from wikipedia
@@ -199,12 +200,13 @@ def get_wiki(GUI):
     # extract writers, composers
     log_print(msg_GREEN="Extracting composers", print_out=False)
     parser.get_composers()
-    log_print(msg_GREEN="Found composers",
-              msg_WHITE="\n".join(flatten_set(parser.composers)))
 
     # complete artists names
     log_app.info("complete 2")
     parser.complete()
+
+    log_print(msg_GREEN="Found composers",
+              msg_WHITE="\n".join(flatten_set(parser.composers)))
 
     if not we_are_frozen():
         # save to files
@@ -270,8 +272,7 @@ def get_wiki(GUI):
     log_app.info("decide lyrics")
     # decide if you want to find lyrics
     if not GUI:
-        print(Fore.CYAN +
-              "\nDo you want to find and save lyrics? (y/n): " +
+        print(Fore.CYAN + "\nDo you want to find and save lyrics? (y/n): " +
               Fore.RESET, end="")
         SharedVars.write_lyrics = to_bool(input())
     else:
@@ -286,7 +287,7 @@ def get_wiki(GUI):
     if SharedVars.write_lyrics:
         save_lyrics(parser)
     else:
-        parser.lyrics = [""]*len(parser.tracks)
+        parser.lyrics = [""] * len(parser.tracks)
 
     SharedVars.done = True
 
@@ -311,7 +312,7 @@ def get_wiki(GUI):
 
     if we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
-    return 0
+    return
 
 
 @exception(log_app)
@@ -377,7 +378,7 @@ def get_lyrics(GUI):
 if __name__ == "__main__":
 
     print(Fore.CYAN + "Download only lyrics? (y/n)", Fore.RESET, end="")
-    only_lyrics = str(input())
+    only_lyrics = to_bool(input())
     print(Fore.CYAN + "Write json save file? (y/n)", Fore.RESET, end="")
     SharedVars.write_json = to_bool(input())
     print(Fore.CYAN + "Offline debbug? (y/n)", Fore.RESET, end="")
@@ -386,7 +387,7 @@ if __name__ == "__main__":
     parser.work_dir = os.getcwd()
     parser.files = list_files(parser.work_dir)
 
-    if to_bool(only_lyrics):
+    if only_lyrics:
         get_lyrics(GUI=False)
     else:
         print("Enter album name: " + Fore.GREEN, end="")

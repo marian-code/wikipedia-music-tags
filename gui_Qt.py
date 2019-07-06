@@ -26,7 +26,7 @@ from utilities.loggers import log_gui
 log_gui.debug("started imports")
 
 from wiki_music import parser
-from wiki_music.google_images_download import google_images_download
+from wiki_music.external_libraries.google_images_download import google_images_download
 from wiki_music.ui.gui_Qt_base import Ui_MainWindow
 from wiki_music.ui.art_dialog_base import Ui_Dialog
 from wiki_music.ui.cover_art_base import Ui_cover_art_search
@@ -765,8 +765,6 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
 
         self.__update_model__()
 
-    # TODO try thread with trace
-    # TODO disconnect after search starts
     def __preload__(self, first=False):
         album = self.album_entry_input.text()
         band = self.band_entry_input.text()
@@ -790,7 +788,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
                     SharedVars.preload.join()
                 log_gui.debug("Starting wikipedia preload...")
                 SharedVars.preload = ThreadWithTrace(target=parser.preload,
-                                                      name="WikiPreload")
+                                                     name="WikiPreload")
                 SharedVars.preload.start()
 
     @exception(log_gui)

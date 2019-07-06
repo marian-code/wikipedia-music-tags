@@ -1,4 +1,8 @@
 """
+!!! EXPERIMENTAL !!!
+requires python 3.7 to run!
+!!! EXPERIMENTAL !!!
+
 Get lyrics from:
 
 Anime Lyrics, AZLyrics, Genius, Lyricsmode, \
@@ -13,7 +17,11 @@ from utilities.wrappers import exception
 if not we_are_frozen():
     log_lyrics.propagate = False
 
-search_lyrics = lazy_callable("external_libraries.lyricsfinder.search_lyrics")
+import lyricsfinder
+import asyncio
+from aiohttp import ClientSession
+from lyricsfinder import search_lyrics
+
 Pool = lazy_callable("multiprocessing.Pool")
 Fore = lazy_callable("colorama.Fore")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
@@ -21,6 +29,7 @@ colorama_init = lazy_callable("utilities.utils.colorama_init")
 normalize = lazy_callable("utilities.utils.normalize")
 
 google_api_key = get_google_api_key()
+
 colorama_init()
 
 log_lyrics.info("imports done")
@@ -52,24 +61,14 @@ def save_lyrics(parser):
 
     lyrics_temp = []
 
-    if len(parser.tracks) > 1:
+    for i, (tr, dp) in enumerate(zip(parser.tracks, duplicates)):
+        if i == dp:
+            lyrics_temp.append(get_lyrics(parser.band, parser.album,
+                                          tr, google_api_key))
 
-        arg = []
-        # starmap takes list of tupples for argument
-        for t in parser.tracks:
-            arg.append((parser.band, parser.album, t, google_api_key))
-
-        pool = Pool()
-        lyrics_temp = pool.starmap(get_lyrics, arg)
-
-        pool.close()
-        pool.join()
-
-    else:
-        for i, (tr, dp) in enumerate(zip(parser.tracks, duplicates)):
-            if i == dp:
-                lyrics_temp.append(get_lyrics(parser.band, parser.album,
-                                              tr, google_api_key))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.wait(lyrics_temp))
+    loop.close()
 
     index = 0
     for i, dp in enumerate(duplicates):
@@ -83,12 +82,15 @@ def save_lyrics(parser):
 
 
 @exception(log_lyrics)
-def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
+async def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
 
     log_lyrics.info("starting lyricsfinder ")
 
-    lyrics = next(search_lyrics(song, album, artist,
-                                google_api_key=google_api_key), None)
+    async with ClientSession() as session:
+        lyrics_iterator = lyricsfinder.search_lyrics(song, album, artist,
+            api_key=google_api_key, session=session)
+        async for lyrics in lyrics_iterator:
+            print(lyrics.title, lyrics.artist, lyrics.lyrics)
 
     if not lyrics:
         return {

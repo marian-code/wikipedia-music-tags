@@ -1,3 +1,6 @@
+__all__ = ["colorama_init", "list_files", "to_bool", "normalize",
+           "we_are_frozen", "module_path", "get_sizes", "win_naming_convetion",
+           "flatten_set", "clean_logs", "yaml_load"]
 
 import unicodedata
 from urllib.request import urlopen
@@ -10,10 +13,7 @@ init = lazy_import.lazy_callable("colorama.init")
 os = lazy_import.lazy_module("os")
 sys = lazy_import.lazy_module("sys")
 re = lazy_import.lazy_module("re")
-
-__all__ = ["colorama_init", "list_files", "to_bool", "normalize",
-           "we_are_frozen", "module_path", "get_sizes", "win_naming_convetion",
-           "flatten_set", "clean_logs"]
+yaml = lazy_import.lazy_module("yaml")
 
 
 def colorama_init():
@@ -167,9 +167,10 @@ def clean_logs():
             print(e)
 
 
-def json_load(work_dir: str):
-    pass
-    # under construction
+def yaml_load(work_dir: str) -> dict:
+
+    with open(work_dir, "r") as infile:
+        return yaml.full_load(infile)
 
 
 def loading():

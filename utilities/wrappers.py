@@ -19,7 +19,7 @@ def exception(logger):
                 e = f"Unhandled golbal exception: {e}"
                 logger.exception(e)
                 print(e)
-                SharedVars.exception = e
+                SharedVars.exception = str(e)
 
         return wrapper
     return real_wrapper
@@ -53,11 +53,11 @@ def warning(logger):
             except AttributeError as e:
                 print(e)
                 logger.warning(e)
-                SharedVars.warning = e
+                SharedVars.warning = str(e)
             except Exception as e:
                 print(e)
                 logger.warning(e)
-                SharedVars.warning = e
+                SharedVars.warning = str(e)
 
         return wrapper
     return real_wrapper

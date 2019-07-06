@@ -1,8 +1,6 @@
 # To-Do
-
 - acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels
 - maybe bypass the dict method of passing data to save function
-- still no json load
 - try Pool.starmap_Async to load lyrics while other things are done - introduces more complexity and reduces code readability - maybe not a great idea
 - frozen code doesnt run on x86 systems, need 32bit python installation to build 32bit app
 - implement timeout errors - cannot seem to cath it probably originates from other module
@@ -15,7 +13,6 @@
 - add support for PySide2 and PyQt4
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
-- try extract this https://en.wikipedia.org/wiki/Aina_(band)
 - consolidate flags into dict
 
 
@@ -23,8 +20,23 @@
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
 - load composer fails for https://en.wikipedia.org/wiki/Pursuit_of_the_Sun_%26_Allure_of_the_Earth
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
+- try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 6.7.2019
+- lyrics module now supports python 3.6 (multiprocessing) and 3.7 (asyncio),
+  asyncio support is experimental for now.
+- still cannot compile pytaglib for python 3.7
+- minor bugfixes
+- moved edited versions of external libs (google_images_search, lyricsfinder)
+  to new folder.
+
+### 24.6.2019
+- bugfixes and further restructure
+- moved table extractors to own class
+- replaced json with YAML and implemented loading
+- created new folder with settings
 
 ### 22.6.2019
 - major restructure of package. Now it is more comprehensible.

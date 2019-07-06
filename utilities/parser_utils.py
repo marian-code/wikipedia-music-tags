@@ -1,3 +1,8 @@
+__all__ = ["NLTK", "bracket", "write_roman",
+           "roman_num", "normalize", "normalize_caseless", "caseless_equal",
+           "caseless_contains", "count_spaces", "yaml_dump",
+           "complete_N_dim", "replace_N_dim", "delete_N_dim"]
+
 import os
 from threading import Lock, Thread
 
@@ -8,13 +13,7 @@ from fuzzywuzzy import fuzz
 from .utils import normalize
 
 OrderedDict = lazy_import.lazy_callable("collections.OrderedDict")
-json = lazy_import.lazy_module("json")
-
-
-__all__ = ["NLTK", "bracket", "write_roman",
-           "roman_num", "normalize", "normalize_caseless", "caseless_equal",
-           "caseless_contains", "count_spaces", "json_dump",
-           "complete_N_dim", "replace_N_dim", "delete_N_dim"]
+yaml = lazy_import.lazy_module("yaml")
 
 
 class NltkMeta(type):
@@ -149,8 +148,8 @@ def count_spaces(tracks: list, types: list) -> (list, int):
     return spaces, length
 
 
-def json_dump(dict_data: list, save_dir: str):
-    """ Save json file to disk.\n
+def yaml_dump(dict_data: list, save_dir: str):
+    """ Save yaml file to disk.\n
 
     Parameters
     ----------
@@ -160,10 +159,10 @@ def json_dump(dict_data: list, save_dir: str):
         directory to save to
     """
 
-    _path = os.path.join(save_dir, "database.json")
-    print(Fore.GREEN + "\nSaving JSON file: " + Fore.RESET + _path + "\n")
+    _path = os.path.join(save_dir, "database.yaml")
+    print(Fore.GREEN + "\nSaving YAML file: " + Fore.RESET + _path + "\n")
     with open(_path, "w") as outfile:
-        json.dump(dict_data, outfile, indent=4)
+        yaml.dump(dict_data, outfile, default_flow_style=False)
 
 
 def _find_N_dim(array, template):
