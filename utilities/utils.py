@@ -72,7 +72,8 @@ def module_path() -> str:
     # encoding = sys.getfilesystemencoding()
     if we_are_frozen():
         return os.path.dirname(sys.executable)
-    return os.path.dirname(__file__)
+    else:
+        return os.path.join(os.path.dirname(__file__), "..")
 
 
 def get_sizes(uri):
@@ -86,21 +87,21 @@ def get_sizes(uri):
     """
 
     try:
-        file = urlopen(uri)
-        size = file.headers.get("content-length")
+        fl = urlopen(uri)
+        size = fl.headers.get("content-length")
         if size:
             size = int(size)
 
         p = ImageFile.Parser()
         while True:
-            data = file.read(1024)
+            data = fl.read(1024)
             if not data:
                 break
             p.feed(data)
             if p.image:
                 return size, p.image.size
 
-        file.close()
+        fl.close()
 
         return size, None
     except:
@@ -110,7 +111,7 @@ def get_sizes(uri):
 def get_google_api_key():
 
     # load google api key for lyrics search
-    _file = os.path.join(module_path(), "..", "files", "google_api_key.txt")
+    _file = os.path.join(module_path(), "files", "google_api_key.txt")
     try:
         f = open(_file, "r")
         return f.read().strip()
@@ -168,6 +169,7 @@ def clean_logs():
 
 
 def yaml_load(work_dir: str) -> dict:
+    """ Loads yaml format file to dictionary. """
 
     with open(work_dir, "r") as infile:
         return yaml.full_load(infile)

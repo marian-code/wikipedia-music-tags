@@ -8,7 +8,7 @@ __pycache__/
 # testing 
 Aventine/
 test_music/
-tests/
+tests/function_tests/
 logs/
 wiki_music_setup.log
 

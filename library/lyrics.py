@@ -114,7 +114,7 @@ def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
         "lyrics": (normalize(lyrics_data["lyrics"]
                    .replace("\r", "").replace("\n", "\r\n"))),
         "origin": lyrics_data["origin"]
-        }
+    }
 
     log_lyrics.info("done")
 

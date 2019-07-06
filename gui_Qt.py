@@ -15,7 +15,8 @@ from threading import Thread, current_thread
 from PyQt5.QtWidgets import (QMainWindow, QFileDialog, QApplication,
                              QTableWidgetItem, QMessageBox, QAbstractItemView,
                              QInputDialog, QLabel, QVBoxLayout, QTableWidget,
-                             QWidget, QDialog, QStatusBar, QHBoxLayout)
+                             QWidget, QDialog, QStatusBar, QHBoxLayout,
+                             QSystemTrayIcon)
 from PyQt5.QtGui import (QStandardItemModel, QStandardItem, QImage, QPixmap,
                          QIcon, QPainter)
 from PyQt5.QtCore import (Qt, QSortFilterProxyModel, QTimer, pyqtProperty,
@@ -620,8 +621,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         self.wiki_search_button.clicked.connect(lambda: self.__run_search__())
         self.coverArt.clicked.connect(lambda: self.__cover_art_search__())
         self.lyrics_button.clicked.connect(
-            lambda: self.__run_lyrics_search__()
-            )
+            lambda: self.__run_lyrics_search__())
         self.toolButton.clicked.connect(lambda: self.__select_file__())
         self.band_entry_input.textChanged.connect(self.__entry_band__)
         self.album_entry_input.textChanged.connect(self.__entry_album__)
@@ -647,8 +647,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         self.tableView.horizontalHeader().setSectionsMovable(True)
         self.tableView.horizontalHeader().setDragEnabled(True)
         self.tableView.horizontalHeader().setDragDropMode(
-            QAbstractItemView.InternalMove
-            )
+            QAbstractItemView.InternalMove)
 
         # connect to signal that is emited when table cell is clicked
         self.tableView.clicked.connect(self.__detail__)
@@ -682,16 +681,19 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         else:
             # connect switches to functions
             self.offline_debbug_sw.stateChanged.connect(
-                self.__select_offline_debbug__
-                )
+                self.__select_offline_debbug__)
             self.json_write_sw.stateChanged.connect(self.__select_json__)
 
     def __initUI__(self):
         self.setWindowTitle("Wiki Music")
         myappid = "WikiMusic"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-        self.setWindowIcon(QIcon(os.path.join(module_path(),
-                                              "files/icon.ico")))
+        _icon = os.path.join(module_path(), "files", "icon.ico")
+        if not os.path.isfile(_icon):
+            raise FileNotFoundError(f"There is no icon file in: {_icon}")
+        self.setWindowIcon(QIcon(_icon))
+        tray_icon = QSystemTrayIcon(QIcon(_icon))
+        tray_icon.show()
 
     def __table_headers__(self):
         _headers = ["Number:", "Name:", "Type:", "Artists:", "Composers:",
@@ -738,9 +740,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     def __select_dir__(self):
 
         if not we_are_frozen():
-            start_dir = (r"C:/Users/Marián Rynik/OneDrive/Dokumenty"
-                         r"/Visual Studio 2017/Projects/Python"
-                         r"/wiki_music/test_music")
+            start_dir = os.path.join(module_path(), "tests", "test_music")
         else:
             start_dir = get_music_path()
         self.input_work_dir = QFileDialog.getExistingDirectory(self,
@@ -798,15 +798,15 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         msg.setIcon(QMessageBox.Information)
         msg.setWindowTitle("Message")
 
-        if str(self.input_band) == "":
+        if self.input_band == "":
             msg.setText("You must input artist!")
             msg.exec_()
             return None
-        elif str(self.input_album) == "":
+        elif self.input_album == "":
             msg.setText("You must input album!")
             msg.exec_()
             return None
-        elif str(self.input_work_dir) == "":
+        elif self.input_work_dir == "":
             msg.setText("You must select working directory!")
             msg.exec_()
             return None
@@ -831,7 +831,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         SharedVars.preload.kill()
         SharedVars.preload.join()
 
-        if str(self.input_work_dir) == "":
+        if self.input_work_dir == "":
             QMessageBox(QMessageBox.Information, "Message",
                         "You must select working directory!").exec_()
 

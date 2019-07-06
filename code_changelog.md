@@ -14,6 +14,7 @@
 - consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - consolidate flags into dict
+- add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 
 
 ###  Individual problem cases 
@@ -31,6 +32,7 @@
 - minor bugfixes
 - moved edited versions of external libs (google_images_search, lyricsfinder)
   to new folder.
+- further reorganizing of code, moved setup files to separate folder
 
 ### 24.6.2019
 - bugfixes and further restructure

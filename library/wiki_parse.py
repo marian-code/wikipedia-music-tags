@@ -29,8 +29,8 @@ NLTK.run_import()  # imports nltk in separate thread
 
 __all__ = ["WikipediaParser"]
 
-settings_dict = yaml_load(os.path.join(module_path(), "..", "settings",
-                                       "constants.yaml"))
+settings_dict = yaml_load(os.path.join(module_path(), "settings",
+                                       "constants.yml"))
 DEF_TYPES = settings_dict["DEF_TYPES"]
 UNWANTED = settings_dict["UNWANTED"]
 TO_DELETE = settings_dict["TO_DELETE"]
