@@ -10,7 +10,8 @@ winreg = lazy_import.lazy_module("winreg")
 requests = lazy_import.lazy_module("requests")
 BytesIO = lazy_import.lazy_callable("io.BytesIO")
 
-__all__ = ["ThreadWithTrace", "image_handle", "get_music_path"] 
+__all__ = ["ThreadWithTrace", "image_handle", "get_music_path",
+           "abstract_warning"]
 
 
 class ThreadWithTrace(Thread):
@@ -28,10 +29,10 @@ class ThreadWithTrace(Thread):
         self.__run_backup()
         self.run = self.__run_backup
 
-    def globaltrace(self, frame, event, arg): 
-        if event == 'call': 
+    def globaltrace(self, frame, event, arg):
+        if event == 'call':
             return self.localtrace
-        else: 
+        else:
             return None
 
     def localtrace(self, frame, event, arg):
@@ -42,6 +43,12 @@ class ThreadWithTrace(Thread):
 
     def kill(self):
         self.killed = True
+
+
+def abstract_warning():
+    """ Raises error when abstract method is called directly. """
+    raise NotImplementedError("This method is abstaract and should be "
+                              "reimplemented by inheriting class")
 
 
 def image_handle(url: str, size=None, clipboad=True, path=None,
@@ -74,7 +81,7 @@ def image_handle(url: str, size=None, clipboad=True, path=None,
             image = image.resize(size, Image.LANCZOS)
 
         # get size down to ~300Kb
-        disk_size = sys.getsizeof(file_stream)/1024
+        disk_size = sys.getsizeof(file_stream) / 1024
         _format = Image.registered_extensions()[".jpg"]
         """
         q = 95

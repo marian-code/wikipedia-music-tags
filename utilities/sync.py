@@ -35,7 +35,6 @@ class SharedVars:
     terminate_app = False
 
     # threads
-    preload = None
     parser_running = False
 
     # exceptions

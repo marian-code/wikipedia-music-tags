@@ -4,7 +4,8 @@ if __name__ == "__main__":
     from utilities.utils import clean_logs
     clean_logs()
 
-import lazy_import
+from lazy_import import lazy_callable, lazy_module
+from colorama import Fore, init
 import signal
 from utilities.utils import (list_files, to_bool, we_are_frozen,
                              win_naming_convetion, flatten_set)
@@ -25,18 +26,14 @@ signal.signal(signal.SIGINT, signal_handler)
 
 log_app.info("starting imports")
 
-Fore = lazy_import.lazy_callable("colorama.Fore")
-init = lazy_import.lazy_callable("colorama.init")
-time = lazy_import.lazy_module("time")
-os = lazy_import.lazy_module("os")
-re = lazy_import.lazy_module("re")
-sys = lazy_import.lazy_module("sys")
-pickle = lazy_import.lazy_module("pickle")
-functools = lazy_import.lazy_module("functools")
+time = lazy_module("time")
+os = lazy_module("os")
+re = lazy_module("re")
+sys = lazy_module("sys")
 
-write_tags = lazy_import.lazy_callable("library.write_tags")
-read_tags = lazy_import.lazy_callable("library.read_tags")
-save_lyrics = lazy_import.lazy_callable("library.save_lyrics")
+write_tags = lazy_callable("library.write_tags")
+read_tags = lazy_callable("library.read_tags")
+save_lyrics = lazy_callable("library.save_lyrics")
 
 init(convert=True)
 
@@ -98,9 +95,6 @@ def get_wiki(GUI):
     # download wikipedia page
     if not SharedVars.offline_debbug:
 
-        while parser.preload_running:
-            time.sleep(0.05)
-
         print("Accessing Wikipedia...")
         SharedVars.describe = "Accessing Wikipedia"
 
@@ -109,17 +103,13 @@ def get_wiki(GUI):
         SharedVars.describe = ("Searching for: " + parser.album +
                                " by " + parser.band)
 
-        if not parser.wiki_downloaded:
-            parser.get_wiki()
+        parser.get_wiki()
 
         log_print(msg_GREEN="Found at: ", msg_WHITE=str(parser.url),
                   describe_both=True)
-
     else:
-        fname = os.path.join("output", parser.album, 'page.pkl')
-        if os.path.isfile(fname):
-            infile = open(fname, 'rb')
-            parser.page = pickle.load(infile)
+        success = parser.get_wiki_from_disk()
+        if success is True:
             log_print(msg_GREEN="Using offline cached page insted of web page")
         else:
             msg = ("Cannot find cached offline version of page. "
@@ -131,8 +121,7 @@ def get_wiki(GUI):
             get_wiki(GUI)
 
     log_print(msg_WHITE="Cooking Soup")
-    if not parser.soup_ready:
-        parser.cook_soup()
+    parser.cook_soup()
     log_print(msg_WHITE="Soup ready")
 
     # get page contents

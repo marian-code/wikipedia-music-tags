@@ -6,6 +6,7 @@ if __name__ == "__main__":
     clean_logs()
 
 import os
+from abc import ABC, abstractmethod
 import subprocess
 import sys
 import time
@@ -34,7 +35,7 @@ from wiki_music.ui.cover_art_base import Ui_cover_art_search
 from wiki_music.application import get_lyrics, get_wiki
 from wiki_music.library import write_tags
 from wiki_music.utilities.utils import list_files, we_are_frozen, module_path
-from wiki_music.utilities.gui_utils import *
+from wiki_music.utilities.gui_utils import *  # pylint: disable=unused-wildcard-import
 from utilities.sync import SharedVars
 from utilities.wrappers import exception, synchronized
 
@@ -174,7 +175,19 @@ class ImageTable(QTableWidget):
 
 # these method don't work alone, they must be inherited by Window class
 class Gui2Parser:
-    # methods for data transfer between gui <--> parser object
+    """ Methods for data transfer between  gui <--> parser object.
+        This class is not stand-alone. It should be inherited and attributes in
+        __init__ should be redefined.
+    """
+
+    def __init__(self):
+        self.genre_entry = None
+        self.year_entry = None
+        self.album_entry = None
+        self.band_entry = None
+        self.table = None
+        self.picture_visible = None
+        self.picture_layout = None
 
     def __parser_to_gui__(self):
 
@@ -267,6 +280,25 @@ class Gui2Parser:
 
 
 class DataModel:
+    """ This class is not stand-alone. It should be inherited and attributes in
+        __init__ should be redefined.
+    """
+
+    def __init__(self):
+        self.table = None
+        self.tableView = None
+        self.number_detail = None
+        self.title_detail = None
+        self.artist_detail = None
+        self.composer_detail = None
+        self.lyrics_detail = None
+        self.file_detail = None
+        self.proxy = None
+
+    @abstractmethod
+    def __parser_to_gui__(self):
+        abstract_warning()
+
     # methods for managing gui data model
     @exception(log_gui)
     def __update_model__(self):
@@ -365,6 +397,21 @@ class DataModel:
 
 
 class Checkers(DataModel):
+    """ This class is not stand-alone. It should be inherited and attributes in
+        __init__ should be redefined.
+    """
+
+    def __init__(self):
+        self.statusbar = None
+        self.input_work_dir = None
+
+    @abstractmethod
+    def exec_(self):
+        abstract_warning()
+
+    @abstractmethod
+    def __display_image__(self):
+        abstract_warning()
 
     def __init_checkers__(self):
         self.description_timer = QTimer()
@@ -513,6 +560,15 @@ class Checkers(DataModel):
 
 
 class Buttons:
+    """ This class is not stand-alone. It should be inherited and attributes in
+        __init__ should be redefined.
+    """
+
+    def __init__(self):
+        self.file_detail = None
+        self.json_write_sw = None
+        self.offline_debbug_sw = None
+        self.input_work_dir = None
 
     @exception(log_gui)
     def __open_dir__(self):
@@ -572,7 +628,9 @@ class Buttons:
     def __select_offline_debbug__(self):
         SharedVars.offline_debbug = self.offline_debbug_sw.isChecked()
         if SharedVars.offline_debbug:
-            parser.preload_stop = True
+            if parser.preload_instances >= 1:
+                parser.preload_thread.kill()
+                parser.preload_thread.join()
 
     def __do_nothing__(self):
         log_gui.warning("Not implemented yet")
@@ -661,8 +719,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         # connect menubar actions to functions
         self.actionAll_Tags.triggered.connect(lambda: self.__save_all__(False))
         self.actionOnly_Lyrics.triggered.connect(
-            lambda: self.__save_all__(True)
-            )
+            lambda: self.__save_all__(True))
 
         # menubar buttons taht are not implemented
         self.actionNew.triggered.connect(self.__do_nothing__)
@@ -783,13 +840,13 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
             # band and album entry must be non-empty strings
             if self.input_band and self.input_album:
                 # if preload is already running, kill the thread
-                if parser.preload_running:
-                    SharedVars.preload.kill()
-                    SharedVars.preload.join()
+                if parser.preload_instances >= 1:
+                    parser.preload_thread.kill()
+                    parser.preload_thread.join()
                 log_gui.debug("Starting wikipedia preload...")
-                SharedVars.preload = ThreadWithTrace(target=parser.preload,
-                                                     name="WikiPreload")
-                SharedVars.preload.start()
+                parser.preload_thread = ThreadWithTrace(target=parser.preload,
+                                                        name="WikiPreload")
+                parser.preload_thread.start()
 
     @exception(log_gui)
     def __run_search__(self, *args):
@@ -828,8 +885,8 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     @exception(log_gui)
     def __run_lyrics_search__(self, *args):
 
-        SharedVars.preload.kill()
-        SharedVars.preload.join()
+        parser.preload_thread.kill()
+        parser.preload_thread.join()
 
         if self.input_work_dir == "":
             QMessageBox(QMessageBox.Information, "Message",
@@ -1028,7 +1085,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
 
         if result is not True:
             SharedVars.exception = ("Error in processing Cover Art "
-                                     "{}".format(result))
+                                    "{}".format(result))
             log_gui.exception(result)
             return 0
 

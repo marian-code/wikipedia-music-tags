@@ -15,6 +15,8 @@
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - consolidate flags into dict
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
+- write aoutamated tests
+- move wikipdia page download and soup cooking to separate class
 
 
 ###  Individual problem cases 
@@ -33,6 +35,7 @@
 - moved edited versions of external libs (google_images_search, lyricsfinder)
   to new folder.
 - further reorganizing of code, moved setup files to separate folder
+- started writinng automated tests
 
 ### 24.6.2019
 - bugfixes and further restructure

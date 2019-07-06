@@ -13,6 +13,7 @@ from utilities.wrappers import warning, time_methods, for_all_methods
 from .ID3_tags import read_tags
 
 Thread = lazy_callable("threading.Thread")
+Lock = lazy_callable("threading.Lock")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
 Fore = lazy_callable("colorama.Fore")
 BeautifulSoup = lazy_callable("bs4.BeautifulSoup")
@@ -219,12 +220,12 @@ class WikipediaParser(DataExtractors):
         # when new search is started
         if protected_vars:
             # control
-            self.getting_wiki = False
             self.cooking_soup = False
             self.wiki_downloaded = False
             self.soup_ready = False
-            self.preload_running = False
-            self.preload_stop = False
+            self._preload_instances = 0
+            self.preload_thread = None
+            self.lock = Lock()
 
             # variables
             self.album = ""
@@ -234,6 +235,17 @@ class WikipediaParser(DataExtractors):
             self.page = None
             self.soup = None
             self._files = []
+
+    @property
+    def preload_instances(self):
+        with self.lock:
+            return self._preload_instances
+
+    @preload_instances.setter
+    def preload_instances(self, value):
+        with self.lock:
+            self._preload_instances = value
+
 
     @property
     def bracketed_types(self):
@@ -246,9 +258,8 @@ class WikipediaParser(DataExtractors):
     @property
     def debug_folder(self):
         if self._debug_folder is None:
-            self._debug_folder = os.path.join("output",
-                                              win_naming_convetion(self.album,
-                                              dir_name=True))
+            _win_name = win_naming_convetion(self.album, dir_name=True)
+            self._debug_folder = os.path.join("output", _win_name)
 
         return self._debug_folder
 
@@ -802,27 +813,20 @@ class WikipediaParser(DataExtractors):
     def preload(self):
 
         if self.album and self.band:
-            self.preload_running = True
             self.get_wiki()
-            if self.preload_stop:
-                self.preload_running = False
-                log_parser.debug("Preload aborted")
-                return
             self.cook_soup()
-            self.preload_running = False
+            log_parser.debug("Preload finished")
         else:
             log_parser.debug("Input fields empty, aborting preload")
 
     # TODO implement timeout error
     def get_wiki(self):
 
-        # if GUI already started downloading page wait for finish and than exit
-        while self.getting_wiki:
+        self.preload_instances += 1
+        while self.preload_instances > 1:
             sleep(0.05)
-            if not self.getting_wiki:
-                return
-
-        self.getting_wiki = True
+        if self.wiki_downloaded:
+            return
 
         searches = [f"{self.album} ({self.band} album)",
                     f"{self.album} (album)",
@@ -862,8 +866,17 @@ class WikipediaParser(DataExtractors):
                                     "poor internet connetion")
             sys.exit()
 
-        self.getting_wiki = False
+        self.preload_instances -= 1
         self.wiki_downloaded = True
+
+    def get_wiki_from_disk(self):
+        fname = os.path.join(module_path(), "output", self.album, 'page.pkl')
+        if os.path.isfile(fname):
+            with open(fname, 'rb') as infile:
+                self.page = pickle.load(infile)
+            return True
+        else:
+            return False
 
     def cook_soup(self):
 
@@ -873,6 +886,9 @@ class WikipediaParser(DataExtractors):
             sleep(0.05)
             if not self.cooking_soup:
                 return
+
+        if self.soup_ready:
+            return
 
         self.cooking_soup = True
 
