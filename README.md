@@ -28,6 +28,8 @@ wikipedia>=1.4.0
 numpy>=1.14.3
 PyQt5>=5.11.3
 python-Levenshtein>=0.12.0
+pywin32>=224
+mutagen>=1.42.0
 ```
 
 Versions that are equal to listed vesions are tested. Higher vesions should work but are not guaranted to. All modules are found in PyPI so installing should be as easy as:
