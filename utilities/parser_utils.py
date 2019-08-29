@@ -1,9 +1,10 @@
-__all__ = ["NLTK", "bracket", "write_roman",
+__all__ = ["ThreadWithTrace", "NLTK", "bracket", "write_roman",
            "roman_num", "normalize", "normalize_caseless", "caseless_equal",
            "caseless_contains", "count_spaces", "yaml_dump",
            "complete_N_dim", "replace_N_dim", "delete_N_dim"]
 
 import os
+import sys
 from threading import Lock, Thread
 
 import lazy_import
@@ -14,6 +15,37 @@ from .utils import normalize
 
 OrderedDict = lazy_import.lazy_callable("collections.OrderedDict")
 yaml = lazy_import.lazy_module("yaml")
+
+
+class ThreadWithTrace(Thread):
+    def __init__(self, *args, **keywords):
+        Thread.__init__(self, *args, **keywords)
+        self.killed = False
+
+    def start(self):
+        self.__run_backup = self.run
+        self.run = self.__run
+        Thread.start(self)
+
+    def __run(self):
+        sys.settrace(self.globaltrace)
+        self.__run_backup()
+        self.run = self.__run_backup
+
+    def globaltrace(self, frame, event, arg):
+        if event == 'call':
+            return self.localtrace
+        else:
+            return None
+
+    def localtrace(self, frame, event, arg):
+        if self.killed:
+            if event == 'line':
+                raise SystemExit()
+        return self.localtrace
+
+    def kill(self):
+        self.killed = True
 
 
 class NltkMeta(type):

@@ -14,6 +14,7 @@ wiki_music_setup.log
 
 # build dir
 build/
+dist/
 
 # dir for file output
 output/

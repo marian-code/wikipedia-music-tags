@@ -1,6 +1,6 @@
 __all__ = ["colorama_init", "list_files", "to_bool", "normalize",
            "we_are_frozen", "module_path", "get_sizes", "win_naming_convetion",
-           "flatten_set", "clean_logs", "yaml_load"]
+           "flatten_set", "clean_logs", "yaml_load", "input_parser"]
 
 import unicodedata
 from urllib.request import urlopen
@@ -14,6 +14,7 @@ os = lazy_import.lazy_module("os")
 sys = lazy_import.lazy_module("sys")
 re = lazy_import.lazy_module("re")
 yaml = lazy_import.lazy_module("yaml")
+argparse = lazy_import.lazy_module("argparse")
 
 
 def colorama_init():
@@ -173,6 +174,28 @@ def yaml_load(work_dir: str) -> dict:
 
     with open(work_dir, "r") as infile:
         return yaml.full_load(infile)
+
+
+def input_parser():
+    """ Parse command line input parameters. """
+
+    parser = argparse.ArgumentParser(description="Description of your program")
+
+    parser = argparse.ArgumentParser(description="Description of your program")
+    parser.add_argument("-y", "--yaml", action="store_true",
+                        help="Write yaml save file?")
+    parser.add_argument("-o", "--offline_debbug", action="store_true",
+                        help="Use offline pickle debbug file instead of "
+                             "web page?")
+    parser.add_argument("-l", "--lyrics_only", action="store_true",
+                        help="Download only lyrics?")
+    parser.add_argument("-a", "--album", default=None, help="Album name")
+    parser.add_argument("-b", "--band", default=None, help="Band name")
+
+    args = parser.parse_args()
+
+    return (args.yaml, args.offline_debbug, args.lyrics_only,
+            args.album, args.band)
 
 
 def loading():

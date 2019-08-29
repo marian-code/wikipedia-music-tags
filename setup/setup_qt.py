@@ -33,17 +33,13 @@ def generate_excludes():
 def main():
 
     # append to path so wiki_music can be imported
-    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(os.path.realpath((os.path.join(os.path.dirname(__file__), "../.."))))
 
     # set tcl paths
     # TODO apparently we dont need tcl lib but cx_freeze
     # TODO is unhappy without them
-    os.environ['TCL_LIBRARY'] = (r"C:\Program Files (x86)"
-                                 r"\Microsoft Visual Studio\Shared"
-                                 r"\Anaconda3_64\tcl\tcl8.6")
-    os.environ['TK_LIBRARY'] = (r"C:\Program Files (x86)"
-                                r"\Microsoft Visual Studio\Shared"
-                                r"\Anaconda3_64\tcl\tk8.6")
+    os.environ['TCL_LIBRARY'] = (r"C:\ProgramData\Anaconda3\tcl\tcl8.6")
+    os.environ['TK_LIBRARY'] = (r"C:\ProgramData\Anaconda3\tcl\tk8.6")
 
     # packages we want to import
     packages = [
@@ -67,7 +63,9 @@ def main():
         "requests",
         "subprocess",
         "sys",
-        "taglib",
+        "PIL",
+        #"taglib",
+        "PyQt5",
         "threading",
         "time",
         "unicodedata",
@@ -75,22 +73,22 @@ def main():
         "webbrowser",
         "wikipedia",
         # lyricsfinder
-        "lyricsfinder",
+        #"external_libraries.lyricsfinder",
         "logging",
         "typing",
         "importlib",
         "io",
-        "lyricsfinder.extractors.darklyrics",
-        "lyricsfinder.extractors.genius",
+        #"external_libraries.lyricsfinder.extractors.darklyrics",
+        #"external_libraries.lyricsfinder.extractors.genius",
         # app
         "wiki_music",
-        "__init__",
-        "application",
-        "libb.ID3_tags",
-        "libb.lyrics",
-        "libb.wiki_parse",
-        "package_setup",
-        "utils",
+        #"__init__",
+        #"application",
+        #"library.ID3_tags",
+        #"wiki_music.library.lyrics",
+        #"library.wiki_parse",
+        #"wiki_music.package_setup",
+        #"utils",
         # for wikipedia
         "urllib3",
         "chardet",
@@ -113,10 +111,10 @@ def main():
     # !This only needs to run for the first time
     # generate_excludes()
 
-    with open("README.md", 'r') as f:
+    with open(os.path.join("..", "README.md"), 'r') as f:
         long_description = f.read()
 
-    with open(r"files\excludes_qt.txt", "r") as f:
+    with open(os.path.join("..", r"files\excludes_qt.txt"), "r") as f:
         excludes = f.read()
 
     excludes = excludes.split("\n")
@@ -131,8 +129,7 @@ def main():
     # TODO not complete
 
     # include files
-    include_files = [(os.path.join(os.path.dirname(__file__),
-                      "files/icon.ico"),
+    include_files = [(os.path.join(os.path.dirname(__file__), "..", "files/icon.ico"),
                       "files/icon.ico")]
 
     if GUI is True:
@@ -140,7 +137,7 @@ def main():
         # GUI applications require a different base on Windows
         if sys.platform == "win32":
             base = "Win32GUI"
-        executable = "gui_Qt.py"
+        executable = "../gui_Qt.py"
         description = """Wiki Music - simple Tkinter GUI app that
                          parses Wikipedia for music metadata"""
     else:
@@ -155,17 +152,19 @@ def main():
                          for music metadata"""
 
     excludes = [ex for ex in excludes if ex not in packages]
-    excludes.remove("PyQt5")
+    #excludes.remove("PyQt5")
+
+    excludes = []
 
     build_exe_options = {"packages": packages,
                          "excludes": excludes,
                          'zip_include_packages': 'PyQt5',
                          "includes": [
-                             "lyricsfinder",
-                             "PyQt5.QtCore",
-                             "PyQt5.QtGui",
-                             "PyQt5.QtWidgets",
-                             "PyQt5.sip"],
+                             #"lyricsfinder",
+                             #"PyQt5.QtCore",
+                            #"PyQt5.QtGui",
+                             #"PyQt5.QtWidgets",
+                            "PyQt5.sip"],
                          "optimize": optimize,
                          "include_files": include_files}
 
@@ -183,7 +182,7 @@ def main():
           executables=[Executable(executable,
                                   base=base,
                                   targetName=app_name,
-                                  icon='files/icon.ico')])
+                                  icon='../files/icon.ico')])
 
 if __name__ == "__main__":
 

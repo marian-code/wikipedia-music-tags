@@ -1,23 +1,18 @@
 # To-Do
 - acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels
 - maybe bypass the dict method of passing data to save function
-- try Pool.starmap_Async to load lyrics while other things are done - introduces more complexity and reduces code readability - maybe not a great idea
 - frozen code doesnt run on x86 systems, need 32bit python installation to build 32bit app
-- implement timeout errors - cannot seem to cath it probably originates from other module
 - parser probably should have its own lock - access to its variables should be guarded - see 13.1.2019 entry in changelog
 - freezed Qt app is too big ~ 0.65GB - most files probably not needed
-- consider using mutagen [mutagen](https://mutagen.readthedocs.io/en/latest/index.html) instead of pytaglib
 - use "zip_include_packages" in cx_freeze setup to reduce size refer to:  
     https://github.com/anthony-tuininga/cx_Freeze/issues/256  
     https://stackoverflow.com/questions/27281317/cx-freeze-preventing-including-unneeded-packages  
 - add support for PySide2 and PyQt4
-- consired using [audiotools](http://audiotools.sourceforge.net/programming/index.html#)
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - consolidate flags into dict
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 - write aoutamated tests
-- move wikipdia page download and soup cooking to separate class
-
+- finish work on image search
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -27,6 +22,23 @@
 
 # Change Log
 
+### 29.8.2019
+- bug fix, preload would reinit parser attributes and gui would display nothing
+- started migration to mutagen [mutagen](https://mutagen.readthedocs.io/en/latest/index.html)
+  tagging library, basic functionality is implemented.
+  This will allow to ditch complicated taglib dependency that
+  needs compiling and allow saving album art. But mutagen is more difficult to
+  use as it doesn't provide the same high level of abstraction. This will need
+  to be implemented, along with some tagging restructuring
+- taglib version of the code now enters deprecation phase
+- whole codebase will migrate to python 3.7 namely lyricfinder module, old
+  multiprocessing lyrics search will from now on get only bug fixes and will
+  not be further developed
+
+### 7.7.2019
+- finally timeout is implemented on wiki search
+- moved wiki search and soup cooking to separate thread
+
 ### 6.7.2019
 - lyrics module now supports python 3.6 (multiprocessing) and 3.7 (asyncio),
   asyncio support is experimental for now.
@@ -35,7 +47,8 @@
 - moved edited versions of external libs (google_images_search, lyricsfinder)
   to new folder.
 - further reorganizing of code, moved setup files to separate folder
-- started writinng automated tests
+- started writing automated tests
+- added command line argument parser
 
 ### 24.6.2019
 - bugfixes and further restructure

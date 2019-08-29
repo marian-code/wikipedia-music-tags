@@ -628,9 +628,7 @@ class Buttons:
     def __select_offline_debbug__(self):
         SharedVars.offline_debbug = self.offline_debbug_sw.isChecked()
         if SharedVars.offline_debbug:
-            if parser.preload_instances >= 1:
-                parser.preload_thread.kill()
-                parser.preload_thread.join()
+            parser.preload.stop()
 
     def __do_nothing__(self):
         log_gui.warning("Not implemented yet")
@@ -792,17 +790,27 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
             parser.read_files()
             self.__update_model__()
 
-    # TODO DOESN´T REMEMBER LAST DIR
     @exception(log_gui)
     def __select_dir__(self):
 
-        if not we_are_frozen():
-            start_dir = os.path.join(module_path(), "tests", "test_music")
-        else:
+        dir_file = os.path.join(os.getcwd(), "data", "last_opened.txt")
+
+        # load last opened dir
+        try:
+            f = open(dir_file, "r")
+        except FileNotFoundError:
             start_dir = get_music_path()
+        else:
+            start_dir = f.readline().strip()
+
+        # select dir
         self.input_work_dir = QFileDialog.getExistingDirectory(self,
                                                                "Open Folder",
                                                                start_dir)
+
+        # record last opened dir
+        with open(dir_file, "w") as f:
+            f.write(self.input_work_dir)
 
         parser.work_dir = self.input_work_dir
 
@@ -839,17 +847,10 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         if not SharedVars.offline_debbug:
             # band and album entry must be non-empty strings
             if self.input_band and self.input_album:
-                # if preload is already running, kill the thread
-                if parser.preload_instances >= 1:
-                    parser.preload_thread.kill()
-                    parser.preload_thread.join()
-                log_gui.debug("Starting wikipedia preload...")
-                parser.preload_thread = ThreadWithTrace(target=parser.preload,
-                                                        name="WikiPreload")
-                parser.preload_thread.start()
+                parser.preload.stop()
+                parser.preload.start()
 
-    @exception(log_gui)
-    def __run_search__(self, *args):
+    def __check_input_is_present__(self):
 
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
@@ -858,50 +859,53 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         if self.input_band == "":
             msg.setText("You must input artist!")
             msg.exec_()
-            return None
+            return False
         elif self.input_album == "":
             msg.setText("You must input album!")
             msg.exec_()
-            return None
-        elif self.input_work_dir == "":
+            return False
+        elif self.input_work_dir in ("", None):
             msg.setText("You must select working directory!")
             msg.exec_()
-            return None
+            return False
         else:
-            log_gui.info("starting wikipedia search")
+            return True
 
-            # TODO non-atomic
-            self.__init_parser__()
-            parser.files = list_files(parser.work_dir)
+    @exception(log_gui)
+    def __run_search__(self, *args):
 
-            self.__start_checkers__()
+        if not self.__check_input_is_present__():
+            return
 
-            self.input_band = self.band_entry_input.text()
-            self.input_album = self.album_entry_input.text()
-            main_app = Thread(target=get_wiki, name="WikiSearch", args=(True,))
-            main_app.daemon = True
-            main_app.start()
+        log_gui.info("starting wikipedia search")
+
+        # TODO non-atomic
+        self.__init_parser__()
+        parser.files = list_files(parser.work_dir)
+
+        self.__start_checkers__()
+
+        self.input_band = self.band_entry_input.text()
+        self.input_album = self.album_entry_input.text()
+        main_app = Thread(target=get_wiki, name="WikiSearch", args=(True,))
+        main_app.daemon = True
+        main_app.start()
 
     @exception(log_gui)
     def __run_lyrics_search__(self, *args):
 
-        parser.preload_thread.kill()
-        parser.preload_thread.join()
+        parser.preload.stop()
 
-        if self.input_work_dir == "":
-            QMessageBox(QMessageBox.Information, "Message",
-                        "You must select working directory!").exec_()
+        if not self.__check_input_is_present__():
+            return
 
-        if self.input_work_dir is not None:
+        log_gui.info("starting lyrics search")
 
-            log_gui.info("starting lyrics search")
+        self.__start_checkers__()
+        main_app = Thread(target=get_lyrics, name="LyricsSearch", args=(True,))
+        main_app.start()
 
-            self.__start_checkers__()
-            main_app = Thread(target=get_lyrics, name="LyricsSearch",
-                              args=(True,))
-            main_app.start()
-
-            log_gui.debug("lyrics search started")
+        log_gui.debug("lyrics search started")
 
     @exception(log_gui)
     def __cover_art_search__(self):

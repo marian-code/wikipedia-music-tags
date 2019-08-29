@@ -40,6 +40,18 @@ CONTENTS_IDS = settings_dict["CONTENTS_IDS"]
 HEADER_CATEGORY = settings_dict["HEADER_CATEGORY"]
 
 
+# TODO doesn't work without GUI
+def terminate(msg):
+    SharedVars.ask_exit = str(msg)
+    SharedVars.wait_exit = True
+
+    while SharedVars.wait_exit:
+        sleep(0.05)
+
+    if SharedVars.terminate_app:
+        sys.exit()
+
+
 class DataExtractors:
     """ Extracts various table formats from wikipedia. """
 
@@ -177,10 +189,204 @@ class DataExtractors:
         return (string[:start] + string[end + 1:]).strip()
 
 
-@for_all_methods(time_methods, exclude=["cut_out"])
-class WikipediaParser(DataExtractors):
+@for_all_methods(time_methods, exclude=["PreloadControl"])
+class WikiCooker:
 
-    def __init__(self, protected_vars=True):
+    def __init__(self, protected_vars=True, init_preload_thread=True):
+
+         # control
+        self.wiki_downloaded = False
+        self.soup_ready = False
+        self._preload_instances = 0
+        self.getter_lock = Lock()
+
+        if init_preload_thread:
+            self.preload = self.PreloadControl(self)
+
+        if protected_vars:
+            # variables
+            self.album = ""
+            self.band = ""
+            self.formated_html = None
+            self.info_box_html = None
+            self.page = None
+            self.soup = None
+
+    class PreloadControl:
+
+        def __init__(self, outer_instance):
+            self._preload_thread = None
+            self.outer_instance = outer_instance
+
+        def start(self):
+            log_parser.debug(f"Starting wikipedia preload for: "
+                             f"{self.outer_instance.album} by "
+                             f"{self.outer_instance.band}")
+
+            self._preload_thread = ThreadWithTrace(
+                target=self.outer_instance.preload_run,
+                name="WikiPreload")
+            self._preload_thread.start()
+
+        def stop(self):
+
+            if self.outer_instance.preload_instances >= 1:
+
+                log_parser.debug(f"Stoping wikipedia preload for: "
+                                 f"{self.outer_instance.album} by "
+                                 f"{self.outer_instance.band}")
+                self._preload_thread.kill()
+                self._preload_thread.join()
+
+    @property
+    def preload_instances(self):
+        with self.getter_lock:
+            return self._preload_instances
+
+    @preload_instances.setter
+    def preload_instances(self, value):
+        with self.getter_lock:
+            self._preload_instances = value
+
+    def check_band(self) -> bool:
+
+        try:
+            for child in self.info_box_html.children:
+                if child.find(href="/wiki/Album") is not None:
+                    album_artist = (child
+                                    .find(href="/wiki/Album")
+                                    .parent.get_text())
+                    break
+
+        except AttributeError as e:
+            print(e)
+            log_parser.warning(e)
+            SharedVars.warning = e
+            return True
+        else:
+            if fuzz.token_set_ratio(nc(self.band),
+               nc(album_artist)) < 90:
+                b = re.sub(r"[Bb]y|[Ss]tudio album", "", album_artist).strip()
+                e = (f"The Wikipedia entry for album: {self.album} belongs to "
+                     f"band: {b}\nThis probably means that entry for: "
+                     f"{self.album} by {self.band} does not exist.")
+                print(e)
+                log_parser(e)
+                terminate(e)
+
+                return False
+            else:
+                return True  # band found on page matches input
+
+    def preload_run(self):
+
+        if self.album and self.band:
+            self.get_wiki()
+            self.cook_soup()
+            log_parser.debug("Preload finished")
+        else:
+            log_parser.debug("Input fields empty, aborting preload")
+
+    # TODO implement timeout error
+    def get_wiki(self):
+
+        if SharedVars.offline_debbug:
+            return self._from_disk()
+        else:
+            return self._from_web()
+
+    def _from_web(self):
+
+        self.preload_instances += 1
+        while self.preload_instances > 1:
+            sleep(0.05)
+        if self.wiki_downloaded:
+            return True
+
+        searches = [f"{self.album} ({self.band} album)",
+                    f"{self.album} (album)",
+                    self.album]
+
+        error_msg = "Could not get wikipedia page."
+
+        try:
+            for query in searches:
+                self.page = wiki.page(title=query, auto_suggest=True)
+                summ = nc(self.page.summary)
+                if nc(self.band) in summ and nc(self.album) in summ:
+                    break
+
+        except wiki.exceptions.DisambiguationError as e:
+            print("Found entries: ")
+            print("\n".join(e.options[:3]), "\n...")
+            for option in e.options:
+                if self.band in option:
+                    break
+
+            print("\nSelecting: " + option + "\n")
+            self.page = wiki.page(option)
+
+        except wiki.exceptions.PageError:
+            try:
+                self.page = wiki.page(f"{self.album} {self.band}")
+            except wiki.exceptions.PageError as e:
+                log_parser.warning(e)
+                SharedVars.warning = "Album was not found!!"
+                print(Fore.LIGHTYELLOW_EX + "Album was not found!!" +
+                      Fore.RESET)
+                sys.exit()
+
+        except (wiki.exceptions.HTTPTimeoutError, Exception) as e:
+            log_parser.exception(e)
+            error_msg = "Search failed probably due to poor internet connetion."
+            terminate(error_msg)
+        else:
+            error_msg = True
+
+        self.preload_instances -= 1
+        self.wiki_downloaded = True
+
+        return error_msg
+
+    def _from_disk(self):
+
+        fname = os.path.join(module_path(), "output", self.album, 'page.pkl')
+        if os.path.isfile(fname):
+            with open(fname, 'rb') as infile:
+                self.page = pickle.load(infile)
+            return True
+        else:
+            return ("Cannot find cached offline version of page. "
+                    "Trying to get online version...")
+
+    def cook_soup(self):
+
+        if self.soup_ready:
+            return
+
+        # make BeautifulSoup black magic
+        self.soup = BeautifulSoup(self.page.html(), "lxml")
+        self.formated_html = self.soup.get_text()
+        self.info_box_html = self.soup.find("table",
+                                            class_="infobox vevent haudio")
+
+        # check if the album belongs to band that was requested
+        if not self.check_band():
+            SharedVars.wait_exit = True
+            while SharedVars.wait_exit:
+                sleep(0.01)
+
+            # If user wants to terminate program, the GUI
+            #  makes the application thread throw exception and exit
+            assert not SharedVars.terminate_app
+
+        self.soup_ready = True
+
+
+@for_all_methods(time_methods)
+class WikipediaParser(DataExtractors, WikiCooker):
+
+    def __init__(self, protected_vars=True, init_preload_thread=True):
         colorama_init()
 
         # lists 1D
@@ -219,33 +425,7 @@ class WikipediaParser(DataExtractors):
         # atributes protected from GUIs reinit method
         # when new search is started
         if protected_vars:
-            # control
-            self.cooking_soup = False
-            self.wiki_downloaded = False
-            self.soup_ready = False
-            self._preload_instances = 0
-            self.preload_thread = None
-            self.lock = Lock()
-
-            # variables
-            self.album = ""
-            self.band = ""
-            self.formated_html = None
-            self.info_box_html = None
-            self.page = None
-            self.soup = None
-            self._files = []
-
-    @property
-    def preload_instances(self):
-        with self.lock:
-            return self._preload_instances
-
-    @preload_instances.setter
-    def preload_instances(self, value):
-        with self.lock:
-            self._preload_instances = value
-
+            WikiCooker.__init__(self, init_preload_thread=init_preload_thread)
 
     @property
     def bracketed_types(self):
@@ -266,8 +446,11 @@ class WikipediaParser(DataExtractors):
     @property
     def url(self):
         if self._url is None:
-            self._url = self.page.url
-
+            try:
+                self._url = str(self.page.url)
+            except AttributeError:
+                self._url = os.path.join(module_path(), "output", self.album,
+                                         'page.pkl')
         return self._url
 
     @property
@@ -335,39 +518,6 @@ class WikipediaParser(DataExtractors):
                     self.cover_art = bytearray(f)
 
         Thread(target=cover_art_getter, name="CoverArtGetter").start()
-
-    def check_band(self) -> bool:
-
-        try:
-            for child in self.info_box_html.children:
-                if child.find(href="/wiki/Album") is not None:
-                    album_artist = (child
-                                    .find(href="/wiki/Album")
-                                    .parent.get_text())
-                    break
-
-        except AttributeError as e:
-            print(e)
-            log_parser.warning(e)
-            SharedVars.warning = e
-            return True
-        else:
-            if fuzz.token_set_ratio(nc(self.band),
-               nc(album_artist)) < 90:
-                e = ("The Wikipedia entry for album: " + self.album +
-                     " belongs to band: " +
-                     re.sub(r"[Bb]y|[Ss]tudio album", "",
-                            album_artist).strip() +
-                     "\nThis probably means that entry for: " +
-                     self.album +
-                     " by " + self.band + " does not exist.")
-                print(e)
-                log_parser.warning(e)
-                SharedVars.ask_exit = e
-
-                return False
-            else:
-                return True  # band found on page matches input
 
     def get_composers(self):
 
@@ -809,107 +959,6 @@ class WikipediaParser(DataExtractors):
             for i, t in enumerate(tc):
                 if isinstance(t, list):
                     tc[i] = sorted(list(set(t)))
-
-    def preload(self):
-
-        if self.album and self.band:
-            self.get_wiki()
-            self.cook_soup()
-            log_parser.debug("Preload finished")
-        else:
-            log_parser.debug("Input fields empty, aborting preload")
-
-    # TODO implement timeout error
-    def get_wiki(self):
-
-        self.preload_instances += 1
-        while self.preload_instances > 1:
-            sleep(0.05)
-        if self.wiki_downloaded:
-            return
-
-        searches = [f"{self.album} ({self.band} album)",
-                    f"{self.album} (album)",
-                    self.album]
-
-        try:
-            for query in searches:
-                self.page = wiki.page(title=query, auto_suggest=True)
-                summ = nc(self.page.summary)
-                if nc(self.band) in summ and nc(self.album) in summ:
-                    break
-
-        except wiki.exceptions.DisambiguationError as e:
-            print("Found entries: ")
-            print("\n".join(e.options[:3]), "\n...")
-            for option in e.options:
-                if self.band in option:
-                    break
-
-            print("\nSelecting: " + option + "\n")
-            self.page = wiki.page(option)
-
-        except wiki.exceptions.PageError:
-            try:
-                self.page = wiki.page(self.album + " " + self.band)
-            except wiki.exceptions.PageError as e:
-                log_parser.warning(e)
-                SharedVars.warning = "Album was not found!!"
-                print(Fore.LIGHTYELLOW_EX + "Album was not found!!" +
-                      Fore.RESET)
-                sys.exit()
-
-        except wiki.exceptions.HTTPTimeoutError as e:
-            print(e)
-            log_parser.exception(e)
-            SharedVars.exception = ("Search failed probably due to "
-                                    "poor internet connetion")
-            sys.exit()
-
-        self.preload_instances -= 1
-        self.wiki_downloaded = True
-
-    def get_wiki_from_disk(self):
-        fname = os.path.join(module_path(), "output", self.album, 'page.pkl')
-        if os.path.isfile(fname):
-            with open(fname, 'rb') as infile:
-                self.page = pickle.load(infile)
-            return True
-        else:
-            return False
-
-    def cook_soup(self):
-
-        # TODO preparation for preloading
-        # if GUI already started downloading page wait for finish and than exit
-        while self.cooking_soup:
-            sleep(0.05)
-            if not self.cooking_soup:
-                return
-
-        if self.soup_ready:
-            return
-
-        self.cooking_soup = True
-
-        # make BeautifulSoup black magic
-        self.soup = BeautifulSoup(self.page.html(), "lxml")
-        self.formated_html = self.soup.get_text()
-        self.info_box_html = self.soup.find("table",
-                                            class_="infobox vevent haudio")
-
-        # check if the album belongs to band that was requested
-        if not self.check_band():
-            SharedVars.wait_exit = True
-            while SharedVars.wait_exit:
-                sleep(0.01)
-
-            # If user wants to terminate program, the GUI
-            #  makes the application thread throw exception and exit
-            assert not SharedVars.terminate_app
-
-        self.cooking_soup = False
-        self.soup_ready = True
 
     # TODO try asyncio for disk write (https://github.com/Tinche/aiofiles)
     # TODO and for getters

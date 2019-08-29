@@ -8,7 +8,7 @@ from lazy_import import lazy_callable, lazy_module
 from colorama import Fore, init
 import signal
 from utilities.utils import (list_files, to_bool, we_are_frozen,
-                             win_naming_convetion, flatten_set)
+                             win_naming_convetion, flatten_set, input_parser)
 
 from utilities.loggers import log_app
 from utilities.sync import SharedVars
@@ -89,6 +89,19 @@ def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False):
         SharedVars.describe = msg_GREEN + msg_WHITE
 
 
+def write_data(writeable, GUI, dict_data, lyrics_only=False):
+
+    if writeable and not GUI:
+        print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
+              Fore.RESET, end="")
+        write = to_bool(input())
+
+        if write:
+            # write data to ID3 tags
+            for data in dict_data:
+                write_tags(data, lyrics_only=False)
+
+
 @exception(log_app)
 def get_wiki(GUI):
 
@@ -103,22 +116,18 @@ def get_wiki(GUI):
         SharedVars.describe = ("Searching for: " + parser.album +
                                " by " + parser.band)
 
-        parser.get_wiki()
+    else:
+        log_print(msg_GREEN="Using offline cached page insted of web page")
 
-        log_print(msg_GREEN="Found at: ", msg_WHITE=str(parser.url),
+    success = parser.get_wiki()
+
+    if success:
+        log_print(msg_GREEN="Found at: ", msg_WHITE=parser.url,
                   describe_both=True)
     else:
-        success = parser.get_wiki_from_disk()
-        if success is True:
-            log_print(msg_GREEN="Using offline cached page insted of web page")
-        else:
-            msg = ("Cannot find cached offline version of page. "
-                   "Trying to get online version...")
-            log_app.warning(msg)
-            SharedVars.warning = msg
-            log_print(msg_GREEN=msg)
-            SharedVars.offline_debbug = False
-            get_wiki(GUI)
+        log_app.warning(success)
+        SharedVars.warning = success
+        log_print(msg_GREEN=success)
 
     log_print(msg_WHITE="Cooking Soup")
     parser.cook_soup()
@@ -287,21 +296,12 @@ def get_wiki(GUI):
     if GUI:
         SharedVars.barrier.wait()
 
-    if writeable and not GUI:
-        print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
-              Fore.RESET, end="")
-        write = to_bool(input())
-
-        if write:
-            # write data to ID3 tags
-            for data in dict_data:
-                write_tags(data, lyrics_only=False)
+    write_data(writeable, GUI, dict_data, lyrics_only=False)
 
     log_print(msg_GREEN="Done")
 
     if we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
-    return
 
 
 @exception(log_app)
@@ -311,17 +311,6 @@ def get_lyrics(GUI):
 
     if not GUI:
         parser.read_files()
-
-    if parser.album == "" or parser.album == " " or parser.album is None:
-        print("No album tag was found, enter album name: " +
-              Fore.GREEN, end="")
-        parser.album = str(input())
-        print(Fore.RESET)
-    if parser.band == "" or parser.band == " " or parser.band is None:
-        print("No artist tag was found, enter band name: " +
-              Fore.GREEN, end="")
-        parser.band = str(input())
-        print(Fore.RESET)
 
     # find lyrics
     log_print(msg_GREEN="Searching for lyrics")
@@ -346,42 +335,30 @@ def get_lyrics(GUI):
 
     log_app.info("write data to tags")
 
-    if writeable and not GUI:
-        print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
-              Fore.RESET, end="")
-        write = to_bool(input())
-
-        if write:
-
-            # write data to ID3 tags
-            for data in dict_data:
-                write_tags(data, lyrics_only=True)
+    write_data(writeable, GUI, dict_data, lyrics_only=True)
 
     log_print(msg_GREEN="Done")
 
     if we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
 
-    return 0
-
 if __name__ == "__main__":
 
-    print(Fore.CYAN + "Download only lyrics? (y/n)", Fore.RESET, end="")
-    only_lyrics = to_bool(input())
-    print(Fore.CYAN + "Write json save file? (y/n)", Fore.RESET, end="")
-    SharedVars.write_json = to_bool(input())
-    print(Fore.CYAN + "Offline debbug? (y/n)", Fore.RESET, end="")
-    SharedVars.offline_debbug = to_bool(input())
+    (SharedVars.write_json, SharedVars.offline_debbug, only_lyrics,
+     parser.album, parser.band) = input_parser()
 
     parser.work_dir = os.getcwd()
     parser.files = list_files(parser.work_dir)
 
+    if parser.album is None:
+        print("Enter album name: " + Fore.GREEN, end="")
+        parser.album = str(input())
+    if parser.band is None:
+        print(Fore.RESET + "Enter band name: " + Fore.GREEN, end="")
+        parser.band = str(input())
+    print(Fore.RESET)
+
     if only_lyrics:
         get_lyrics(GUI=False)
     else:
-        print("Enter album name: " + Fore.GREEN, end="")
-        parser.album = str(input())
-        print(Fore.RESET + "Enter band name: " + Fore.GREEN, end="")
-        parser.band = str(input())
-        print(Fore.RESET)
         get_wiki(GUI=False)

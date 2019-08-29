@@ -1,4 +1,5 @@
-from pytaglib import taglib
+#from pytaglib import taglib
+import library.ID3_tags_handler as taglib
 from colorama import Fore, init
 from utilities.sync import SharedVars
 from utilities.wrappers import exception
