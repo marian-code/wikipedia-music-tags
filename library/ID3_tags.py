@@ -1,11 +1,24 @@
-#from pytaglib import taglib
-import library.ID3_tags_handler as taglib
+import sys
+
 from colorama import Fore, init
+
+from utilities.loggers import log_tags
 from utilities.sync import SharedVars
 from utilities.wrappers import exception
-from utilities.loggers import log_tags
 
-init(convert=True)
+_version = sys.version_info
+
+if _version.major == 3:
+    if _version.minor == 6:
+        from pytaglib import taglib
+    if _version.minor == 7:
+        import library.tags_handler as taglib
+else:
+    raise NotImplementedError("Wikimusic only supports python "
+                              "versions=(3.6, 3.7)")
+
+
+init(convert=True, autoreset=True)
 
 __all__ = ["read_tags", "write_tags"]
 
@@ -27,13 +40,13 @@ def write_tags(data: dict, lyrics_only):
 
             song.tags[tag] = value
         except AttributeError as e:
-            print(Fore.LIGHTRED_EX, "Probably encoding error!", Fore.RESET)
+            print(Fore.LIGHTRED_EX, "Probably encoding error!")
             print(f'Couldn´t write tag {tag} to file {data["file"]}')
             print(e)
             SharedVars.exception = e
             log_tags.exception(e)
         except Exception as e:
-            print(Fore.RED, "Error in writing tags!", Fore.RESET)
+            print(Fore.RED, "Error in writing tags!")
             print(f'Couldn´t write tag {tag} to file {data["file"]}')
             print(e)
             SharedVars.exception = e
@@ -41,7 +54,7 @@ def write_tags(data: dict, lyrics_only):
 
     if data["file"] is None:
         print(data["TITLE"] + " " + data["type"] + Fore.LIGHTYELLOW_EX +
-              "does not have matching file!" + Fore.RESET)
+              "does not have matching file!")
         return 0
 
     if lyrics_only is False:
@@ -96,7 +109,7 @@ def write_tags(data: dict, lyrics_only):
         SharedVars.exception = e
         log_tags.exception(e)
     else:
-        print(Fore.GREEN + "Tags written succesfully!", Fore.RESET)
+        print(Fore.GREEN + "Tags written succesfully!")
 
 
 @exception(log_tags)

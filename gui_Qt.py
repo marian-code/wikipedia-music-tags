@@ -764,6 +764,10 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     # methods that bind to gui elements
     @exception(log_gui)
     def __save_all__(self, lyrics_only):
+
+        # first stop any running preload, as it is not needed any more
+        parser.preload.stop()
+
         # TODO non-atomic
         if not parser.numbers:
             QMessageBox(QMessageBox.Information, "Info",
@@ -874,6 +878,9 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     @exception(log_gui)
     def __run_search__(self, *args):
 
+        self.input_band = self.band_entry_input.text()
+        self.input_album = self.album_entry_input.text()
+
         if not self.__check_input_is_present__():
             return
 
@@ -885,8 +892,6 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
 
         self.__start_checkers__()
 
-        self.input_band = self.band_entry_input.text()
-        self.input_album = self.album_entry_input.text()
         main_app = Thread(target=get_wiki, name="WikiSearch", args=(True,))
         main_app.daemon = True
         main_app.start()
@@ -895,6 +900,9 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     def __run_lyrics_search__(self, *args):
 
         parser.preload.stop()
+
+        self.input_band = self.band_entry_input.text()
+        self.input_album = self.album_entry_input.text()
 
         if not self.__check_input_is_present__():
             return

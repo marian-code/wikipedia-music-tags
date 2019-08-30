@@ -17,12 +17,10 @@ from utilities.wrappers import exception
 if not we_are_frozen():
     log_lyrics.propagate = False
 
-import lyricsfinder
 import asyncio
 from aiohttp import ClientSession
-from lyricsfinder import search_lyrics
+search_lyrics = lazy_callable("external_libraries.lyricsfinder_aio.search_lyrics")
 
-Pool = lazy_callable("multiprocessing.Pool")
 Fore = lazy_callable("colorama.Fore")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
 colorama_init = lazy_callable("utilities.utils.colorama_init")
@@ -66,9 +64,8 @@ def save_lyrics(parser):
             lyrics_temp.append(get_lyrics(parser.band, parser.album,
                                           tr, google_api_key))
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.wait(lyrics_temp))
-    loop.close()
+    asyncio.run(get_lyrics(parser.band, parser.album, parser.tracks[0],
+                           google_api_key))
 
     index = 0
     for i, dp in enumerate(duplicates):
@@ -87,8 +84,8 @@ async def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict
     log_lyrics.info("starting lyricsfinder ")
 
     async with ClientSession() as session:
-        lyrics_iterator = lyricsfinder.search_lyrics(song, album, artist,
-            api_key=google_api_key, session=session)
+        lyrics_iterator = search_lyrics(song, album, artist, session=session,
+                                        api_key=google_api_key)
         async for lyrics in lyrics_iterator:
             print(lyrics.title, lyrics.artist, lyrics.lyrics)
 
@@ -120,7 +117,7 @@ async def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict
 
     log_lyrics.info("done")
 
-    return lyrics["lyrics"]
+    #return lyrics["lyrics"]
 
 if __name__ == "__main__":
 

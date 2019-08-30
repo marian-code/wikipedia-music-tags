@@ -24,3 +24,6 @@ profiling/
 
 # unique user files
 files/google_api_key.txt
+
+# data folder
+data/

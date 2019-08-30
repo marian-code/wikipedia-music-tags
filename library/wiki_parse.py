@@ -331,8 +331,8 @@ class WikiCooker:
                 self.page = wiki.page(f"{self.album} {self.band}")
             except wiki.exceptions.PageError as e:
                 log_parser.warning(e)
-                SharedVars.warning = "Album was not found!!"
-                print(Fore.LIGHTYELLOW_EX + "Album was not found!!" +
+                SharedVars.warning = "Album was not found on wikipedia!!"
+                print(Fore.LIGHTYELLOW_EX + "Album was not found on wikipedia!!" +
                       Fore.RESET)
                 sys.exit()
 

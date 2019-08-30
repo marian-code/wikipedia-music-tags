@@ -11,7 +11,7 @@
 - tcl files are not needed for PyQt version but cx_freeze includes them
 - consolidate flags into dict
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
-- write aoutamated tests
+- write automated tests
 - finish work on image search
 
 ###  Individual problem cases 
@@ -22,9 +22,21 @@
 
 # Change Log
 
+### 30.9.2019
+- further development of mutagen implementation
+- now if app is run under python 3.6 pytaglib backend is loaded and
+  for 3.7 mutagen backend is loaded.
+- mutagen implementation is complete for mp3, flac and m4a other file types
+  should be easy to add. The API mimics that of pytaglib.
+- mutagen needs further testing
+- experiments with asyncio lyricsfinder version, seems like thread safety
+  affects also async version. Lyricsfinder will need major overhaul to be
+  thread safe
+- minor bugfixes to gui
+
 ### 29.8.2019
 - bug fix, preload would reinit parser attributes and gui would display nothing
-- started migration to mutagen [mutagen](https://mutagen.readthedocs.io/en/latest/index.html)
+- started migration to [mutagen](https://mutagen.readthedocs.io/en/latest/index.html)
   tagging library, basic functionality is implemented.
   This will allow to ditch complicated taglib dependency that
   needs compiling and allow saving album art. But mutagen is more difficult to
@@ -34,6 +46,7 @@
 - whole codebase will migrate to python 3.7 namely lyricfinder module, old
   multiprocessing lyrics search will from now on get only bug fixes and will
   not be further developed
+- implemented remembereing last opened dir
 
 ### 7.7.2019
 - finally timeout is implemented on wiki search

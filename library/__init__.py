@@ -4,9 +4,10 @@ from .ID3_tags import write_tags, read_tags
 
 _version = sys.version_info
 if _version.major == 3:
-    #if _version.minor == 6:
-    #    from .lyrics import save_lyrics
+    if _version.minor == 6:
+        from .lyrics import save_lyrics
     if _version.minor == 7:
+        # TODO probably problem with lyricsfinder not being thread safe
         #from .lyrics_aio import save_lyrics
         from .lyrics import save_lyrics
 else:
