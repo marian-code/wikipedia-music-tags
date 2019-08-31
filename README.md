@@ -5,8 +5,8 @@ files. Has also the ability to search for lyrics and album cover art.
 
 ## Getting Started
 
-Anyone is welcome to use it or contribute. Project has unfortunately plenty
-or requirements of which some might be tricky to install. Most notably pytaglib.
+Anyone is welcome to use it or contribute. In the newest version number of dependencies has been reduced, most notably pytaglib is now not mandatory and
+can be replaced by mutagen. All of the dependencies are quite common so you shouldn't encoundter any problems.
 I also use edited versions of [google-images-download](https://github.com/hardikvasa/google-images-download) and [LyricsFinder](https://github.com/GieselaDev/LyricsFinder), but 
 those are found in the repository.
 
@@ -23,13 +23,13 @@ lazy-import>=0.2.2
 lxml>=4.2.1
 nltk>=3.3
 requests>=2.18.4
-pytaglib>=1.4.4
 wikipedia>=1.4.0
 numpy>=1.14.3
 PyQt5>=5.11.3
 python-Levenshtein>=0.12.0
 pywin32>=224
 mutagen>=1.42.0
+joblib>=0.13.2
 ```
 
 Versions that are equal to listed vesions are tested. Higher vesions should work but are not guaranted to. All modules are found in PyPI so installing should be as easy as:
@@ -65,10 +65,17 @@ packages that are not necessary:
 * *python-Levenshtein* makes fuzzywuzzy a whole lot faster
 * *lxml* makes Beautifulsoup a whole lot faster
 * *PyQt5* if you want to use Tkinter GUI (deprecated) or console mode
+* *pytaglib>=1.4.4* alternative tagging library currently used if 
+  code is run under python version 3.6. Can be very hard to compile under Windows
+
+If you want to use pytaglib as default you need to merely alter imports in:
+```
+wiki_music.library.__init__.py
+```
 
 You should be able to seamlessly substitute **PyQt5** with **PySide2** or **PyQt4** just by changing imports and some little alterations to the code.
 
-The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications module should be able to run on Linux and Os X too. This concers mainly default paths and interaction with clipboard in GUI.
+The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications it should be able to run on Linux and Os X too. Problems concern mainly default paths and interaction with clipboard in GUI.
 
 If you want to utilize lyrics search you will have to get a [Google Developer API Key](https://console.developers.google.com/projectselector/apis/library/customsearch.googleapis.com/) **(Strongly Recommended)** with the 'Custom Search' API enabled. This link should take one there once logged in. this is a requirement of [LyricsFinder](https://github.com/GieselaDev/LyricsFinder) module. When you have the key create a file named **google_api_key.txt** under **files** directory and copy the key there.
 
