@@ -1,1 +1,2 @@
 cx-Freeze>=5.1.1
+pytaglib>=1.4.4
