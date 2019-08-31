@@ -1,5 +1,6 @@
 """Base for extracting."""
 
+import abc
 import logging
 from typing import TYPE_CHECKING
 
@@ -9,8 +10,6 @@ if TYPE_CHECKING:
     from .lyrics import Lyrics
 
 log = logging.getLogger(__name__)
-#log.setLevel(logging.DEBUG)
-#logging.basicConfig()
 
 
 class LyricsExtractorMount(type):
@@ -43,7 +42,7 @@ class LyricsExtractor(metaclass=LyricsExtractorMount):
         """Check whether this extractor can extract lyrics from this url."""
         return cls.display_url in url_data.url
 
-    @classmethod
-    def extract_lyrics(cls, url_data: UrlData) -> "Lyrics":
+    @abc.abstractmethod
+    def extract_lyrics(self, url_data: UrlData) -> "Lyrics":
         """Return a Lyrics object for the given url, html or bs."""
         raise NotImplementedError

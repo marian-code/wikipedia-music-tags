@@ -16,8 +16,8 @@ class AZLyrics(LyricsExtractor):
     url = "https://www.azlyrics.com/"
     display_url = "azlyrics.com"
 
-    @classmethod
-    def extract_lyrics(cls, url_data, song, artist):
+    @staticmethod
+    def extract_lyrics(url_data, song, artist):
         """Extract lyrics."""
         url_data.headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
         bs = url_data.bs

@@ -22,8 +22,8 @@ class MusixMatch(LyricsExtractor):
     url = "https://www.musixmatch.com/"
     display_url = "musixmatch.com"
 
-    @classmethod
-    def extract_lyrics(cls, url_data, song, artist):
+    @staticmethod
+    def extract_lyrics(url_data, song, artist):
         """Extract lyrics."""
         url_data.headers = {"user-agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1"}
         try:

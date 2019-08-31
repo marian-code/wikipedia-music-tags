@@ -16,8 +16,8 @@ class Genius(LyricsExtractor):
     url = "https://genius.com/"
     display_url = "genius.com"
 
-    @classmethod
-    def extract_lyrics(cls, url_data, song, artist):
+    @staticmethod
+    def extract_lyrics(url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
 

@@ -15,8 +15,8 @@ class Lyricsmode(LyricsExtractor):
     url = "http://www.lyricsmode.com/"
     display_url = "lyricsmode.com"
 
-    @classmethod
-    def extract_lyrics(cls, url_data, song, artist):
+    @staticmethod
+    def extract_lyrics(url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
         lyrics_window = bs.find_all("p", {"id": "lyrics_text", "class": "ui-annotatable"})[0]

@@ -21,8 +21,8 @@ class Animelyrics(LyricsExtractor):
     url = "http://www.animelyrics.com/"
     display_url = "animelyrics.com"
 
-    @classmethod
-    def extract_lyrics(cls, url_data, song, artist):
+    @staticmethod
+    def extract_lyrics(url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
         title = bs.select_one("div ~ h1").string

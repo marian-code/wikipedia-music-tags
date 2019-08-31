@@ -17,9 +17,9 @@ yaml = lazy_import.lazy_module("yaml")
 argparse = lazy_import.lazy_module("argparse")
 
 
-def colorama_init():
+def colorama_init(**kwargs):
     """ Colorama initialize foe Windows """
-    init(convert=True)
+    init(convert=True, **kwargs)
 
 
 def list_files(work_dir: str) -> list:

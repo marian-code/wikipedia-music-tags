@@ -22,6 +22,15 @@
 
 # Change Log
 
+### 31.8.2019
+- abandon asyncio version of lyricsfinder
+- overhaul of the old lyricsfinder version to be thread safe
+- ported lyricsfinding from multiprocessing to joblib with threading backend
+- result is major speed improvement
+- reduce codebase in lyrics functions
+- introduce nice ordered printing in lyrics functions
+- fix bug in darklyrics extractor
+
 ### 30.9.2019
 - further development of mutagen implementation
 - now if app is run under python 3.6 pytaglib backend is loaded and

@@ -427,6 +427,9 @@ class WikipediaParser(DataExtractors, WikiCooker):
         if protected_vars:
             WikiCooker.__init__(self, init_preload_thread=init_preload_thread)
 
+    def __len__(self):
+        return len(self.numbers)
+
     @property
     def bracketed_types(self):
         if not self._bracketed_types:
@@ -1164,7 +1167,7 @@ class WikipediaParser(DataExtractors, WikiCooker):
             lyrics_data.append(lyrics)
             numbers_data.append(number)
 
-            if track is "" or track is " " or track is None:
+            if track in ("", " ", None):
                 tracks_data.append(file_names[i])
             else:
                 tracks_data.append(track)

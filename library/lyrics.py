@@ -13,15 +13,17 @@ from utilities.wrappers import exception
 if not we_are_frozen():
     log_lyrics.propagate = False
 
-search_lyrics = lazy_callable("external_libraries.lyricsfinder.search_lyrics")
-Pool = lazy_callable("multiprocessing.Pool")
+Parallel = lazy_callable("joblib.Parallel")
+delayed = lazy_callable("joblib.delayed")
 Fore = lazy_callable("colorama.Fore")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
 colorama_init = lazy_callable("utilities.utils.colorama_init")
 normalize = lazy_callable("utilities.utils.normalize")
+LyricsManager = lazy_callable("external_libraries.lyricsfinder"
+                              ".lyrics.LyricsManager")
 
-google_api_key = get_google_api_key()
-colorama_init()
+GOOGLE_API_KEY = get_google_api_key()
+colorama_init(autoreset=True)
 
 log_lyrics.info("imports done")
 
@@ -33,10 +35,10 @@ def save_lyrics(parser):
     log_lyrics.info("starting save lyrics")
 
     parser.lyrics = []
-    for i, _ in enumerate(parser.tracks):
-        if parser.types[i] == "Instrumental":
+    for i, typ in enumerate(parser.types):
+        if typ == "Instrumental":
             parser.lyrics.append("Instrumental")
-        elif parser.types[i] == "Orchestral":
+        elif typ == "Orchestral":
             parser.lyrics.append("Orchestral")
         else:
             parser.lyrics.append(None)
@@ -50,26 +52,21 @@ def save_lyrics(parser):
                     90 and parser.lyrics[j] is None):
                 duplicates[j] = i
 
-    lyrics_temp = []
+    # run search
+    lyrics_temp = Parallel(n_jobs=len(parser), prefer="threads")(
+        delayed(get_lyrics)(parser.band, parser.album, t)
+        for t in parser.tracks)
 
-    if len(parser.tracks) > 1:
-
-        arg = []
-        # starmap takes list of tupples for argument
-        for t in parser.tracks:
-            arg.append((parser.band, parser.album, t, google_api_key))
-
-        pool = Pool()
-        lyrics_temp = pool.starmap(get_lyrics, arg)
-
-        pool.close()
-        pool.join()
-
-    else:
-        for i, (tr, dp) in enumerate(zip(parser.tracks, duplicates)):
-            if i == dp:
-                lyrics_temp.append(get_lyrics(parser.band, parser.album,
-                                              tr, google_api_key))
+    # report results
+    for i, l in enumerate(lyrics_temp):
+        if l["lyrics"]:
+            print(Fore.GREEN + "Saved lyrics for:" + Fore.RESET,
+                  f"{l['artist']} - {l['title']} " +
+                  Fore.GREEN + f"({l['origin']['source_name']})")
+            lyrics_temp[i] = l["lyrics"]
+        else:
+            print(Fore.GREEN + "Couldn't find lyrics for:" +
+                  Fore.RESET, f"{l['artist']} - {l['title']}")
 
     index = 0
     for i, dp in enumerate(duplicates):
@@ -83,46 +80,30 @@ def save_lyrics(parser):
 
 
 @exception(log_lyrics)
-def get_lyrics(artist: str, album: str, song: str, google_api_key) -> dict:
+def get_lyrics(artist: str, album: str, song: str) -> dict:
 
     log_lyrics.info("starting lyricsfinder ")
 
-    lyrics = next(search_lyrics(song, album, artist,
-                                google_api_key=google_api_key), None)
+    l = LyricsManager()
 
-    if not lyrics:
-        return {
-            "success": False,
-            "error": "Couldn't find any lyrics for " + artist + " " + song
-        }
+    lyrics = next(l.search_lyrics(song, album, artist,
+                                  google_api_key=GOOGLE_API_KEY), None)
+
+    if lyrics is None:
+        log_lyrics.info(f"Couldn't find lyrics for: {artist} - {song}")
+        lyrics = {"lyrics": None, "artist": artist, "title": song}
     else:
-        lyrics_data = lyrics.to_dict()
-        lyrics_data["filename"] = lyrics.save_name
+        log_lyrics.info(f"Saved lyrics for: {artist} - {song}")
+        lyrics = lyrics.to_dict()
+        lyrics["lyrics"] = normalize(lyrics["lyrics"].replace("\r", "").replace("\n", "\r\n"))    
 
-        print(Fore.GREEN + "Saved lyrics for: ",
-              Fore.RESET, artist + " - " + song)
-        log_lyrics.info("Saved lyrics for " + "artist" + " - " + "song")
-
-    log_lyrics.info("lyrics to dict")
-
-    lyrics = {
-        "success": True,
-        "title": lyrics_data["title"],
-        "artist": lyrics_data["artist"],
-        "release_date": lyrics_data["release_date"],
-        # replace \n with \r\n if there is no \r in front of \n
-        "lyrics": (normalize(lyrics_data["lyrics"]
-                   .replace("\r", "").replace("\n", "\r\n"))),
-        "origin": lyrics_data["origin"]
-    }
-
-    log_lyrics.info("done")
-
-    return lyrics["lyrics"]
+    return lyrics
 
 if __name__ == "__main__":
 
     # testing
     from pprint import pprint
-    pprint(get_lyrics("arch enemy", "", "you will know my name",
-                      "<google_api_key>"))
+    pprint(get_lyrics("Swallow The Sun",
+                      "When a Shadow is Forced Into the Light",
+                      "When a Shadow Is Forced into the Light",
+                      GOOGLE_API_KEY))

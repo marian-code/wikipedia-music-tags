@@ -307,7 +307,7 @@ class DataModel:
         from within conditions check function
         """
 
-        n_entries = len(parser.numbers)
+        n_entries = len(parser)
 
         if n_entries > 0:
 

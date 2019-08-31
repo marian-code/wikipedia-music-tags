@@ -16,7 +16,7 @@ class UrlData:
         self.url = url
         self.headers = {}
 
-        self.html_parser = "html.parser"
+        self.html_parser = "lxml"
 
         self._resp = None
         self._html = None

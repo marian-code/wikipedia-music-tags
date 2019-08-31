@@ -17,52 +17,63 @@ class Darklyrics(LyricsExtractor):
     url = "http://www.darklyrics.com/"
     display_url = "darklyrics.com"
 
-    @classmethod
-    def extract_lyrics(cls, url_data, song, artist):
+    def extract_lyrics(self, url_data, song, artist):
         """Extract lyrics."""
+
+        def p(*args):
+            if "Shadow" in song:
+                print(*args)
 
         bs = url_data.bs
 
         # get list of album tracks
         track_list = bs.find('div', class_='albumlyrics')
-        track_list = track_list.text.split("\n")
 
-        # remove empty entries from list
-        track_list = list(filter(None, track_list))
+        # get table header
+        header = track_list.find("h2").text
+
+        # get tracklist
+        track_list = track_list.find_all("a", href=re.compile(r"#"))
+        track_list = [t.text for t in track_list]
 
         # convert to dict, delimiter is . or :
-        for i in range(len(track_list)):
-            track_list[i] = re.split("\.|:" ,track_list[i])
+        for i, t in enumerate(track_list):
+            track_list[i] = re.split(r"\.|:", t)
 
         # remove whitespaces
-        dict = {track[0]:track[1].strip() for track in track_list}
-        
+        track_list = {t[0]: t[1].strip() for t in track_list}
+
         # find release date
-        for string in re.findall('\(.*?\)', dict["album"]):
+        for string in re.findall(r'\(.*?\)', header):
             string = re.sub(r"\(|\)", "", string)
             if string.isdigit():
                 date_str = string
                 break
+        else:
+            date_str = "9999"
 
         release_date = datetime.strptime(date_str, "%Y")
 
         # find the desired song
-        for key, value in dict.items():
-            
+        for key, value in track_list.items():
+
             if song.lower() in value.lower():
                 song_number = int(key)
-                title = dict[key]
+                title = track_list[key]
 
         try:
             lyrics_div = bs.find('div', class_='lyrics')
-            lyrics = lyrics_div.prettify().split('</h3>')  # split into separate lyrics
-            lyric = cls.process_lyric(cls, lyrics[song_number])
+            # split into separate lyrics
+            lyrics = lyrics_div.prettify().split('</h3>')
+            lyric = self.process_lyric(lyrics[song_number])
         except Exception as e:
             log.exception(e)
 
-        return Lyrics(title, lyric, artist= artist.title(), release_date=release_date)
+        return Lyrics(title, lyric, artist=artist.title(),
+                      release_date=release_date)
 
-    def process_lyric(cls, lyric):
+    @staticmethod
+    def process_lyric(lyric):
         lyric = lyric[:lyric.find('<h3>')]  # remove tail
         # Set linebreaks
         lyric = lyric.replace('<br/>', '')
@@ -78,7 +89,8 @@ class Darklyrics(LyricsExtractor):
             next_line = split_lyric[line_number + 1].rstrip()
             last_line = split_lyric[max(line_number - 1, 0)].rstrip()
             # Remove duplicate blank lines
-            if line is not '' or (line is '' and next_line is '' and last_line is not ''):
+            if line is not '' or (line is '' and next_line is '' and
+                                  last_line is not ''):
                 result = result + '\n' + line
         return result.strip()
 

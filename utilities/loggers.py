@@ -1,5 +1,5 @@
-import os
 import logging
+from threading import get_ident
 
 
 def get_logger(name, logfile, mode="a"):
@@ -35,5 +35,5 @@ log_tags = get_logger("wiki_music_tags", r"logs/wiki_music_ID3_tags.log")
 log_parser = get_logger("wiki_music_parser", r"logs/wiki_music_parser.log")
 
 # logging for lyrics
-_id = str(os.getpid())
+_id = str(get_ident())
 log_lyrics = get_logger(_id, f"logs/wiki_music_lyrics_{_id}.log")
