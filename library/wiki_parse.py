@@ -1,16 +1,18 @@
+from functools import wraps
 from time import sleep
 
 from fuzzywuzzy import process
 from lazy_import import lazy_callable, lazy_module
 
-from utilities.parser_utils import *  # pylint: disable=unused-wildcard-import
-from utilities.utils import *  # pylint: disable=unused-wildcard-import
-nc = normalize_caseless
-
 from utilities.loggers import log_parser
+from utilities.parser_utils import *  # pylint: disable=unused-wildcard-import
 from utilities.sync import SharedVars
-from utilities.wrappers import warning, time_methods, for_all_methods
-from .ID3_tags import read_tags
+from utilities.utils import *  # pylint: disable=unused-wildcard-import
+from utilities.wrappers import for_all_methods, time_methods, warning
+
+from . import read_tags, TAGS
+
+nc = normalize_caseless
 
 Thread = lazy_callable("threading.Thread")
 Lock = lazy_callable("threading.Lock")
@@ -39,10 +41,12 @@ DELIMITERS = settings_dict["DELIMITERS"]
 CONTENTS_IDS = settings_dict["CONTENTS_IDS"]
 HEADER_CATEGORY = settings_dict["HEADER_CATEGORY"]
 
+colorama_init(autoreset=True)
+
 
 # TODO doesn't work without GUI
-def terminate(msg):
-    SharedVars.ask_exit = str(msg)
+def terminate(message: str):
+    SharedVars.ask_exit = message
     SharedVars.wait_exit = True
 
     while SharedVars.wait_exit:
@@ -149,7 +153,7 @@ class DataExtractors:
         return data
 
     @classmethod
-    def get_track(cls, data):
+    def get_track(cls, data: str) -> (list, list):
 
         tracks = []
         subtracks = []
@@ -180,7 +184,7 @@ class DataExtractors:
         return tracks, subtracks
 
     @classmethod
-    def get_artist(cls, data):
+    def get_artist(cls, data: str) -> list:
         temp = re.split(",|&", data)
         return [tmp.replace(",", "").strip() for tmp in temp]
 
@@ -189,19 +193,131 @@ class DataExtractors:
         return (string[:start] + string[end + 1:]).strip()
 
 
-@for_all_methods(time_methods, exclude=["PreloadControl"])
+class VariableProxy:
+    """ Properties with same names as tags act as a proxy to parser variables
+        for convenient access."""
+
+    @property
+    def ALBUM(self) -> str:
+        return self.album
+
+    @ALBUM.setter
+    def ALBUM(self, value: str):
+        self.album = value
+
+    @property
+    def ALBUMARTIST(self) -> str:
+        return self.band
+
+    @ALBUMARTIST.setter
+    def ALBUMARTIST(self, value: str):
+        self.band = value
+
+    @property
+    def ARTIST(self) -> list:
+        return self.artists
+
+    @ARTIST.setter
+    def ARTIST(self, value: list):
+        self.artists = value
+
+    @property
+    def COMPOSER(self) -> list:
+        return self.composers
+
+    @COMPOSER.setter
+    def COMPOSER(self, value: list):
+        self.composers = value
+
+    @property
+    def DATE(self) -> str:
+        return self.release_date
+
+    @DATE.setter
+    def DATE(self, value: str):
+        self.release_date = value
+
+    @property
+    def DISCNUMBER(self) -> list:
+        return self.disc_num
+
+    @DISCNUMBER.setter
+    def DISCNUMBER(self, value: list):
+        self.disc_num = value
+
+    @property
+    def GENRE(self) -> str:
+        return self.selected_genre
+
+    @GENRE.setter
+    def GENRE(self, value: str):
+        self.selected_genre = value
+
+    @property
+    def LYRICS(self) -> list:
+        return self.lyrics
+
+    @LYRICS.setter
+    def LYRICS(self, value: list):
+        self.lyrics = value
+
+    @property
+    def UNSYNCEDLYRICS(self) -> list:
+        return self.lyrics
+
+    @UNSYNCEDLYRICS.setter
+    def UNSYNCEDLYRICS(self, value: list):
+        self.lyrics = value
+
+    @property
+    def TITLE(self) -> list:
+        return self.tracks
+
+    @TITLE.setter
+    def TITLE(self, value: list):
+        self.tracks = value
+
+    @property
+    def TRACKNUMBER(self) -> list:
+        return self.numbers
+
+    @TRACKNUMBER.setter
+    def TRACKNUMBER(self, value: list):
+        self.numbers = value
+
+    @property
+    def FILE(self) -> list:
+        return self.files
+
+    @FILE.setter
+    def FILE(self, value: list):
+        self.files = value
+
+    @property
+    def TYPE(self) -> list:
+        return self.bracketed_types
+
+    @TYPE.setter
+    def TYPE(self, value: list):
+        self.bracketed_types = value
+
+
+@for_all_methods(time_methods, exclude=["Preload"])
 class WikiCooker:
 
-    def __init__(self, protected_vars=True, init_preload_thread=True):
+    def __init__(self, protected_vars=True):
 
-         # control
+        # control
         self.wiki_downloaded = False
         self.soup_ready = False
-        self._preload_instances = 0
+        self.preload_running = False
         self.getter_lock = Lock()
+        self.error_msg = None
 
-        if init_preload_thread:
-            self.preload = self.PreloadControl(self)
+        self._url = None
+
+        # pass reference of current class instance to subclass
+        self.Preload.outer_instance = self
 
         if protected_vars:
             # variables
@@ -212,43 +328,52 @@ class WikiCooker:
             self.page = None
             self.soup = None
 
-    class PreloadControl:
+    class Preload:
 
-        def __init__(self, outer_instance):
-            self._preload_thread = None
-            self.outer_instance = outer_instance
+        _preload_thread = None
+        outer_instance = None
 
-        def start(self):
+        @classmethod
+        def start(cls):
+            cls.stop()
+
+            cls.outer_instance.wiki_downloaded = False
+            cls.outer_instance.soup_ready = False
+            cls.outer_instance.error_msg = None
+
             log_parser.debug(f"Starting wikipedia preload for: "
-                             f"{self.outer_instance.album} by "
-                             f"{self.outer_instance.band}")
+                             f"{cls.outer_instance.album} by "
+                             f"{cls.outer_instance.band}")
 
-            self._preload_thread = ThreadWithTrace(
-                target=self.outer_instance.preload_run,
+            cls._preload_thread = ThreadWithTrace(
+                target=cls.outer_instance._preload_run,
                 name="WikiPreload")
-            self._preload_thread.start()
+            cls._preload_thread.start()
 
-        def stop(self):
+        @classmethod
+        def stop(cls):
 
-            if self.outer_instance.preload_instances >= 1:
+            if cls.outer_instance.preload_running:
 
                 log_parser.debug(f"Stoping wikipedia preload for: "
-                                 f"{self.outer_instance.album} by "
-                                 f"{self.outer_instance.band}")
-                self._preload_thread.kill()
-                self._preload_thread.join()
+                                 f"{cls.outer_instance.album} by "
+                                 f"{cls.outer_instance.band}")
+                cls._preload_thread.kill()
+                cls._preload_thread.join()
+
+                cls.outer_instance.preload_running = False
 
     @property
-    def preload_instances(self):
-        with self.getter_lock:
-            return self._preload_instances
+    def url(self):
+        if self._url is None:
+            try:
+                self._url = str(self.page.url)
+            except AttributeError:
+                self._url = os.path.join(module_path(), "output", self.album,
+                                         'page.pkl')
+        return self._url
 
-    @preload_instances.setter
-    def preload_instances(self, value):
-        with self.getter_lock:
-            self._preload_instances = value
-
-    def check_band(self) -> bool:
+    def _check_band(self) -> bool:
 
         try:
             for child in self.info_box_html.children:
@@ -259,10 +384,7 @@ class WikiCooker:
                     break
 
         except AttributeError as e:
-            print(e)
-            log_parser.warning(e)
-            SharedVars.warning = e
-            return True
+            return False
         else:
             if fuzz.token_set_ratio(nc(self.band),
                nc(album_artist)) < 90:
@@ -271,43 +393,52 @@ class WikiCooker:
                      f"band: {b}\nThis probably means that entry for: "
                      f"{self.album} by {self.band} does not exist.")
                 print(e)
-                log_parser(e)
+                log_parser.exception(e)
                 terminate(e)
 
                 return False
             else:
                 return True  # band found on page matches input
 
-    def preload_run(self):
+    def _preload_run(self):
 
-        if self.album and self.band:
-            self.get_wiki()
+        self.preload_running = True
+
+        self.get_wiki(preload=True)
+
+        if not self.error_msg:
             self.cook_soup()
-            log_parser.debug("Preload finished")
-        else:
-            log_parser.debug("Input fields empty, aborting preload")
 
-    # TODO implement timeout error
-    def get_wiki(self):
+            if not self.error_msg:
+                log_parser.info(f"Preload finished successfully, "
+                                f"found: {self.url}")
+
+        if self.error_msg:
+            log_parser.info(f"Preload unsucessfull: {self.error_msg}")
+
+        self.preload_running = False
+
+    def get_wiki(self, preload=False) -> str:
+
+        # when function is called from application,
+        # wait until all preloads are finished and then continue
+        if not preload:
+            while self.preload_running:
+                sleep(0.05)
+
+        if self.wiki_downloaded:
+            return self.error_msg
 
         if SharedVars.offline_debbug:
             return self._from_disk()
         else:
             return self._from_web()
 
-    def _from_web(self):
-
-        self.preload_instances += 1
-        while self.preload_instances > 1:
-            sleep(0.05)
-        if self.wiki_downloaded:
-            return True
+    def _from_web(self) -> str:
 
         searches = [f"{self.album} ({self.band} album)",
                     f"{self.album} (album)",
                     self.album]
-
-        error_msg = "Could not get wikipedia page."
 
         try:
             for query in searches:
@@ -315,79 +446,73 @@ class WikiCooker:
                 summ = nc(self.page.summary)
                 if nc(self.band) in summ and nc(self.album) in summ:
                     break
+            else:
+                self.error_msg = "Could not get wikipedia page."
 
         except wiki.exceptions.DisambiguationError as e:
-            print("Found entries: ")
-            print("\n".join(e.options[:3]), "\n...")
+            print("Found entries: {}\n...".format("\n".join(e.options[:3])))
             for option in e.options:
                 if self.band in option:
+                    print(f"\nSelecting: {option}\n")
+                    self.page = wiki.page(option)
                     break
-
-            print("\nSelecting: " + option + "\n")
-            self.page = wiki.page(option)
+            else:
+                self.error_msg = ("Couldn't select best album entry "
+                                  "from wikipedia")
 
         except wiki.exceptions.PageError:
             try:
                 self.page = wiki.page(f"{self.album} {self.band}")
             except wiki.exceptions.PageError as e:
-                log_parser.warning(e)
-                SharedVars.warning = "Album was not found on wikipedia!!"
-                print(Fore.LIGHTYELLOW_EX + "Album was not found on wikipedia!!" +
-                      Fore.RESET)
-                sys.exit()
+                self.error_msg = "Album was not found on wikipedia"
 
         except (wiki.exceptions.HTTPTimeoutError, Exception) as e:
-            log_parser.exception(e)
-            error_msg = "Search failed probably due to poor internet connetion."
-            terminate(error_msg)
+            self.error_msg = ("Search failed probably due to "
+                              "poor internet connetion.")
         else:
-            error_msg = True
+            self.error_msg = None
+            self.wiki_downloaded = True
 
-        self.preload_instances -= 1
-        self.wiki_downloaded = True
+        return self.error_msg
 
-        return error_msg
-
-    def _from_disk(self):
+    def _from_disk(self) -> str:
 
         fname = os.path.join(module_path(), "output", self.album, 'page.pkl')
         if os.path.isfile(fname):
             with open(fname, 'rb') as infile:
                 self.page = pickle.load(infile)
-            return True
+            self.error_msg = None
+            self.wiki_downloaded = True
         else:
-            return ("Cannot find cached offline version of page. "
-                    "Trying to get online version...")
+            self.error_msg = "Cannot find cached offline version of page."
 
-    def cook_soup(self):
+        return self.error_msg
+
+    def cook_soup(self) -> str:
 
         if self.soup_ready:
-            return
+            return self.error_msg
 
         # make BeautifulSoup black magic
-        self.soup = BeautifulSoup(self.page.html(), "lxml")
+        self.soup = BeautifulSoup(self.page.html(), features="lxml")
         self.formated_html = self.soup.get_text()
         self.info_box_html = self.soup.find("table",
                                             class_="infobox vevent haudio")
 
         # check if the album belongs to band that was requested
-        if not self.check_band():
-            SharedVars.wait_exit = True
-            while SharedVars.wait_exit:
-                sleep(0.01)
+        if self._check_band():
+            self.soup_ready = True
+            self.error_msg = None
+        else:
+            self.error_msg = "Album doesnt't belong to the requested band"
 
-            # If user wants to terminate program, the GUI
-            #  makes the application thread throw exception and exit
-            assert not SharedVars.terminate_app
-
-        self.soup_ready = True
+        return self.error_msg
 
 
 @for_all_methods(time_methods)
-class WikipediaParser(DataExtractors, WikiCooker):
+class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
 
-    def __init__(self, protected_vars=True, init_preload_thread=True):
-        colorama_init()
+    def __init__(self, protected_vars=True):
 
         # lists 1D
         self.contents = []
@@ -416,16 +541,15 @@ class WikipediaParser(DataExtractors, WikiCooker):
         self.cover_art = None
 
         # strings
-        self.work_dir = None
+        if protected_vars:
+            self.work_dir = None
         self.release_date = None
         self.selected_genre = None
         self._debug_folder = None
-        self._url = None
 
         # atributes protected from GUIs reinit method
         # when new search is started
-        if protected_vars:
-            WikiCooker.__init__(self, init_preload_thread=init_preload_thread)
+        WikiCooker.__init__(self, protected_vars=protected_vars)
 
     def __len__(self):
         return len(self.numbers)
@@ -445,16 +569,6 @@ class WikipediaParser(DataExtractors, WikiCooker):
             self._debug_folder = os.path.join("output", _win_name)
 
         return self._debug_folder
-
-    @property
-    def url(self):
-        if self._url is None:
-            try:
-                self._url = str(self.page.url)
-            except AttributeError:
-                self._url = os.path.join(module_path(), "output", self.album,
-                                         'page.pkl')
-        return self._url
 
     @property
     def files(self):
@@ -643,7 +757,7 @@ class WikipediaParser(DataExtractors, WikiCooker):
         except AttributeError as e:
             print(e)
             log_parser.warning(e)
-            SharedVars.warning = e
+            SharedVars.warning = str(e)
 
             contents = []
 
@@ -963,8 +1077,6 @@ class WikipediaParser(DataExtractors, WikiCooker):
                 if isinstance(t, list):
                     tc[i] = sorted(list(set(t)))
 
-    # TODO try asyncio for disk write (https://github.com/Tinche/aiofiles)
-    # TODO and for getters
     def disk_write(self):
 
         for i, tracklist in enumerate(self.tracklist_2_str(to_file=True), 1):
@@ -978,7 +1090,7 @@ class WikipediaParser(DataExtractors, WikiCooker):
 
             f.write(self.personnel_2_str())
 
-    def tracklist_2_str(self, to_file=True):
+    def tracklist_2_str(self, to_file=True) -> list:
 
         # compute number of spaces
         spaces, length = count_spaces(self.tracks, self.bracketed_types)
@@ -1072,9 +1184,9 @@ class WikipediaParser(DataExtractors, WikiCooker):
         disk_files = list_files(self.work_dir)
         files = []
 
-        print(Fore.GREEN + "\nFound files:" + Fore.RESET)
-        print("\n".join(disk_files), "\n")
-        print(Fore.GREEN + "Assigning files to tracks:" + Fore.RESET)
+        print(Fore.GREEN + "\nFound files:")
+        print(*disk_files, sep="\n")
+        print(Fore.GREEN + "\nAssigning files to tracks:")
 
         for i, tr in enumerate(self.tracks):
             self.tracks[i] = tr.strip()
@@ -1093,112 +1205,69 @@ class WikipediaParser(DataExtractors, WikiCooker):
                       "." * (2 + max_length - len(tr)),
                       "Does not have a matching file!")
 
-                files.append("")
+                files.append(None)
 
         self.files = files
 
-    def data_to_dict(self):
+    def data_to_dict(self) -> list:
 
-        file_counter = 0
+        if not any(self.files):
+            print(Fore.GREEN + "No mathing file was found, "
+                  "tags won´t be written")
+
+            return []
+
+        TAGS = TAGS + ("FILE", "TYPE")
+
         dict_data = []
         for i, _ in enumerate(self.tracks):
 
-            if self.files[i].strip() == "":
-                f = None
-                file_counter += 1
-            else:
-                f = self.files[i]
+            tags = dict()
 
-            dictionary = {
-                "ALBUM": self.album,
-                "ALBUMARTIST": self.band,
-                "ARTIST": self.artists[i],
-                "COMPOSER": self.composers[i],
-                "DATE": self.release_date,
-                "DISCNUMBER": self.disc_num[i],
-                "file": f,
-                "GENRE": self.selected_genre,
-                "LYRICS": self.lyrics[i],
-                "TITLE": self.tracks[i],
-                "TRACKNUMBER": self.numbers[i],
-                "type": self.bracketed_types[i]
-            }
+            for t in TAGS:
+                attr = getattr(self, t)
+                if isinstance(attr, list):
+                    tags[t] = attr[i]
+                else:
+                    tags[t] = attr
 
-            dict_data.append(dictionary)
+            dict_data.append(tags)
 
         if SharedVars.write_json:
             yaml_dump(dict_data, self.work_dir)
-            print("Saved!")
+            print("Saved YAML file")
 
-        if file_counter == len(self.tracks):
-            print(Fore.GREEN + """No mathing file was found,
-                  tags won´t be written""" + Fore.RESET)
-            writeable = False
-        else:
-            writeable = True
-
-        return dict_data, writeable
+        return dict_data
 
     def read_files(self):
 
+        # initialize variables
+        self.__init__(protected_vars=False)
+
         self.list_files()
 
-        file_names = []
-        artists_data = []
-        composers_data = []
-        disc_num_data = []
-        lyrics_data = []
-        numbers_data = []
-        tracks_data = []
-        for i, fl in enumerate(self.files):
-            path, f = os.path.split(fl)
-            # match digits, zero or one whitespace characters, zero or one dot
-            # zero or one dash, zero or one whitespace characters
-            f = re.sub(r"\d\s?\.?-?\s?", "", f)
-            file_names.append(os.path.join(path, f))
+        for fl in self.files:
 
-            (album, band, artists, composers, release_date, disc_num,
-             genre, lyrics, track, number) = read_tags(fl)
+            for key, value in read_tags(fl).items():
 
-            # individual tags
-            artists_data.append(sorted(re.split(r",\s?", artists)))
-            composers_data.append(sorted(re.split(r",\s?", composers)))
-            disc_num_data.append(disc_num)
-            lyrics_data.append(lyrics)
-            numbers_data.append(number)
+                if isinstance(getattr(self, key), list):
+                    getattr(self, key).append(value)
+                else:
+                    setattr(self, key, value)
 
-            if track in ("", " ", None):
-                tracks_data.append(file_names[i])
-            else:
-                tracks_data.append(track)
-
-        self.artists = artists_data
-        self.composers = composers_data
-        self.disc_num = disc_num_data
-        self.lyrics = lyrics_data
-        self.numbers = numbers_data
-        self.tracks = tracks_data
-
-        # common tags
         if self.files:
-            self.album = album
-            self.band = band
-            self.selected_genre = genre
-            self.release_date = release_date
+            # look for aditional artists in brackets behind track names and
+            # complete artists names again with new info
+            self.info_tracks()
+
+            SharedVars.describe = "Files loaded sucesfully"
         else:
             self.album = ""
             self.band = ""
             self.selected_genre = ""
             self.release_date = ""
 
-        # look for aditional artists in brackets behind track names and
-        # complete artists names again with new info
-        self.info_tracks()
-
-        if not self.files:
             SharedVars.describe = "No music files to Load"
-        else:
-            SharedVars.describe = "Files loaded sucesfully"
 
     def extract_names(self):
 

@@ -35,7 +35,7 @@ write_tags = lazy_callable("library.write_tags")
 read_tags = lazy_callable("library.read_tags")
 save_lyrics = lazy_callable("library.save_lyrics")
 
-init(convert=True)
+init(convert=True, autoreset=True)
 
 __all__ = ["get_lyrics", "get_wiki"]
 
@@ -58,40 +58,44 @@ def genre_select(genres: list, GUI: bool) -> str:
     if not genres:
         print("\nInput genre:", Fore.CYAN, end="")
         genre = input()
-        print(Fore.RESET)
     else:
-        print(Fore.CYAN, "\nSpecify which genre you want to write:",
-              Fore.RESET)
-        for i in range(len(genres)):
-            print(str(i + 1) + ". " + genres[i])
+        print(Fore.CYAN, "\nSpecify which genre you want to write:")
+        for i, gen in enumerate(genres, 1):
+            print(f"{i}. {gen}")
 
         print("Input number:", Fore.CYAN, end="")
         index = int(input()) - 1
-        print(Fore.RESET)
 
         genre = genres[index]
 
     return genre
 
 
-def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False):
+def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False,
+              level="INFO"):
 
     if not we_are_frozen() and print_out:
         if msg_GREEN != "":
-            print(Fore.GREEN + "\n" + msg_GREEN + Fore.RESET)
+            print(Fore.GREEN + "\n" + msg_GREEN)
         if msg_WHITE != "":
             print(msg_WHITE)
 
-    log_app.info(msg_GREEN)
-    if not describe_both:
-        SharedVars.describe = msg_GREEN
+    if describe_both:
+        msg = msg_GREEN + msg_WHITE
     else:
-        SharedVars.describe = msg_GREEN + msg_WHITE
+        msg = msg_GREEN
+
+    if level == "INFO":
+        log_app.info(msg_GREEN)
+        SharedVars.describe = msg
+    if level == "WARN":
+        log_app.warning(msg_GREEN)
+        SharedVars.warning = msg
 
 
-def write_data(writeable, GUI, dict_data, lyrics_only=False):
+def write_data(GUI: bool, dict_data: dict, lyrics_only=False):
 
-    if writeable and not GUI:
+    if dict_data and not GUI:
         print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
               Fore.RESET, end="")
         write = to_bool(input())
@@ -103,35 +107,39 @@ def write_data(writeable, GUI, dict_data, lyrics_only=False):
 
 
 @exception(log_app)
-def get_wiki(GUI):
+def get_wiki(GUI: bool):
 
     # download wikipedia page
     if not SharedVars.offline_debbug:
 
-        print("Accessing Wikipedia...")
-        SharedVars.describe = "Accessing Wikipedia"
+        log_print(msg_WHITE="Accessing Wikipedia...")
 
         print("Searching for: " + Fore.GREEN + parser.album + Fore.WHITE +
-              " by " + Fore.GREEN + parser.band + Fore.WHITE)
-        SharedVars.describe = ("Searching for: " + parser.album +
-                               " by " + parser.band)
+              " by " + Fore.GREEN + parser.band)
+        SharedVars.describe = (f"Searching for: {parser.album} "
+                               f"by {parser.band}")
 
     else:
         log_print(msg_GREEN="Using offline cached page insted of web page")
 
-    success = parser.get_wiki()
+    error_msg = parser.get_wiki()
+    if error_msg is not None:
+        log_print(msg_GREEN=error_msg, level="WARN")
+        return
 
-    if success:
+    else:
         log_print(msg_GREEN="Found at: ", msg_WHITE=parser.url,
                   describe_both=True)
-    else:
-        log_app.warning(success)
-        SharedVars.warning = success
-        log_print(msg_GREEN=success)
 
-    log_print(msg_WHITE="Cooking Soup")
-    parser.cook_soup()
-    log_print(msg_WHITE="Soup ready")
+        log_print(msg_WHITE="Cooking Soup")
+
+        error_msg = parser.cook_soup()
+        if error_msg is not None:
+            log_print(msg_GREEN=error_msg, level="WARN")
+
+            return
+        else:
+            log_print(msg_WHITE="Soup ready")
 
     # get page contents
     parser.get_contents()
@@ -150,8 +158,7 @@ def get_wiki(GUI):
         log_print(msg_GREEN="Found cover art")
 
     if not we_are_frozen():
-        print("Creating directory to store results")
-        SharedVars.describe = "Creating directory to store results"
+        log_print(msg_WHITE="Creating directory to store results")
 
         # create work dir
         if not os.path.exists(parser.debug_folder):
@@ -170,8 +177,8 @@ def get_wiki(GUI):
     # print out tracklist
     log_print(msg_GREEN="Found Track list(s)")
 
-    for i, data in enumerate(parser.data_collect):
-        print(f"Tracklist {i + 1}: {data[0][0]}")
+    for i, data in enumerate(parser.data_collect, 1):
+        print(f"Tracklist {i}: {data[0][0]}")
 
     # process track list
     log_print(msg_GREEN="Processing tracks", print_out=False)
@@ -242,8 +249,7 @@ def get_wiki(GUI):
     log_app.info("decide artists")
     # decide what to do with artists
     if not GUI:
-        print(Fore.CYAN +
-              "Do you want to assign artists to composers? (y/n)",
+        print(Fore.CYAN + "Do you want to assign artists to composers? (y/n)",
               Fore.RESET, end=" ")
         SharedVars.assign_artists = to_bool(input())
     else:
@@ -290,13 +296,13 @@ def get_wiki(GUI):
     SharedVars.done = True
 
     # put data to list of dicts
-    dict_data, writeable = parser.data_to_dict()
+    dict_data = parser.data_to_dict()
 
     # announce that main app thread has reached the barrier
     if GUI:
         SharedVars.barrier.wait()
 
-    write_data(writeable, GUI, dict_data, lyrics_only=False)
+    write_data(GUI, dict_data, lyrics_only=False)
 
     log_print(msg_GREEN="Done")
 
@@ -305,7 +311,7 @@ def get_wiki(GUI):
 
 
 @exception(log_app)
-def get_lyrics(GUI):
+def get_lyrics(GUI: bool):
 
     log_app.info("starting get_lyrics function")
 
@@ -320,7 +326,7 @@ def get_lyrics(GUI):
     log_app.info("data to dict")
 
     # put data to list of dicts
-    dict_data, writeable = parser.data_to_dict()
+    dict_data = parser.data_to_dict()
 
     log_app.info("announcing done")
     SharedVars.describe = "Done"
@@ -335,7 +341,7 @@ def get_lyrics(GUI):
 
     log_app.info("write data to tags")
 
-    write_data(writeable, GUI, dict_data, lyrics_only=True)
+    write_data(GUI, dict_data, lyrics_only=True)
 
     log_print(msg_GREEN="Done")
 

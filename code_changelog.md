@@ -1,8 +1,7 @@
 # To-Do
 - acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels
-- maybe bypass the dict method of passing data to save function
-- frozen code doesnt run on x86 systems, need 32bit python installation to build 32bit app
-- parser probably should have its own lock - access to its variables should be guarded - see 13.1.2019 entry in changelog
+- frozen code doesn't run on x86 systems, need 32bit python installation to build 32bit app
+- parser probably should have its own lock - access to its variables should be guarded  see 13.1.2019 entry in changelog
 - freezed Qt app is too big ~ 0.65GB - most files probably not needed
 - use "zip_include_packages" in cx_freeze setup to reduce size refer to:  
     https://github.com/anthony-tuininga/cx_Freeze/issues/256  
@@ -13,6 +12,8 @@
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 - write automated tests
 - finish work on image search
+- introduce typing https://docs.python.org/3/library/typing.html this will bind app to python version 3.7, maybe to a great idea?
+- write only tags that have changed
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -21,6 +22,23 @@
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 6.9.2019
+- restructuring of tags handling, reduced codebase
+- added proxy properties to access parser variables, now they can be called
+  with same names as tags
+- restructured read_files and data_to_dict methods in parser, significant
+  codebase reduction and improved readability
+- began testing for new cover art handling in tests folder
+- implemented new base class for cover art selection popup window
+
+### 5.9.2019
+- revisions to preload, reduced preload class codebase and simplification
+- preload error messages are now displayed only when search button is clicked
+- change of preload handling in GUI, major simplification
+- overhaul of lyrics finding function and dulpicate lyrics handling, which
+  results in less lyrics downloading if some tracks have same lyrics
+- wrote test for lyrics search
 
 ### 31.8.2019
 - abandon asyncio version of lyricsfinder

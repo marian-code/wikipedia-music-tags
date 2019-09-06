@@ -28,7 +28,8 @@ from utilities.loggers import log_gui
 log_gui.debug("started imports")
 
 from wiki_music import parser
-from wiki_music.external_libraries.google_images_download import google_images_download
+from wiki_music.external_libraries.google_images_download import \
+    google_images_download
 from wiki_music.ui.gui_Qt_base import Ui_MainWindow
 from wiki_music.ui.art_dialog_base import Ui_Dialog
 from wiki_music.ui.cover_art_base import Ui_cover_art_search
@@ -173,7 +174,7 @@ class ImageTable(QTableWidget):
         self.resizeRowsToContents()
 
 
-# these method don't work alone, they must be inherited by Window class
+# these classes don't work alone, they must be inherited by Window class
 class Gui2Parser:
     """ Methods for data transfer between  gui <--> parser object.
         This class is not stand-alone. It should be inherited and attributes in
@@ -616,11 +617,15 @@ class Buttons:
             subprocess.Popen([r"C:\Program Files (x86)\Mp3tag\Mp3tag.exe",
                               r'/fp:' + self.input_work_dir])
 
-    def __entry_band__(self, text):
+    def __entry_band__(self, text, with_preload=False):
         parser.band = text
+        if with_preload:
+            parser.Preload.start()
 
-    def __entry_album__(self, text):
+    def __entry_album__(self, text, with_preload=False):
         parser.album = text
+        if with_preload:
+            parser.Preload.start()
 
     def __select_json__(self):
         SharedVars.write_json = self.json_write_sw.isChecked()
@@ -628,7 +633,7 @@ class Buttons:
     def __select_offline_debbug__(self):
         SharedVars.offline_debbug = self.offline_debbug_sw.isChecked()
         if SharedVars.offline_debbug:
-            parser.preload.stop()
+            parser.Preload.stop()
 
     def __do_nothing__(self):
         log_gui.warning("Not implemented yet")
@@ -683,8 +688,10 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         self.album_entry_input.textChanged.connect(self.__entry_album__)
 
         # connect the album and band entry field to preload function
-        self.band_entry.textChanged.connect(lambda: self.__preload__())
-        self.album_entry.textChanged.connect(lambda: self.__preload__())
+        self.band_entry_input.textEdited.connect(
+            lambda text: self.__entry_band__(text, with_preload=True))
+        self.album_entry_input.textEdited.connect(
+            lambda text: self.__entry_album__(text, with_preload=True))
 
         # create table to hold the data
         self.table = QStandardItemModel()
@@ -766,7 +773,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     def __save_all__(self, lyrics_only):
 
         # first stop any running preload, as it is not needed any more
-        parser.preload.stop()
+        parser.Preload.stop()
 
         # TODO non-atomic
         if not parser.numbers:
@@ -779,9 +786,9 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
                 return None
 
             self.__gui_to_parser__()
-            dict_data, writable = parser.data_to_dict()
+            dict_data = parser.data_to_dict()
 
-            if writable:
+            if dict_data:
                 for data in dict_data:
                     write_tags(data, lyrics_only=lyrics_only)
             else:
@@ -817,42 +824,24 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
             f.write(self.input_work_dir)
 
         parser.work_dir = self.input_work_dir
+        self.display_dir.setText(self.input_work_dir)
 
         # TODO non-atomic
+        # read files and start preload
         parser.read_files()
+        parser.Preload.start()
 
-        self.input_album = parser.album
+        # set band
         self.input_band = parser.band
-
         self.band_entry_input.setText(self.input_band)
-        self.album_entry_input.setText(self.input_album)
-        self.__preload__(first=True)
-
-        self.display_dir.setText(self.input_work_dir)
         self.band_entry.setText(self.input_band)
+
+        # set album
+        self.input_album = parser.album
+        self.album_entry_input.setText(self.input_album)
         self.album_entry.setText(self.input_album)
 
         self.__update_model__()
-
-    def __preload__(self, first=False):
-        album = self.album_entry_input.text()
-        band = self.band_entry_input.text()
-
-        # if no changes occured and this is not the first call,
-        # return imediately
-        if not first:
-            if self.input_album == album and self.input_band == band:
-                return
-
-        self.input_album = album
-        self.input_band = band
-
-        # offline debug must be dissabled
-        if not SharedVars.offline_debbug:
-            # band and album entry must be non-empty strings
-            if self.input_band and self.input_album:
-                parser.preload.stop()
-                parser.preload.start()
 
     def __check_input_is_present__(self):
 
@@ -899,7 +888,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
     @exception(log_gui)
     def __run_lyrics_search__(self, *args):
 
-        parser.preload.stop()
+        parser.Preload.stop()
 
         self.input_band = self.band_entry_input.text()
         self.input_album = self.album_entry_input.text()
@@ -1072,7 +1061,7 @@ class Window(QMainWindow, Ui_MainWindow, Gui2Parser, Checkers, Buttons):
         dialog_window.exec_()
 
         if cancel:
-            return 0
+            return
 
         self.cover_art_search.close()
         self.imd.exit = True

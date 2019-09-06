@@ -35,48 +35,52 @@ def save_lyrics(parser):
     log_lyrics.info("starting save lyrics")
 
     parser.lyrics = []
-    for i, typ in enumerate(parser.types):
-        if typ == "Instrumental":
+    for i, tp in enumerate(parser.types):
+        if tp == "Instrumental":
             parser.lyrics.append("Instrumental")
-        elif typ == "Orchestral":
+        elif tp == "Orchestral":
             parser.lyrics.append("Orchestral")
         else:
             parser.lyrics.append(None)
 
-    log_lyrics.info("initialize duplicates")
-    duplicates = [i for i, _ in enumerate(parser.lyrics)]
+    log_lyrics.info("Initialize duplicates")
 
-    for i, _ in enumerate(parser.lyrics):
-        for j in range(i + 1, len(parser.lyrics)):
-            if (fuzz.token_set_ratio(parser.tracks[i], parser.tracks[j]) >
-                    90 and parser.lyrics[j] is None):
-                duplicates[j] = i
+    tracks = dict()
+
+    for i, (tr, lyr) in enumerate(zip(parser.tracks, parser.lyrics)):
+
+        if lyr is None:
+            for tr_k in tracks.keys():
+                if fuzz.token_set_ratio(tr, tr_k) > 90:
+                    tracks[tr_k]["track"].append(i)
+                    break
+            else:
+                tracks[tr] = {"track": [i]}
+
+    log_lyrics.info("Download lyrics")
 
     # run search
-    lyrics_temp = Parallel(n_jobs=len(parser), prefer="threads")(
+    lyrics = Parallel(n_jobs=len(parser), prefer="threads")(
         delayed(get_lyrics)(parser.band, parser.album, t)
-        for t in parser.tracks)
+        for t in tracks.keys())
+
+    log_lyrics.info("Assign lyrics to tracks")
 
     # report results
-    for i, l in enumerate(lyrics_temp):
+    for i, l in enumerate(lyrics):
         if l["lyrics"]:
             print(Fore.GREEN + "Saved lyrics for:" + Fore.RESET,
                   f"{l['artist']} - {l['title']} " +
                   Fore.GREEN + f"({l['origin']['source_name']})")
-            lyrics_temp[i] = l["lyrics"]
+            tracks[l["title"]]["lyrics"] = l["lyrics"]
         else:
             print(Fore.GREEN + "Couldn't find lyrics for:" +
                   Fore.RESET, f"{l['artist']} - {l['title']}")
+            tracks[l["title"]]["lyrics"] = ""
 
-    index = 0
-    for i, dp in enumerate(duplicates):
-        if i == dp:
-            parser.lyrics[i] = lyrics_temp[index]
-            index += 1
-
-    for i, (pl, dp) in enumerate(zip(parser.lyrics, duplicates)):
-        if pl is None:
-            parser.lyrics[i] = parser.lyrics[dp]
+    for track in tracks.values():
+        for t in track["track"]:
+            parser.lyrics[t] = track["lyrics"]
 
 
 @exception(log_lyrics)
@@ -95,7 +99,9 @@ def get_lyrics(artist: str, album: str, song: str) -> dict:
     else:
         log_lyrics.info(f"Saved lyrics for: {artist} - {song}")
         lyrics = lyrics.to_dict()
-        lyrics["lyrics"] = normalize(lyrics["lyrics"].replace("\r", "").replace("\n", "\r\n"))    
+        lyrics["title"] = song
+        lyrics["lyrics"] = normalize(lyrics["lyrics"].replace("\r", "")
+                                     .replace("\n", "\r\n"))
 
     return lyrics
 
@@ -105,5 +111,4 @@ if __name__ == "__main__":
     from pprint import pprint
     pprint(get_lyrics("Swallow The Sun",
                       "When a Shadow is Forced Into the Light",
-                      "When a Shadow Is Forced into the Light",
-                      GOOGLE_API_KEY))
+                      "When a Shadow Is Forced into the Light"))

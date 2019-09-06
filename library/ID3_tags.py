@@ -1,6 +1,8 @@
+import re
 import sys
 
 from colorama import Fore, init
+from os.path import join, split
 
 from utilities.loggers import log_tags
 from utilities.sync import SharedVars
@@ -10,13 +12,25 @@ _version = sys.version_info
 
 if _version.major == 3:
     if _version.minor == 6:
-        from pytaglib import taglib
+        from pytaglib import taglib  # pylint: disable=import-error
     if _version.minor == 7:
         import library.tags_handler as taglib
 else:
     raise NotImplementedError("Wikimusic only supports python "
                               "versions=(3.6, 3.7)")
 
+TAGS = (
+    "ALBUM",
+    "ALBUMARTIST",
+    "ARTIST",
+    "COMPOSER",
+    "DATE",
+    "DISCNUMBER",
+    "GENRE",
+    "LYRICS",
+    "TITLE",
+    "TRACKNUMBER"
+)
 
 init(convert=True, autoreset=True)
 
@@ -27,6 +41,11 @@ __all__ = ["read_tags", "write_tags"]
 def write_tags(data: dict, lyrics_only):
 
     def write(tag, value=None):
+
+        if tag == "LYRICS":
+            if not data["FILE"].endswith((".m4a", ".mp3")):
+                tag = "UNSYNCEDLYRICS"
+
         try:
             if value is None:
                 value = data[tag]
@@ -41,31 +60,31 @@ def write_tags(data: dict, lyrics_only):
             song.tags[tag] = value
         except AttributeError as e:
             print(Fore.LIGHTRED_EX, "Probably encoding error!")
-            print(f'Couldn´t write tag {tag} to file {data["file"]}')
+            print(f'Couldn´t write tag {tag} to file {data["FILE"]}')
             print(e)
             SharedVars.exception = e
             log_tags.exception(e)
         except Exception as e:
             print(Fore.RED, "Error in writing tags!")
-            print(f'Couldn´t write tag {tag} to file {data["file"]}')
+            print(f'Couldn´t write tag {tag} to file {data["FILE"]}')
             print(e)
             SharedVars.exception = e
             log_tags.exception(e)
 
-    if data["file"] is None:
+    if data["FILE"] is None:
         print(data["TITLE"] + " " + data["type"] + Fore.LIGHTYELLOW_EX +
               "does not have matching file!")
-        return 0
+        return
 
     if lyrics_only is False:
-        print(Fore.GREEN + "Writing tags to:" + Fore.RESET, data["file"])
+        print(Fore.GREEN + "Writing tags to:" + Fore.RESET, data["FILE"])
     else:
-        print(Fore.GREEN + "Writing lyrics to:" + Fore.RESET, data["file"])
+        print(Fore.GREEN + "Writing lyrics to:" + Fore.RESET, data["FILE"])
 
     try:
-        song = taglib.File(data["file"])
+        song = taglib.File(data["FILE"])
     except Exception as e:
-        print(f'Couldn´t open file {data["file"]} for writing')
+        print(f'Couldn´t open file {data["FILE"]} for writing')
         print(e)
         SharedVars.exception = e
         log_tags.exception(e)
@@ -84,27 +103,20 @@ def write_tags(data: dict, lyrics_only):
         else:
             raise NotImplementedError("Unsupported data type for ARTIST tag")
 
-        # write tags
-        write("ALBUM")
-        write("ALBUMARTIST")
-        write("COMPOSER")
-        write("DATE")
-        write("DISCNUMBER")
-        write("GENRE")
-        write("COMMENT", "")
-        write("TITLE", f'{data["TITLE"]} {data["type"]}')
-        write("TRACKNUMBER")
-        write("ARTIST")
+        data["TITLE"] = f"{data['TITLE']} {data['TYPE']}"
 
-    if ".m4a" in data["file"] or ".mp3" in data["file"]:
-        write("LYRICS")
+        # write tags
+        for t in TAGS:
+            write(t)
+
+        write("COMMENT", "")
     else:
-        write("UNSYNCEDLYRICS", data["LYRICS"])
+        write("LYRICS")
 
     try:
         song.save()
     except Exception as e:
-        print(f'Couldn´t save file {data["file"]}')
+        print(f'Couldn´t save file {data["FILE"]}')
         print(e)
         SharedVars.exception = e
         log_tags.exception(e)
@@ -113,38 +125,43 @@ def write_tags(data: dict, lyrics_only):
 
 
 @exception(log_tags)
-def read_tags(song_file: str):
+def read_tags(song_file: str) -> tuple:
 
     def read_tag(TAG_ID):
+
+        if TAG_ID == "LYRICS":
+            if not song_file.endswith((".m4a", ".mp3")):
+                TAG_ID = "UNSYNCEDLYRICS"
+
         try:
             tag = song.tags[TAG_ID][0].strip()
         except:
             tag = ""
         finally:
-            return tag
+            if TAG_ID in ("ARTIST", "COMPOSER"):
+                return sorted(re.split(r",\s?", tag))
+            else:
+                return tag
 
     try:
         song = taglib.File(song_file)
-    except Exception as error:
-        print(Fore.RED + "Can not read file:\n" + Fore.RESET + song_file)
-        SharedVars.exception = str(error)
-        log_tags.exception(error)
+    except Exception as e:
+        print(Fore.RED + "Can not read file: " + Fore.RESET + song_file)
+        SharedVars.exception = str(e)
+        log_tags.exception(e)
     else:
-        album = read_tag("ALBUM")
-        band = read_tag("ALBUMARTIST")
-        artists = read_tag("ARTIST")
-        composer = read_tag("COMPOSER")
-        release_date = read_tag("DATE")
-        disc_num = read_tag("DISCNUMBER")
-        genre = read_tag("GENRE")
-        # TODO apple losseles doesnt accept UNSYNCEDLYRICS !!
-        # TODO this check might not be sufficient
-        if ".m4a" in song_file or ".mp3" in song_file:
-                lyrics = read_tag("LYRICS")
-        else:
-                lyrics = read_tag("UNSYNCEDLYRICS")
-        track = read_tag("TITLE")
-        number = read_tag("TRACKNUMBER")
+        tags_dict = dict()
 
-    return (album, band, artists, composer, release_date,
-            disc_num, genre, lyrics, track, number)
+        for t in TAGS:
+            tags_dict[t] = read_tag(t)
+
+        # if no title was loadaed use filename
+        if tags_dict["TITLE"] in ("", " ", None):
+            path, f = split(song_file)
+            # match digits, zero or one whitespace characters, zero or one dot,
+            # zero or one dash, zero or one whitespace characters
+            f = re.sub(r"\d\s?\.?-?\s?", "", f)
+
+            tags_dict["TITLE"] = join(path, f)
+
+    return tags_dict
