@@ -87,24 +87,25 @@ def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False,
 
     if level == "INFO":
         log_app.info(msg_GREEN)
-        SharedVars.describe = msg
+        SharedVars.info(msg)
     if level == "WARN":
         log_app.warning(msg_GREEN)
         SharedVars.warning = msg
 
 
-def write_data(GUI: bool, dict_data: dict, lyrics_only=False):
+def write_data():
 
-    if dict_data and not GUI:
-        print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
-              Fore.RESET, end="")
-        write = to_bool(input())
+    print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
+          Fore.RESET, end="")
+    write = to_bool(input())
 
-        if write:
-            # write data to ID3 tags
-            for data in dict_data:
-                write_tags(data, lyrics_only=False)
-
+    if write:
+        log_app.info("write data to tags")
+        if not parser.write_tags(lyrics_only=False):
+            log_print(msg_WHITE="Cannot write tags because there are no "
+                                "coresponding files")
+        else:
+            log_print(msg_GREEN="Done")
 
 @exception(log_app)
 def get_wiki(GUI: bool):
@@ -295,16 +296,11 @@ def get_wiki(GUI: bool):
 
     SharedVars.done = True
 
-    # put data to list of dicts
-    dict_data = parser.data_to_dict()
-
     # announce that main app thread has reached the barrier
     if GUI:
         SharedVars.barrier.wait()
-
-    write_data(GUI, dict_data, lyrics_only=False)
-
-    log_print(msg_GREEN="Done")
+    else:
+        write_data()
 
     if we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
@@ -323,11 +319,6 @@ def get_lyrics(GUI: bool):
 
     save_lyrics(parser)
 
-    log_app.info("data to dict")
-
-    # put data to list of dicts
-    dict_data = parser.data_to_dict()
-
     log_app.info("announcing done")
     SharedVars.describe = "Done"
 
@@ -338,14 +329,10 @@ def get_lyrics(GUI: bool):
     # announce that main app thread has reached the barrier
     if GUI:
         SharedVars.barrier.wait()
+    else:
+        write_data()
 
-    log_app.info("write data to tags")
-
-    write_data(GUI, dict_data, lyrics_only=True)
-
-    log_print(msg_GREEN="Done")
-
-    if we_are_frozen() and not GUI:
+    if not we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
 
 if __name__ == "__main__":

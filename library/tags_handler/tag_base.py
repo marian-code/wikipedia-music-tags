@@ -15,6 +15,10 @@ class TagBase(ABC):
         for tag, value in self._tags.items():
             self._write(tag, value)
 
+        # for key, value in self.song.tags.items():
+        #    if key in self.map_keys:
+        #        print(f"{key}: {value}")
+
         self.song.save()
 
     @abstractmethod

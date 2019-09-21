@@ -6,7 +6,7 @@
 
 # Import Libraries
 import package_setup
-from utilities.utils import get_sizes
+from utilities.gui_utils import get_sizes
 import sys
 import time  # Importing the time library to check the time of code execution
 import os
@@ -130,7 +130,10 @@ class googleimagesdownload:
         self.fullsize_dim = []
         self.count = 0
         self.finished = False
-        self.exit = False
+        self._exit = False
+    
+    def close(self):
+        self._exit = True
 
     # Downloading entire Web Document (Raw Page Content)
     def download_page(self,url):
@@ -764,7 +767,7 @@ class googleimagesdownload:
                 page = page[end_content:]
             i += 1
 
-            if self.exit is True:
+            if self._exit is True:
                 print("Album art search exiting ...")
                 return items, errorCount, abs_path
         if count < limit:

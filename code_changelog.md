@@ -1,19 +1,30 @@
 # To-Do
+
+### Main problems
 - acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels
+- consolidate flags into dict
+- write automated tests
+- write only tags that have changed
+- write cover art tag with mutagen and abandon pytaglib
+- something is wrong in displaying cropped image, it shows with weird crop
+
+### Freezing problems
 - frozen code doesn't run on x86 systems, need 32bit python installation to build 32bit app
-- parser probably should have its own lock - access to its variables should be guarded  see 13.1.2019 entry in changelog
 - freezed Qt app is too big ~ 0.65GB - most files probably not needed
 - use "zip_include_packages" in cx_freeze setup to reduce size refer to:  
     https://github.com/anthony-tuininga/cx_Freeze/issues/256  
-    https://stackoverflow.com/questions/27281317/cx-freeze-preventing-including-unneeded-packages  
-- add support for PySide2 and PyQt4
+    https://stackoverflow.com/questions/27281317/cx-freeze-preventing-including-unneeded-packages
 - tcl files are not needed for PyQt version but cx_freeze includes them
-- consolidate flags into dict
-- add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
-- write automated tests
-- finish work on image search
+
+### Ideas
+- maybe integrate application to parser?
 - introduce typing https://docs.python.org/3/library/typing.html this will bind app to python version 3.7, maybe to a great idea?
-- write only tags that have changed
+- parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
+- add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
+- parser should probably include one API channel to comunicate with "outer" world. Now communication is becoming messy and it is not clear how changes in parser API are affecting other classes that are using it.
+- maybe get rid of tkinter GUI? The parser API has changed so much that it does not make sense to keep it
+- add cue spliting and audion conversions
+
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -22,6 +33,62 @@
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 21.9.2019
+- another major GUI restructure
+- heavy use of signals and properties to transparently handle variable changes
+- implemented tag name based data copying between gui and parser
+- new custom classes for QStandardItem and QStandardItemModel for codebase reduction
+  and easier readability
+- parser is split to multiple files and classes based on responsibility
+- some fixes in parser
+- implemented own custom for parser
+- implemented wrapper to easily handle folder select with remembering
+- moved tag writing from GUI to new method in parser
+- prepare for use of QThreads, so parser can emit signals to GUI
+- all communication with parser is now handled by data_model module, relies
+  heavily on use of properties coresponding with tag names
+- moved constants to package init module
+- altered superclass inintialization order in gui, to aviod problems with
+  missing attributes
+
+### 20.9.2019
+- further gui rewrite and bugfixes
+- split classes to even more basic building blocks
+- rewrites to better use Qt signals
+
+### 14.9.2019
+- major GUI restructure and cleanup
+- GUI is split to more classes and files
+- complete overhaul of image search
+- fixed numerous bugs
+- greatly improved readability
+
+### 13.9.2019
+- compatibility layer for all major Qt backends is now implemented
+- We support: PyQt5, PyQt4, PySide2 and PySide
+- added new dependency: PyQt
+- moved Qt importing to separate file
+- moved cover art search and its custom Qt classes to separate file
+
+### 12.9.2019
+- cover art manipulation is roughly implemented but still quite buggy
+- started implementing compatibility layer for different Qt backends, will use
+  https://github.com/spyder-ide/qtpy/blob/master/qtpy/QtWidgets.py
+- gui needs to be cleaned up 
+
+### 11.9.2019
+- offline debug for coverart search is now implemented
+- added some random pictures to test/offline_debug folder for testing
+- begun works on picture compression
+- fixed bug with infinite recursion when setting image size and the
+  dimensions where not some nice round numbers
+
+### 9.9.2019
+- started to implement offline debug for cover art search
+
+### 8.9.2019
+- fixed bug in mp3 and m4a lyrics writing
 
 ### 6.9.2019
 - restructuring of tags handling, reduced codebase

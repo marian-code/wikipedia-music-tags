@@ -1,15 +1,20 @@
 import os
-import sys
 
 import lazy_import
 import win32clipboard
-from PIL import Image
+from PIL import Image, ImageFile
 
+from .utils import module_path
+
+sys = lazy_import.lazy_module("sys")
 winreg = lazy_import.lazy_module("winreg")
 requests = lazy_import.lazy_module("requests")
 BytesIO = lazy_import.lazy_callable("io.BytesIO")
 
-__all__ = ["image_handle", "get_music_path", "abstract_warning"]
+__all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
+           "comp_res", "get_image_size", "get_icon", "send_to_clipboard"]
+
+FORMAT = Image.registered_extensions()[".jpg"]
 
 
 def abstract_warning():
@@ -18,80 +23,24 @@ def abstract_warning():
                               "reimplemented by inheriting class")
 
 
-def image_handle(url: str, size=None, clipboad=True, path=None,
-                 log=None) -> bool:
-    """ Downloads image from internet and reduces its size to <300Kb. If
-    specified in input image can be also resized to defined dimensions.
-    Than paste to clipboard or/and save to file based on input.
-
-    Parameters
-    ----------
-    url: str
-        url addres of image
-    size: tuple or None
-        tuple of desired image dimensions e.g. (500, 500). If None (default)
-        image is not resized.
-    clipboard: bool
-        whether to paste image to clipboard
-    path: str or None
-        path to save picture on disk. If None - don´t save.
-    log: logging.Logger
-        logger object to log messages
-    """
-
-    try:
-        image = requests.get(url).content
-        file_stream = BytesIO(image)
-        image = Image.open(file_stream)
-
-        if size is not None:
-            image = image.resize(size, Image.LANCZOS)
-
-        # get size down to ~300Kb
-        disk_size = sys.getsizeof(file_stream) / 1024
-        _format = Image.registered_extensions()[".jpg"]
-        """
-        q = 95
-        while disk_size > 300:
-            # TODO this is good, but how do the streams work?
-            file_stream = BytesIO()
-            image.save(file_stream, _format, optimize=True, quality=q)
-            image = Image.open(file_stream)
-            disk_size = sys.getsizeof(file_stream)/1024
-            # print("disk size:", disk_size, "quality:", q)
-            q -= 5
-            if q < 50:
-                if log is not None:
-                    log.warning("Couldn´t reduce the size under 300 Kb")
-                break
-        """
-
-        if path is not None:
-            image.save(path, )
-
-        if clipboad:
-            output = BytesIO()
-            image.convert("RGB").save(output, "BMP")
-            data = output.getvalue()[14:]
-            output.close()
-
-            _send_to_clipboard(win32clipboard.CF_DIB, data)
-    except Exception as e:
-        return e
-    else:
-        return True
-
-
-def _send_to_clipboard(clip_type: int, data: BytesIO):
+def send_to_clipboard(data: bytearray, clip_type=win32clipboard.CF_DIB):
     """ Pastes data to clipboard.\n
 
     Parameters
     ----------
     clip_type: int
         type of the clipboard
-    data: ByteIO
+    data: bytearray
         data to paste to clipboard
     """
+
+    file_stream = BytesIO(data)
+    image = Image.open(file_stream)
+
+    clip_stream = BytesIO()
+    image.convert("RGB").save(clip_stream, "BMP")
+    data = clip_stream.getvalue()[14:]
+    clip_stream.close()
 
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
@@ -115,3 +64,78 @@ def get_music_path() -> str:
 
     else:
         return os.path.join(os.path.expanduser("~"), "music")
+
+
+def get_image(address: str) -> bytearray:
+
+    if address.startswith("http"):
+        return requests.get(address).content
+    else:
+        # this is for offline debug
+        try:
+            with open(address, "rb") as f:
+                return bytearray(f.read())
+        except Exception as e:
+            print(f"Address: {address} could not be opened in "
+                  f"online or offline mode. {e}")
+
+
+def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytearray:
+
+    file_stream = BytesIO(image)
+    image = Image.open(file_stream)
+
+    if x and y:
+        image = image.resize((x, y), Image.LANCZOS)
+
+    file_stream = BytesIO()
+    image.save(file_stream, FORMAT, optimize=True, quality=quality,
+               progressive=True)
+
+    return file_stream.getvalue()
+
+
+def get_image_size(image) -> str:
+
+    return f"{sys.getsizeof(image) / 1024:.2f}"
+
+
+def get_icon() -> str:
+
+    icon = os.path.join(module_path(), "files", "icon.ico")
+    if not os.path.isfile(icon):
+        raise FileNotFoundError(f"There is no icon file in: {icon}")
+    else:
+        return icon
+
+
+def get_sizes(uri: str) -> (str, [int, int]):
+    """ Get file size *and* image size (None if not known) of picture on the
+    internet without downloading it.\n
+
+    Parameters
+    ----------
+    uri: str
+        picture url addres
+    """
+
+    try:
+        fl = urlopen(uri)
+        size = fl.headers.get("content-length")
+        if size:
+            size = int(size)
+
+        p = ImageFile.Parser()
+        while True:
+            data = fl.read(1024)
+            if not data:
+                break
+            p.feed(data)
+            if p.image:
+                return size, p.image.size
+
+        fl.close()
+
+        return size, None
+    except:
+        return None, None

@@ -1,13 +1,14 @@
 __all__ = ["colorama_init", "list_files", "to_bool", "normalize",
-           "we_are_frozen", "module_path", "get_sizes", "win_naming_convetion",
-           "flatten_set", "clean_logs", "yaml_load", "input_parser"]
+           "we_are_frozen", "module_path", "win_naming_convetion",
+           "flatten_set", "clean_logs", "yaml_load", "input_parser",
+           "MultiLog"]
 
 import unicodedata
 from urllib.request import urlopen
 
 import lazy_import
-from PIL import ImageFile
 from shutil import rmtree
+from .sync import SharedVars
 
 init = lazy_import.lazy_callable("colorama.init")
 os = lazy_import.lazy_module("os")
@@ -15,6 +16,33 @@ sys = lazy_import.lazy_module("sys")
 re = lazy_import.lazy_module("re")
 yaml = lazy_import.lazy_module("yaml")
 argparse = lazy_import.lazy_module("argparse")
+
+
+class MultiLog:
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def debug(self, message):
+        self.logger.debug(message)
+
+    def info(self, message):
+        self.logger.info(message)
+        SharedVars.info(message)
+
+    def warning(self, message):
+        self.logger.warning(message)
+        SharedVars.warning = message
+
+    def error(self, message):
+        self.logger.error(message)
+
+    def critical(self, message):
+        self.logger.critical(message)
+
+    def exception(self, message):
+        self.logger.exception(message)
+        SharedVars.exception = message
 
 
 def colorama_init(**kwargs):
@@ -75,38 +103,6 @@ def module_path() -> str:
         return os.path.dirname(sys.executable)
     else:
         return os.path.join(os.path.dirname(__file__), "..")
-
-
-def get_sizes(uri):
-    """ Get file size *and* image size (None if not known) of picture on the
-    internet without downloading it.\n
-
-    Parameters
-    ----------
-    uri: str
-        picture url addres
-    """
-
-    try:
-        fl = urlopen(uri)
-        size = fl.headers.get("content-length")
-        if size:
-            size = int(size)
-
-        p = ImageFile.Parser()
-        while True:
-            data = fl.read(1024)
-            if not data:
-                break
-            p.feed(data)
-            if p.image:
-                return size, p.image.size
-
-        fl.close()
-
-        return size, None
-    except:
-        return None, None
 
 
 def get_google_api_key():

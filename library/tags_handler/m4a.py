@@ -52,16 +52,20 @@ class TagM4a(TagBase):
             finally:
                 tags[value] = [tag]
 
-        tags["UNSYNCEDLYRICS"] = tags["LYRICS"]
-
         return tags
 
     def _write(self, tag, value):
 
-        if tag == "UNSYNCEDLYRICS":
-            tag = "LYRICS"
+        # TODO hotfix if tags were not edited they are all lists
+        # and writing fails. This problem is caused by keeping compatibility
+        # with pytaglib
+        if isinstance(value, list):
+            if len(value) == 1:
+                value = value[0]
 
         if tag in ("DISCNUMBER", "TRACKNUMBER"):
             value = [[int(value), 0]]
+
+        # print(f"{tag}({self.reverse_map[tag]}): {value[:70]}")
 
         self.song.tags[self.reverse_map[tag]] = value

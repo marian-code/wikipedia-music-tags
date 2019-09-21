@@ -7,6 +7,7 @@ from os.path import join, split
 from utilities.loggers import log_tags
 from utilities.sync import SharedVars
 from utilities.wrappers import exception
+from wiki_music import TAGS
 
 _version = sys.version_info
 
@@ -18,19 +19,6 @@ if _version.major == 3:
 else:
     raise NotImplementedError("Wikimusic only supports python "
                               "versions=(3.6, 3.7)")
-
-TAGS = (
-    "ALBUM",
-    "ALBUMARTIST",
-    "ARTIST",
-    "COMPOSER",
-    "DATE",
-    "DISCNUMBER",
-    "GENRE",
-    "LYRICS",
-    "TITLE",
-    "TRACKNUMBER"
-)
 
 init(convert=True, autoreset=True)
 
@@ -45,6 +33,7 @@ def write_tags(data: dict, lyrics_only):
         if tag == "LYRICS":
             if not data["FILE"].endswith((".m4a", ".mp3")):
                 tag = "UNSYNCEDLYRICS"
+                value = data["LYRICS"]
 
         try:
             if value is None:
@@ -76,7 +65,7 @@ def write_tags(data: dict, lyrics_only):
               "does not have matching file!")
         return
 
-    if lyrics_only is False:
+    if not lyrics_only:
         print(Fore.GREEN + "Writing tags to:" + Fore.RESET, data["FILE"])
     else:
         print(Fore.GREEN + "Writing lyrics to:" + Fore.RESET, data["FILE"])
@@ -89,7 +78,7 @@ def write_tags(data: dict, lyrics_only):
         SharedVars.exception = e
         log_tags.exception(e)
 
-    if lyrics_only is False:
+    if not lyrics_only:
 
         # preprocess data
         if isinstance(data["ARTIST"], list):

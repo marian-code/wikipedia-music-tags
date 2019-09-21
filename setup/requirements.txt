@@ -13,6 +13,7 @@ python-Levenshtein>=0.12.0
 pywin32>=224
 mutagen>=1.42.0
 joblib>=0.13.2
+QtPy>=1.7.0
 
 
 

@@ -79,14 +79,9 @@ class TagMp3(TagBase):
             finally:
                 tags[value] = [tag]
 
-        tags["UNSYNCEDLYRICS"] = tags["LYRICS"]
-
         return tags
 
     def _write(self, tag, value):
-
-        if tag == "UNSYNCEDLYRICS":
-            tag = "LYRICS"
 
         tag_cls = self.reverse_map[tag]
 

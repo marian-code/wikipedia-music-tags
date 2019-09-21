@@ -2,16 +2,15 @@
 
 from threading import Barrier, Lock
 
-# Class for synchronizing info between threads
-#
-# info_exchange class provides means to synchronize some
-# variables between gui and application, it serves to pass
-# the questions asked in application to to PyQt (Tkinter) frontend.
-
 __all__ = ["SharedVars"]
 
 
 class SharedVars:
+    """ Class for synchronizing info between threads
+        info_exchange class provides means to synchronize some
+        variables between gui and application, it serves to pass
+        the questions asked in application to to PyQt (Tkinter) frontend.
+    """
 
     write_lyrics = None
     select_genre = None
@@ -26,8 +25,6 @@ class SharedVars:
     describe = ""
 
     # caught exceptions
-    _exception = None
-    _warning = None
     ask_exit = None
 
     # switches
@@ -63,8 +60,6 @@ class SharedVars:
         cls.describe = ""
 
         # caught exceptions
-        cls._exception = None
-        cls._warning = None
         cls.ask_exit = None
 
         # switches
@@ -78,3 +73,7 @@ class SharedVars:
         # exceptions
         cls.warning = None
         cls.exception = None
+
+    @classmethod
+    def info(cls, msg):
+        cls.describe = msg
