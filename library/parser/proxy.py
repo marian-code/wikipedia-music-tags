@@ -38,6 +38,14 @@ class VariableProxy:
         self.composers = value
 
     @property
+    def COVERART(self) -> bytearray:
+        return self.cover_art
+
+    @COVERART.setter
+    def COVERART(self, value: bytearray):
+        self.cover_art = value
+
+    @property
     def DATE(self) -> str:
         return self.release_date
 

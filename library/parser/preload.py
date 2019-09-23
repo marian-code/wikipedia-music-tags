@@ -3,11 +3,9 @@ from time import sleep
 
 from lazy_import import lazy_callable, lazy_module
 
-from utilities.loggers import log_parser
-from utilities.parser_utils import ThreadWithTrace, normalize_caseless
-from utilities.sync import SharedVars
-from utilities.utils import module_path
-from utilities.wrappers import for_all_methods, time_methods
+from wiki_music.utilities import (
+    SharedVars, ThreadWithTrace, for_all_methods, log_parser, module_path,
+    normalize_caseless, time_methods)
 
 nc = normalize_caseless
 

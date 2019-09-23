@@ -1,13 +1,10 @@
-from wiki_music import parser, GUI_HEADERS, STR_TAGS
-from wiki_music.gui.base import BaseGui
-from wiki_music.gui.custom_classes import (CustomQStandardItem,
-                                           CustomQStandardItemModel,
-                                           ResizablePixmap)
+from wiki_music import parser
+from wiki_music.constants.tags import GUI_HEADERS, STR_TAGS
+from wiki_music.gui import (BaseGui, CustomQStandardItem,
+                            CustomQStandardItemModel, ResizablePixmap)
 from wiki_music.gui.qt_importer import (QImage, QLabel, QPixmap,
                                         QStandardItemModel, QTimer)
-from wiki_music.utilities.loggers import log_gui
-from wiki_music.utilities.sync import SharedVars
-from wiki_music.utilities.wrappers import exception
+from wiki_music.utilities import SharedVars, exception, log_gui
 
 
 class ParserInteract(BaseGui):
@@ -97,6 +94,9 @@ class ParserInteract(BaseGui):
     def save_ready(self):
         return bool(self.parser)
 
+    def set_cover_art(self, value):
+        self.parser.cover_art = value
+
 
 class DataModel(ParserInteract):
     """ Transfer data between GUI and parser and manage GUI data model. """
@@ -104,10 +104,11 @@ class DataModel(ParserInteract):
     def __init__(self):
 
         super().__init__()
-        self.picture_visible = False
 
+        self.cover_art = None
+
+        # create table with headers
         self.table = CustomQStandardItemModel()
-        # create table header
         self.table.setHorizontalHeaderLabels(GUI_HEADERS)
 
     def __init_parser__(self):
@@ -149,18 +150,15 @@ class DataModel(ParserInteract):
 
         if image:
             _img = image
-        elif self.parser.cover_art:
-            _img = self.parser.cover_art
+            self.set_cover_art(image)
         else:
-            return
+            _img = self.parser.cover_art
 
-        # TODO not working if picture has been selected multiple times
-        # only the first one is displayed
-        self.lbl = ResizablePixmap(_img)
-
-        if not self.picture_visible:
-            self.picture_layout.addWidget(self.lbl)
-            self.picture_visible = True
+        if self.cover_art:
+            self.cover_art.update_pixmap(_img)
+        else:
+            self.cover_art = ResizablePixmap(_img)
+            self.picture_layout.addWidget(self.cover_art)
 
     # methods for managing gui data model
     @exception(log_gui)

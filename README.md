@@ -5,8 +5,7 @@ files. Has also the ability to search for lyrics and album cover art.
 
 ## Getting Started
 
-Anyone is welcome to use it or contribute. In the newest version number of dependencies has been reduced, most notably pytaglib is now not mandatory and
-can be replaced by mutagen. All of the dependencies are quite common so you shouldn't encounter any problems.
+Anyone is welcome to use it or contribute. All of the dependencies are fairly common so you shouldn't encounter any problems.
 I also use edited versions of [google-images-download](https://github.com/hardikvasa/google-images-download) and [LyricsFinder](https://github.com/GieselaDev/LyricsFinder), but 
 those are found in the repository. Curentlly supported versions of python are 3.6 and 3.7.
 
@@ -70,17 +69,10 @@ packages that are not necessary:
 * *python-Levenshtein* makes fuzzywuzzy a whole lot faster
 * *lxml* makes Beautifulsoup a whole lot faster
 * *PyQt5* if you want to use Tkinter GUI (deprecated) or console mode or other Qt backend
-* *pytaglib>=1.4.4* alternative tagging library currently used if 
-  code is run under python version 3.6. Can be very hard to compile under Windows
-
-If you want to use pytaglib as default you need to merely alter imports in:
-```
-wiki_music.library.__init__.py
-```
 
 The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications it should be able to run on Linux and Os X too. Problems concern mainly default paths and interaction with clipboard in GUI.
 
-If you want to utilize lyrics search you will have to get a [Google Developer API Key](https://console.developers.google.com/projectselector/apis/library/customsearch.googleapis.com/) **(Strongly Recommended)** with the 'Custom Search' API enabled. This link should take one there once logged in. This is a requirement of [LyricsFinder](https://github.com/GieselaDev/LyricsFinder) module. When you have the key create a file named **google_api_key.txt** under **files** directory and copy the key there.
+If you want to utilize lyrics search you will have to get a [Google Developer API Key](https://console.developers.google.com/projectselector/apis/library/customsearch.googleapis.com/) **(Strongly Recommended)** with the 'Custom Search' API enabled. The link should take one there once logged in. This is a requirement of [LyricsFinder](https://github.com/GieselaDev/LyricsFinder) module. When you have the key create a file named **google_api_key.txt** under **files** directory and copy the key there.
 
 ### Installing
 
@@ -110,14 +102,7 @@ to your selected location.
 
 After this you can proceed with the packaging.
 
-There are two GUI versions one which uses Tkinter which is now deprecated. It should still be functional but will no longer be maintained. To package 
-the module with it:
-
-```
-setup.py build
-```
-
-The more recent version of the GUI is written in PyQt5. To build it:
+GUI is written in PyQt5. To build it:
 
 ```
 setup_Qt.py build
@@ -131,19 +116,16 @@ setup_cmd.py build
 
 ## Running the code
 
-The module can be run from the command line. There are 3 options:
+The module can be run from the command line. There are 2 options:
 1. command line mode:
 ```
 python application.py
 ```
 2. PyQt5 GUI mode:
 ```
-python gui_Qt.py
-```
-3. Tkinter GUI mode (deprecated):
-```
 python gui.py
 ```
+
 **library** can also be used as a library for getting music tags, lyrics and writing them to files
 
 ## Running the tests

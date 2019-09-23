@@ -3,6 +3,7 @@ from time import perf_counter
 from functools import wraps
 from threading import current_thread
 from .sync import SharedVars
+from .utils import module_path
 
 
 def exception(logger):
@@ -76,7 +77,8 @@ class Timer:
 
     def __exit__(self, *args):
         self.end = perf_counter()
-        with open(os.path.join("profiling", "timing_stats.txt"), "a") as f:
+        path = os.path.join(module_path(), "profiling", "timing_stats.txt")
+        with open(path, "a") as f:
             f.write(f"{current_thread().name:15} --> {self.function_name:30}"
                     f"{(self.end - self.start):8.4f}s\n")
 

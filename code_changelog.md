@@ -1,12 +1,7 @@
 # To-Do
 
 ### Main problems
-- acoustic, instrumental, orcghestral tracks have the same composer as ones without these labels
-- consolidate flags into dict
 - write automated tests
-- write only tags that have changed
-- write cover art tag with mutagen and abandon pytaglib
-- something is wrong in displaying cropped image, it shows with weird crop
 
 ### Freezing problems
 - frozen code doesn't run on x86 systems, need 32bit python installation to build 32bit app
@@ -22,9 +17,8 @@
 - parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 - parser should probably include one API channel to comunicate with "outer" world. Now communication is becoming messy and it is not clear how changes in parser API are affecting other classes that are using it.
-- maybe get rid of tkinter GUI? The parser API has changed so much that it does not make sense to keep it
 - add cue spliting and audion conversions
-
+- change SharedVars class for Qt signals
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -33,6 +27,32 @@
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 23.9.2019
+- fixed some image editing bugs
+- unable to do something with crop selection does not respecting image borders,
+  logic is too complex CPU rockets to 30%, aaaah. Need to find some way.
+- I got saved by StackOverflow https://stackoverflow.com/questions/58053735/get-real-size-of-qpixmap-in-qlabel/58063020#58063020
+- wrote some simple tests for GUI
+- fixed cover art compression bug when gui was ignoring resize on compression
+- now we are writing only tags that have changed
+- constistence of TAGS in constants is asserted with those in init
+  methods in tag handlers
+- fixed minor bugs in tag writing
+- after tests are written we will advance to 1.0.0 version
+
+### 22.9.2019
+- got rid of tkinter gui, the parser API has changed so much
+  that it does not make sense to keep it
+- cleanup in problems, some were solved, others I didn't even remember what
+  they were trying to say
+- simplification to package imports
+- moved constants to separate directory
+- got rid of pytaglib dependency
+- simplified tag writing hihg level functions and low level classes
+- implemented coverart writing
+- written some tags tests
+- tag writing is now parallel with joblib
 
 ### 21.9.2019
 - another major GUI restructure
@@ -51,6 +71,7 @@
 - moved constants to package init module
 - altered superclass inintialization order in gui, to aviod problems with
   missing attributes
+- fixed bug, GUI was displaying only the first selected cover art
 
 ### 20.9.2019
 - further gui rewrite and bugfixes

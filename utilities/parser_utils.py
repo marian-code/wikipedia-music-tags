@@ -8,8 +8,8 @@ import sys
 from threading import Lock, Thread
 
 import lazy_import
-from colorama import Fore
 from fuzzywuzzy import fuzz
+from wiki_music.constants.colors import GREEN, RESET
 
 from .utils import normalize
 
@@ -192,7 +192,7 @@ def yaml_dump(dict_data: list, save_dir: str):
     """
 
     _path = os.path.join(save_dir, "database.yaml")
-    print(Fore.GREEN + "\nSaving YAML file: " + Fore.RESET + _path + "\n")
+    print(GREEN + "\nSaving YAML file: " + RESET + _path + "\n")
     with open(_path, "w") as outfile:
         yaml.dump(dict_data, outfile, default_flow_style=False)
 

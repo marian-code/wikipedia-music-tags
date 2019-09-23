@@ -5,8 +5,7 @@
 ###### Searching and Downloading Google Images to the local disk ######
 
 # Import Libraries
-import package_setup
-from utilities.gui_utils import get_sizes
+from wiki_music.utilities.gui_utils import get_sizes
 import sys
 import time  # Importing the time library to check the time of code execution
 import os

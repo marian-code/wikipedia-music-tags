@@ -1,11 +1,10 @@
 from lazy_import import lazy_callable
 
-from utilities.loggers import log_tags
-from utilities.sync import SharedVars
+from wiki_music.utilities import SharedVars, log_tags
 
-TagMp3 = lazy_callable("library.tags_handler.mp3.TagMp3")
-TagFlac = lazy_callable("library.tags_handler.flac.TagFlac")
-TagM4a = lazy_callable("library.tags_handler.m4a.TagM4a")
+TagMp3 = lazy_callable("wiki_music.library.tags_handler.mp3.TagMp3")
+TagFlac = lazy_callable("wiki_music.library.tags_handler.flac.TagFlac")
+TagM4a = lazy_callable("wiki_music.library.tags_handler.m4a.TagM4a")
 
 
 def File(filename):

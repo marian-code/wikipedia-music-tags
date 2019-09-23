@@ -1,8 +1,3 @@
-__all__ = ["colorama_init", "list_files", "to_bool", "normalize",
-           "we_are_frozen", "module_path", "win_naming_convetion",
-           "flatten_set", "clean_logs", "yaml_load", "input_parser",
-           "MultiLog"]
-
 import unicodedata
 from urllib.request import urlopen
 
@@ -16,6 +11,11 @@ sys = lazy_import.lazy_module("sys")
 re = lazy_import.lazy_module("re")
 yaml = lazy_import.lazy_module("yaml")
 argparse = lazy_import.lazy_module("argparse")
+
+__all__ = ["colorama_init", "list_files", "to_bool", "normalize",
+           "we_are_frozen", "module_path", "win_naming_convetion",
+           "flatten_set", "clean_logs", "yaml_load", "input_parser",
+           "MultiLog", "get_google_api_key"]
 
 
 class MultiLog:
@@ -177,7 +177,6 @@ def input_parser():
 
     parser = argparse.ArgumentParser(description="Description of your program")
 
-    parser = argparse.ArgumentParser(description="Description of your program")
     parser.add_argument("-y", "--yaml", action="store_true",
                         help="Write yaml save file?")
     parser.add_argument("-o", "--offline_debbug", action="store_true",
@@ -185,13 +184,17 @@ def input_parser():
                              "web page?")
     parser.add_argument("-l", "--lyrics_only", action="store_true",
                         help="Download only lyrics?")
-    parser.add_argument("-a", "--album", default=None, help="Album name")
-    parser.add_argument("-b", "--band", default=None, help="Band name")
+    parser.add_argument("-a", "--album", default=None, help="Album name",
+                        type=str)
+    parser.add_argument("-b", "--band", default=None, help="Band name",
+                        type=str)
+    parser.add_argument("-w", "--work_dir", default=os.getcwd(),
+                        help="working directory", type=str)
 
     args = parser.parse_args()
 
     return (args.yaml, args.offline_debbug, args.lyrics_only,
-            args.album, args.band)
+            args.album, args.band, args.work_dir)
 
 
 def loading():

@@ -1,9 +1,7 @@
 from lazy_import import lazy_module
 
-from utilities.loggers import log_parser
-from utilities.sync import SharedVars
-from utilities.parser_utils import normalize_caseless
-from utilities.exceptions import NoTracklistException
+from wiki_music.utilities import (
+    NoTracklistException, SharedVars, log_parser, normalize_caseless)
 
 re = lazy_module("re")
 nc = normalize_caseless

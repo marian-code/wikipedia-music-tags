@@ -1,26 +1,20 @@
-import os
+from os.path import join
 from threading import Thread
 
-from utilities.loggers import log_gui
-from utilities.sync import SharedVars
-from utilities.wrappers import exception
 from wiki_music.external_libraries.google_images_download import (
     google_images_download, google_images_download_offline)
-from wiki_music.gui.base import BaseGui
-from wiki_music.gui.custom_classes import (ImageTable, ResizableRubberBand,
-                                           SelectablePixmap)
+from wiki_music.gui import (BaseGui, ImageTable, ResizableRubberBand,
+                            SelectablePixmap)
 from wiki_music.gui.qt_importer import (QDialog, QHBoxLayout, QIcon,
                                         QMessageBox, QSize, Qt, QTimer,
                                         QWidget, Signal)
-from wiki_music.ui.art_dialog_base import Ui_dialog
-from wiki_music.ui.cover_art_base import Ui_cover_art_search
+from wiki_music.ui import Ui_cover_art_search, Ui_dialog
+from wiki_music.utilities import MultiLog, SharedVars, exception, log_gui
 from wiki_music.utilities.gui_utils import *  # pylint: disable=unused-wildcard-import
-from wiki_music.utilities.utils import module_path, MultiLog
 
 
 class CustomPixmap(SelectablePixmap):
 
-    selectionActive = Signal(bool)
     disksizeChanged = Signal(str)
     dimensionsChanged = Signal(int, int)
 
@@ -31,12 +25,24 @@ class CustomPixmap(SelectablePixmap):
         self.bytes_image_orig = bytes_image
         self.bytes_image_edit = bytes_image
         self.bytes_image_crop = None
+        self.bytes_image_resz = None
 
         self.resize(800, 800)
         self.log = MultiLog(log_gui)
 
     @property
-    def current_image(self):
+    def current_image_c(self):
+
+        if self.bytes_image_crop:
+            return self.bytes_image_crop
+        elif self.bytes_image_resz:
+            print("ahoj")
+            return self.bytes_image_resz
+        else:
+            return self.bytes_image_orig
+
+    @property
+    def current_image_r(self):
 
         if self.bytes_image_crop:
             return self.bytes_image_crop
@@ -45,8 +51,8 @@ class CustomPixmap(SelectablePixmap):
 
     def compress_image(self, quality):
 
-        self.bytes_image_edit = comp_res(self.current_image, quality)
-        self.resizeEvent(None)
+        self.bytes_image_edit = comp_res(self.current_image_c, quality)
+        self.update_pixmap(self.bytes_image_edit)
 
         size = get_image_size(self.bytes_image_edit)
         self.disksizeChanged.emit(size)
@@ -55,8 +61,9 @@ class CustomPixmap(SelectablePixmap):
 
     def resize_image(self, x, y, quality):
 
-        self.bytes_image_edit = comp_res(self.current_image, quality, x, y)
-        self.force_resize(QSize(x, y))
+        self.bytes_image_edit = comp_res(self.current_image_r, quality, x, y)
+        self.bytes_image_resz = self.bytes_image_edit
+        self.update_pixmap(self.bytes_image_resz)
 
         self.log.info(f"Cover art resized to: {x}x{y}")
         self.disksizeChanged.emit(get_image_size(self.bytes_image_edit))
@@ -68,7 +75,7 @@ class CustomPixmap(SelectablePixmap):
         self.bytes_image_crop = self._pixmap2bytes(crop_pixmap)
         self.compress_image(quality)
         self.cancel_selection()
-        self.force_resize(crop_pixmap.size())
+        self.update_pixmap(self.bytes_image_crop)
 
         self.dimensionsChanged.emit(*self.image_dims)
 
@@ -81,9 +88,6 @@ class CustomPixmap(SelectablePixmap):
 
     def send2clipboard(self):
         send_to_clipboard(self.bytes_image_edit)
-
-    def set_aspect_ratio(self, ratio):
-        self.currentQRubberBand.set_aspect_ratio(ratio)
 
 
 class SearchDialog(QDialog, Ui_cover_art_search):
@@ -124,7 +128,7 @@ class SearchDialog(QDialog, Ui_cover_art_search):
 
 class PictureEdit(QDialog, Ui_dialog):
 
-    def __init__(self, dimensions, clicked_image):
+    def __init__(self, dimensions: tuple, clicked_image: bytearray):
 
         # QDialog init
         super().__init__()
@@ -265,7 +269,7 @@ class PictureEdit(QDialog, Ui_dialog):
 
         if self.save_file:
             self.log.info("Cover art saved to file")
-            self.picture.save_image(os.path.join(save_dir, "Folder.jpg"))
+            self.picture.save_image(join(save_dir, "Folder.jpg"))
         if self.clipboard:
             self.log.info("Cover art copied to clipboard")
             self.picture.send2clipboard()

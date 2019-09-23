@@ -1,19 +1,17 @@
+import signal
+
+from lazy_import import lazy_callable, lazy_module
+
 import package_setup
+from wiki_music import parser
+from wiki_music.constants.colors import CYAN, GREEN, RESET
+from wiki_music.utilities import (SharedVars, exception, flatten_set,
+                                  input_parser, log_app, to_bool,
+                                  we_are_frozen)
 
 if __name__ == "__main__":
     from utilities.utils import clean_logs
     clean_logs()
-
-from lazy_import import lazy_callable, lazy_module
-from colorama import Fore, init
-import signal
-from utilities.utils import (list_files, to_bool, we_are_frozen,
-                             win_naming_convetion, flatten_set, input_parser)
-
-from utilities.loggers import log_app
-from utilities.sync import SharedVars
-from utilities.wrappers import exception
-from wiki_music import parser
 
 
 # add signal handler to exit gracefully
@@ -27,19 +25,12 @@ signal.signal(signal.SIGINT, signal_handler)
 log_app.info("starting imports")
 
 time = lazy_module("time")
-os = lazy_module("os")
-re = lazy_module("re")
 sys = lazy_module("sys")
-
-write_tags = lazy_callable("library.write_tags")
-read_tags = lazy_callable("library.read_tags")
 save_lyrics = lazy_callable("library.save_lyrics")
 
-init(convert=True, autoreset=True)
+log_app.info("finished imports")
 
 __all__ = ["get_lyrics", "get_wiki"]
-
-log_app.info("finished imports")
 
 
 def artists_assign(composers: list, artists: list) -> (list, list):
@@ -53,17 +44,17 @@ def artists_assign(composers: list, artists: list) -> (list, list):
     return composers, artists
 
 
-def genre_select(genres: list, GUI: bool) -> str:
+def genre_select(genres: list) -> str:
 
     if not genres:
-        print("\nInput genre:", Fore.CYAN, end="")
+        print(CYAN + "Input genre:", end="")
         genre = input()
     else:
-        print(Fore.CYAN, "\nSpecify which genre you want to write:")
+        print(CYAN + "Specify which genre you want to write:")
         for i, gen in enumerate(genres, 1):
             print(f"{i}. {gen}")
 
-        print("Input number:", Fore.CYAN, end="")
+        print("Input number:", CYAN, end="")
         index = int(input()) - 1
 
         genre = genres[index]
@@ -76,7 +67,7 @@ def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False,
 
     if not we_are_frozen() and print_out:
         if msg_GREEN != "":
-            print(Fore.GREEN + "\n" + msg_GREEN)
+            print(GREEN + "\n" + msg_GREEN)
         if msg_WHITE != "":
             print(msg_WHITE)
 
@@ -93,19 +84,19 @@ def log_print(msg_GREEN="", msg_WHITE="", print_out=True, describe_both=False,
         SharedVars.warning = msg
 
 
-def write_data():
+def write_data(lyrics_only=False):
 
-    print(Fore.CYAN + "Write data to ID3 tags? (y/n): " +
-          Fore.RESET, end="")
+    print(CYAN + "Write data to ID3 tags? (y/n): " + RESET, end="")
     write = to_bool(input())
 
     if write:
         log_app.info("write data to tags")
-        if not parser.write_tags(lyrics_only=False):
+        if not parser.write_tags(lyrics_only=lyrics_only):
             log_print(msg_WHITE="Cannot write tags because there are no "
                                 "coresponding files")
         else:
             log_print(msg_GREEN="Done")
+
 
 @exception(log_app)
 def get_wiki(GUI: bool):
@@ -115,8 +106,8 @@ def get_wiki(GUI: bool):
 
         log_print(msg_WHITE="Accessing Wikipedia...")
 
-        print("Searching for: " + Fore.GREEN + parser.album + Fore.WHITE +
-              " by " + Fore.GREEN + parser.band)
+        print("Searching for: " + GREEN + parser.album + RESET +
+              " by " + GREEN + parser.band)
         SharedVars.describe = (f"Searching for: {parser.album} "
                                f"by {parser.band}")
 
@@ -160,10 +151,6 @@ def get_wiki(GUI: bool):
 
     if not we_are_frozen():
         log_print(msg_WHITE="Creating directory to store results")
-
-        # create work dir
-        if not os.path.exists(parser.debug_folder):
-            os.makedirs(parser.debug_folder)
 
         # basic html textout for debug
         parser.basic_out()
@@ -233,7 +220,7 @@ def get_wiki(GUI: bool):
     if len(parser.genres) == 1:
         parser.selected_genre = parser.genres[0]
     elif not GUI:
-        parser.selected_genre = genre_select(parser.genres, GUI=GUI)
+        parser.selected_genre = genre_select(parser.genres)
     else:
         if not parser.genres:
             SharedVars.describe = "Input genre"
@@ -250,8 +237,8 @@ def get_wiki(GUI: bool):
     log_app.info("decide artists")
     # decide what to do with artists
     if not GUI:
-        print(Fore.CYAN + "Do you want to assign artists to composers? (y/n)",
-              Fore.RESET, end=" ")
+        print(CYAN + "Do you want to assign artists to composers? (y/n)",
+              RESET, end=" ")
         SharedVars.assign_artists = to_bool(input())
     else:
         SharedVars.describe = "Assign artists to composers"
@@ -277,8 +264,8 @@ def get_wiki(GUI: bool):
     log_app.info("decide lyrics")
     # decide if you want to find lyrics
     if not GUI:
-        print(Fore.CYAN + "\nDo you want to find and save lyrics? (y/n): " +
-              Fore.RESET, end="")
+        print(CYAN + "\nDo you want to find and save lyrics? (y/n): " +
+              RESET, end="")
         SharedVars.write_lyrics = to_bool(input())
     else:
         print("\n")
@@ -330,7 +317,7 @@ def get_lyrics(GUI: bool):
     if GUI:
         SharedVars.barrier.wait()
     else:
-        write_data()
+        write_data(lyrics_only=True)
 
     if not we_are_frozen() and not GUI:
         input("\nPRESS ENTER TO CONTINUE...")
@@ -338,18 +325,17 @@ def get_lyrics(GUI: bool):
 if __name__ == "__main__":
 
     (SharedVars.write_json, SharedVars.offline_debbug, only_lyrics,
-     parser.album, parser.band) = input_parser()
+     parser.album, parser.band, parser.work_dir) = input_parser()
 
-    parser.work_dir = os.getcwd()
-    parser.files = list_files(parser.work_dir)
+    parser.list_files()
 
     if parser.album is None:
-        print("Enter album name: " + Fore.GREEN, end="")
+        print(GREEN + "Enter album name: " + RESET, end="")
         parser.album = str(input())
     if parser.band is None:
-        print(Fore.RESET + "Enter band name: " + Fore.GREEN, end="")
+        print(GREEN + "Enter band name: " + RESET, end="")
         parser.band = str(input())
-    print(Fore.RESET)
+    print(RESET)
 
     if only_lyrics:
         get_lyrics(GUI=False)

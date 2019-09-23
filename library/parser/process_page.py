@@ -1,45 +1,35 @@
 from fuzzywuzzy import process
 from lazy_import import lazy_callable, lazy_module
 
-from utilities.exceptions import NoTracklistException
-from utilities.loggers import log_parser
-from utilities.parser_utils import *  # pylint: disable=unused-wildcard-import
-from utilities.sync import SharedVars
-from utilities.utils import *  # pylint: disable=unused-wildcard-import
-from utilities.wrappers import for_all_methods, time_methods, warning
-from wiki_music import EXTENDED_TAGS, GUI_RUNNING
+from wiki_music import GUI_RUNNING
+from wiki_music.constants.colors import GREEN, LBLUE, LGREEN, LYELLOW, RESET
+from wiki_music.constants.parser_const import *
+from wiki_music.constants.tags import EXTENDED_TAGS
+from wiki_music.utilities import (NoTracklistException, SharedVars,
+                                  for_all_methods, get_image, log_parser,
+                                  time_methods, warning)
+from wiki_music.utilities.parser_utils import *  # pylint: disable=unused-wildcard-import
+from wiki_music.utilities.utils import *  # pylint: disable=unused-wildcard-import
 
 from ..ID3_tags import read_tags, write_tags
 from .extractors import DataExtractors
 from .preload import WikiCooker
-
 from .proxy import VariableProxy
 
 nc = normalize_caseless
 
 Thread = lazy_callable("threading.Thread")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
-Fore = lazy_callable("colorama.Fore")
+find_dates = lazy_callable("datefinder.find_dates")
+Parallel = lazy_callable("joblib.Parallel")
+delayed = lazy_callable("joblib.delayed")
 
-
-datefinder = lazy_module("datefinder")
-dt = lazy_module("datetime")
 os = lazy_module("os")
 re = lazy_module("re")
-requests = lazy_module("requests")
 pickle = lazy_module("pickle")
 NLTK.run_import()  # imports nltk in separate thread
 
 __all__ = ["WikipediaParser"]
-
-settings_dict = yaml_load(os.path.join(module_path(), "settings",
-                                       "constants.yml"))
-DEF_TYPES = settings_dict["DEF_TYPES"]
-UNWANTED = settings_dict["UNWANTED"]
-TO_DELETE = settings_dict["TO_DELETE"]
-DELIMITERS = settings_dict["DELIMITERS"]
-CONTENTS_IDS = settings_dict["CONTENTS_IDS"]
-HEADER_CATEGORY = settings_dict["HEADER_CATEGORY"]
 
 colorama_init(autoreset=True)
 
@@ -131,7 +121,7 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
             if child.find(class_="published") is not None:
                 dates = child.find(class_="published")
 
-                dates = datefinder.find_dates(str(dates))
+                dates = find_dates(str(dates))
                 date_year = [d.strftime('%Y') for d in dates]
                 date_year = list(set(date_year))
 
@@ -167,7 +157,7 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                     image = child.find("img")
                     image_url = f"https:{image['src']}"
 
-                    self.cover_art = requests.get(image_url).content
+                    self.cover_art = get_image(image_url)
                     break
             else:
                 with open("files/Na.jpg", "rb") as imageFile:
@@ -270,6 +260,8 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                                 self.composers[i].append(n)
 
     def basic_out(self):
+
+        os.makedirs(self.debug_folder, exist_ok=True)
 
         # save page object for offline debbug
         fname = os.path.join(self.debug_folder, 'page.pkl')
@@ -632,17 +624,16 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
 
     def tracklist_2_str(self, to_file=True) -> list:
 
+        def _set_color():
+            if to_file:
+                return [""] * 3
+            else:
+                return GREEN, LGREEN, RESET
+
         # compute number of spaces
         spaces, length = count_spaces(self.tracks, self.bracketed_types)
 
-        if not to_file:
-            G = Fore.GREEN
-            LG = Fore.LIGHTGREEN_EX
-            R = Fore.RESET
-        else:
-            G = ""
-            LG = ""
-            R = ""
+        G, LG, R = _set_color()
 
         # convert to string
         tracklists = []
@@ -724,9 +715,9 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
         disk_files = list_files(self.work_dir)
         files = []
 
-        print(Fore.GREEN + "\nFound files:")
+        print(GREEN + "\nFound files:")
         print(*disk_files, sep="\n")
-        print(Fore.GREEN + "\nAssigning files to tracks:")
+        print(GREEN + "\nAssigning files to tracks:")
 
         for i, tr in enumerate(self.tracks):
             self.tracks[i] = tr.strip()
@@ -735,14 +726,12 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                 f = os.path.split(path)[1]
                 if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
 
-                    print(Fore.LIGHTYELLOW_EX + tr + Fore.RESET,
-                          "-" * (1 + max_length - len(tr)) + ">",
-                          path)
+                    print(LYELLOW + tr + RESET,
+                          "-" * (1 + max_length - len(tr)) + ">", path)
                     files.append(path)
                     break
             else:
-                print(Fore.LIGHTBLUE_EX + tr + Fore.RESET,
-                      "." * (2 + max_length - len(tr)),
+                print(LBLUE + tr + RESET, "." * (2 + max_length - len(tr)),
                       "Does not have a matching file!")
 
                 files.append(None)
@@ -781,6 +770,11 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
         for fl in self.files:
 
             for key, value in read_tags(fl).items():
+
+                # TODO need more elegant way to avoid this difference
+                # between read tags and parser attributes
+                if key == "COMMENT":
+                    continue
 
                 if isinstance(getattr(self, key), list):
                     getattr(self, key).append(value)
@@ -859,7 +853,11 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
         if not any(self.files):
             return False
         else:
-            for data in self.data_to_dict():
-                write_tags(data, lyrics_only=lyrics_only)
+            # for data in self.data_to_dict():
+            #     write_tags(data, lyrics_only=lyrics_only)
+
+            Parallel(n_jobs=len(self), prefer="threads")(
+                delayed(write_tags)(data, lyrics_only=lyrics_only)
+                for data in self.data_to_dict())
 
             return True

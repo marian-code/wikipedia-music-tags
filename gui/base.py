@@ -1,13 +1,11 @@
 import ctypes
 from abc import abstractmethod
 
-from utilities.loggers import log_gui
 from wiki_music.gui.qt_importer import (QAbstractItemView, QIcon, QMainWindow,
                                         QMessageBox, QStandardItemModel,
                                         QSystemTrayIcon)
 from wiki_music.ui.gui_Qt_base import Ui_MainWindow
-from wiki_music.utilities.gui_utils import abstract_warning, get_icon
-from wiki_music.utilities.utils import MultiLog
+from wiki_music.utilities import MultiLog, abstract_warning, get_icon, log_gui
 
 
 # inherit base from QMainWindow and lyaout from Ui_MainWindow

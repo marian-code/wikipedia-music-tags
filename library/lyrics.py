@@ -6,24 +6,21 @@ Lyrical Nonsense, Musixmatch, darklyrics
 """
 
 from lazy_import import lazy_callable
-from utilities.utils import we_are_frozen, get_google_api_key
-from utilities.loggers import log_lyrics
-from utilities.wrappers import exception
+
+from wiki_music.utilities import (exception, get_google_api_key, log_lyrics,
+                                  normalize, we_are_frozen)
+from wiki_music.constants.colors import GREEN, RESET
 
 if not we_are_frozen():
     log_lyrics.propagate = False
 
 Parallel = lazy_callable("joblib.Parallel")
 delayed = lazy_callable("joblib.delayed")
-Fore = lazy_callable("colorama.Fore")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
-colorama_init = lazy_callable("utilities.utils.colorama_init")
-normalize = lazy_callable("utilities.utils.normalize")
 LyricsManager = lazy_callable("external_libraries.lyricsfinder"
                               ".lyrics.LyricsManager")
 
 GOOGLE_API_KEY = get_google_api_key()
-colorama_init(autoreset=True)
 
 log_lyrics.info("imports done")
 
@@ -69,13 +66,13 @@ def save_lyrics(parser):
     # report results
     for i, l in enumerate(lyrics):
         if l["lyrics"]:
-            print(Fore.GREEN + "Saved lyrics for:" + Fore.RESET,
+            print(GREEN + "Saved lyrics for:" + RESET,
                   f"{l['artist']} - {l['title']} " +
-                  Fore.GREEN + f"({l['origin']['source_name']})")
+                  GREEN + f"({l['origin']['source_name']})")
             tracks[l["title"]]["lyrics"] = l["lyrics"]
         else:
-            print(Fore.GREEN + "Couldn't find lyrics for:" +
-                  Fore.RESET, f"{l['artist']} - {l['title']}")
+            print(GREEN + "Couldn't find lyrics for:" +
+                  RESET, f"{l['artist']} - {l['title']}")
             tracks[l["title"]]["lyrics"] = ""
 
     for track in tracks.values():

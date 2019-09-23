@@ -1,5 +1,5 @@
 import os
-from wiki_music import ROOT_DIR
+from wiki_music.constants.paths import ROOT_DIR
 from PIL import Image
 
 
