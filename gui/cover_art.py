@@ -1,24 +1,31 @@
 from os.path import join
 from threading import Thread
+from typing import Iterable, Optional, Tuple
 
 from wiki_music.external_libraries.google_images_download import (
     google_images_download, google_images_download_offline)
-from wiki_music.gui import (BaseGui, ImageTable, ResizableRubberBand,
-                            SelectablePixmap)
+from wiki_music.gui import BaseGui, ImageTable, SelectablePixmap
 from wiki_music.gui.qt_importer import (QDialog, QHBoxLayout, QIcon,
                                         QMessageBox, QSize, Qt, QTimer,
                                         QWidget, Signal)
 from wiki_music.ui import Ui_cover_art_search, Ui_dialog
-from wiki_music.utilities import MultiLog, SharedVars, exception, log_gui
-from wiki_music.utilities.gui_utils import *  # pylint: disable=unused-wildcard-import
+from wiki_music.utilities import (
+    MultiLog, SharedVars, comp_res, exception, get_icon, get_image,
+    get_image_size, log_gui, send_to_clipboard)
 
 
 class CustomPixmap(SelectablePixmap):
 
-    disksizeChanged = Signal(str)
-    dimensionsChanged = Signal(int, int)
+    bytes_image_orig: bytearray
+    bytes_image_edit: bytearray
+    bytes_image_crop: Optional[bytearray]
+    bytes_image_resz: Optional[bytearray]
+    log: MultiLog
 
-    def __init__(self, bytes_image):
+    disksizeChanged: Signal = Signal(str)
+    dimensionsChanged: Signal = Signal(int, int)
+
+    def __init__(self, bytes_image: bytearray) -> None:
 
         super().__init__(bytes_image)
 
@@ -31,25 +38,24 @@ class CustomPixmap(SelectablePixmap):
         self.log = MultiLog(log_gui)
 
     @property
-    def current_image_c(self):
+    def current_image_c(self) -> bytearray:
 
         if self.bytes_image_crop:
             return self.bytes_image_crop
         elif self.bytes_image_resz:
-            print("ahoj")
             return self.bytes_image_resz
         else:
             return self.bytes_image_orig
 
     @property
-    def current_image_r(self):
+    def current_image_r(self) -> bytearray:
 
         if self.bytes_image_crop:
             return self.bytes_image_crop
         else:
             return self.bytes_image_orig
 
-    def compress_image(self, quality):
+    def compress_image(self, quality: int):
 
         self.bytes_image_edit = comp_res(self.current_image_c, quality)
         self.update_pixmap(self.bytes_image_edit)
@@ -59,7 +65,7 @@ class CustomPixmap(SelectablePixmap):
 
         self.log.info(f"Compressed cover art  to: {size}Kb")
 
-    def resize_image(self, x, y, quality):
+    def resize_image(self, x: int, y: int, quality: int):
 
         self.bytes_image_edit = comp_res(self.current_image_r, quality, x, y)
         self.bytes_image_resz = self.bytes_image_edit
@@ -68,7 +74,7 @@ class CustomPixmap(SelectablePixmap):
         self.log.info(f"Cover art resized to: {x}x{y}")
         self.disksizeChanged.emit(get_image_size(self.bytes_image_edit))
 
-    def crop_image(self, quality):
+    def crop_image(self, quality: int):
 
         # TODO wrong image part displayed after crop
         crop_pixmap = self.pixmap().copy(self.currentQRubberBand.geometry())
@@ -81,7 +87,7 @@ class CustomPixmap(SelectablePixmap):
 
         self.log.info("Cover art cropped to: {}x{}".format(*self.image_dims))
 
-    def save_image(self, path):
+    def save_image(self, path: str):
 
         with open(path, 'wb') as f:
             f.write(self.bytes_image_edit)
@@ -92,9 +98,11 @@ class CustomPixmap(SelectablePixmap):
 
 class SearchDialog(QDialog, Ui_cover_art_search):
 
-    cellClicked = Signal(int, int)
+    table: ImageTable
 
-    def __init__(self, query):
+    cellClicked: Signal = Signal(int, int)
+
+    def __init__(self, query: str) -> None:
 
         # QDialog init
         super().__init__()
@@ -115,20 +123,25 @@ class SearchDialog(QDialog, Ui_cover_art_search):
         # forward table signal
         self.table.cellClicked.connect(self.table_cell_clicked)
 
-    def table_cell_clicked(self, row, col):
+    def table_cell_clicked(self, row: int, col: int):
         self.cellClicked.emit(row, col)
 
     @property
-    def max_columns(self):
+    def max_columns(self) -> int:
         return self.table.max_columns
 
-    def add_pic(self, dimension, thumbnail):
+    def add_pic(self, dimension: str, thumbnail: bytearray):
         self.table.add_pic(dimension, thumbnail)
 
 
 class PictureEdit(QDialog, Ui_dialog):
 
-    def __init__(self, dimensions: tuple, clicked_image: bytearray):
+    log: MultiLog
+    picture: CustomPixmap
+    cancel: bool
+    original_ratio: float
+
+    def __init__(self, dimensions: tuple, clicked_image: bytearray) -> None:
 
         # QDialog init
         super().__init__()
@@ -193,47 +206,48 @@ class PictureEdit(QDialog, Ui_dialog):
             lambda comp_value: self._get_compressed(comp_value, "slider"))
 
     @property
-    def image_dims(self):
+    def image_dims(self) -> Tuple[int, int]:
         return self.size_spinbox_X.value(), self.size_spinbox_Y.value()
 
-    def set_image_dims(self, x, y):
+    def set_image_dims(self, x: int, y: int):
         self.size_spinbox_X.setValue(x)
         self.size_spinbox_Y.setValue(y)
 
     @property
-    def clipboard(self):
+    def clipboard(self) -> bool:
         return self.ca_clipboard.isChecked()
 
     @property
-    def save_file(self):
+    def save_file(self) -> bool:
         return self.ca_file.isChecked()
 
     @property
-    def preserve_ratio(self):
+    def preserve_ratio(self) -> bool:
         return self.ca_ratio.isChecked()
 
     @property
-    def compresion(self):
+    def compresion(self) -> int:
         return self.compresion_spinbox.value()
 
     def _dialog_cancel(self):
         self.cancel = True
 
-    def _get_crop_ratio(self, index):
+    def _get_crop_ratio(self, value: str):
+        crop_ratio: Optional[Iterable[float]]
 
-        if index.lower() == "preserve":
+        if value.lower() == "preserve":
             crop_ratio = (self.original_ratio, 1)
-        elif index.lower() == "free":
+        elif value.lower() == "free":
             crop_ratio = None
         else:
             try:
-                crop_ratio = [int(i) for i in index.split(":")]
+                crop_ratio = [int(i) for i in value.split(":")]
             except ValueError:
-                raise ValueError(f"{index} is not a valid ratio format")
+                raise ValueError(f"{value} is not a valid ratio format")
 
         self.picture.set_aspect_ratio(crop_ratio)
 
-    def _aspect_ratio_set(self, dim, activated):
+    def _aspect_ratio_set(self, dim: int, activated: str):
 
         x, y = self.image_dims
 
@@ -254,7 +268,7 @@ class PictureEdit(QDialog, Ui_dialog):
         else:
             self.original_ratio = x / y
 
-    def _get_compressed(self, comp_value, activated):
+    def _get_compressed(self, comp_value: int, activated: str):
 
         if activated == "spinbox":
             self.compresion_slider.setValue(comp_value)
@@ -265,7 +279,7 @@ class PictureEdit(QDialog, Ui_dialog):
 
         self.picture.compress_image(comp_value)
 
-    def execute(self, save_dir):
+    def execute(self, save_dir: str):
 
         if self.save_file:
             self.log.info("Cover art saved to file")
@@ -276,6 +290,11 @@ class PictureEdit(QDialog, Ui_dialog):
 
 
 class CoverArtSearch(BaseGui):
+
+    max_count: int
+    old_count: int
+    image_search_thread: Thread
+    search_dialog: SearchDialog
 
     @exception(log_gui)
     def __cover_art_search__(self):
@@ -327,6 +346,10 @@ class CoverArtSearch(BaseGui):
 
     @exception(log_gui)
     def _async_search(self):
+        new_count: int
+        t: bytearray
+        s: Tuple[float, Tuple[int, int]]
+        dim: str
 
         new_count = self.gimd.count
         if new_count > self.old_count:
@@ -349,21 +372,20 @@ class CoverArtSearch(BaseGui):
             self.gimd.close()
 
     @exception(log_gui)
-    def __select_picture__(self, row, col):
+    def __select_picture__(self, row: int, col: int):
 
         # position of clicked picture in list
-        index = (self.search_dialog.max_columns + 1) * row + col
+        index: int = (self.search_dialog.max_columns + 1) * row + col
 
         # 0-th position is size in b, and 1-st position is tuple of dimensions
-        dimensions = self.gimd.fullsize_dim[index][1]
-        url = self.gimd.fullsize_url[index]
-        thumbnail = self.gimd.thumbs[index]
+        dimensions: Tuple[int, int] = self.gimd.fullsize_dim[index][1]
+        url: str = self.gimd.fullsize_url[index]
+        thumbnail: bytearray = self.gimd.thumbs[index]
 
         self.log.info(f"Downloading full size cover art from: {url}")
-        clicked_image = get_image(url)
 
         # create dialog to handle image editing
-        self.image_dialog = PictureEdit(dimensions, clicked_image)
+        self.image_dialog = PictureEdit(dimensions, get_image(url))
         self.image_dialog.exec_()
 
         if self.image_dialog.cancel:

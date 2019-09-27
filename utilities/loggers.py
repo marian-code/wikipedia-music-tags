@@ -2,19 +2,19 @@ import logging
 from threading import get_ident
 
 
-def get_logger(name, logfile, mode="a"):
+def get_logger(name: str, logfile: str, mode: str = "a") -> logging.Logger:
 
     log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)
     fh = logging.FileHandler(logfile, mode=mode)
     fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
+    fh.setFormatter(FORMATTER)
     log.addHandler(fh)
 
     return log
 
 # logger formater
-formatter = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
+FORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
                               "pid = %(process)d \n\t - "
                               "proces name = %(processName)s \n\t - "
                               "module = %(module)s,"

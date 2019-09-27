@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Dict
 from collections import OrderedDict
 from os.path import join, split
 from wiki_music.constants.tags import TAGS
@@ -34,15 +35,15 @@ class SelectiveDict(dict):
 
 class TagBase(ABC):
 
-    map_keys: dict  # noqa E701
+    map_keys: Dict[str, str]
+    reverse_map: Dict[str, str]
+    _tags: SelectiveDict
+    
 
     def __init__(self, filename):
 
         self.song = None
         self._tags = None
-
-        # ensure we are consistent with package defined tags
-        assert sorted(self.map_keys.values()) == sorted(TAGS + ("COMMENT",))
 
         self.reverse_map = self.get_reversed(self.map_keys)
 
@@ -52,10 +53,6 @@ class TagBase(ABC):
 
         for tag, value in self._tags.save_items():
             self._write(tag, value)
-
-        # for key, value in self.song.tags.items():
-        #    if key in self.map_keys:
-        #        print(f"{key}: {value}")
 
         self.song.save()
 
@@ -85,9 +82,9 @@ class TagBase(ABC):
         return self._tags
 
     @staticmethod
-    def get_reversed(map_keys):
+    def get_reversed(map_keys: Dict[str, str]) -> Dict[str, str]:
 
-        reverse_map = OrderedDict()
+        reverse_map: Dict[str, str] = OrderedDict()
 
         for key, value in map_keys.items():
             reverse_map[value] = key

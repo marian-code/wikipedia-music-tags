@@ -11,7 +11,8 @@ try:
                             QPixmap, QIcon, QPainter, QResizeEvent)
     from qtpy.QtCore import (Qt, QSortFilterProxyModel, QTimer, QObject,
                              QBuffer, QSize, QRect, Property, Slot, Signal,
-                             QByteArray, QIODevice, QPoint, QEvent)
+                             QByteArray, QIODevice, QPoint, QEvent,
+                             QModelIndex)
 except ImportError as e:
     log_gui.critical("None of the Qt backends is available! Aborting")
     raise ImportError("None of the Qt backends is available! Aborting")

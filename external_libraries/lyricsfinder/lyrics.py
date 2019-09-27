@@ -31,13 +31,13 @@ class LyricsManager:
         """Extract lyrics from url."""
         #log.info("extracting lyrics from url \"{}\"".format(url))
         url_data = UrlData(url)
-        for extractor in cls.extractors:
+        for ext in cls.extractors:
 
-            if not extractor.can_handle(url_data):
+            if not ext.can_handle(url_data):
                 continue
 
-            log.debug("using {} for {}".format(extractor, url_data))
-            extractor = extractor()
+            log.debug("using {} for {}".format(ext, url_data))
+            extractor = ext()
             try:
                 lyrics = extractor.extract_lyrics(url_data, song, artist)
             except exceptions.NoLyrics:

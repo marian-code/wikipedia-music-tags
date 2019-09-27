@@ -1,17 +1,19 @@
-from wiki_music import parser
+from typing import Iterable, List, Optional, Union
+
 from wiki_music.constants.tags import GUI_HEADERS, STR_TAGS
 from wiki_music.gui import (BaseGui, CustomQStandardItem,
                             CustomQStandardItemModel, ResizablePixmap)
 from wiki_music.gui.qt_importer import (QImage, QLabel, QPixmap,
                                         QStandardItemModel, QTimer)
+from wiki_music.library.parser import WikipediaRunner
 from wiki_music.utilities import SharedVars, exception, log_gui
 
 
 class ParserInteract(BaseGui):
 
-    def __init__(self):
+    def __init__(self) -> None:
 
-        self.parser = parser
+        self.parser = WikipediaRunner(GUI=True)
         super().__init__()
 
         # TODO needs QThreads to work
@@ -25,57 +27,57 @@ class ParserInteract(BaseGui):
         """
 
     @property
-    def GENRE(self):
+    def GENRE(self) -> str:
         return self.parser.selected_genre
 
     @GENRE.setter
-    def GENRE(self, value):
+    def GENRE(self, value: str):
         self.parser.selected_genre = value
         self.genre_entry.setText(value)
 
     @property
-    def DATE(self):
+    def DATE(self) -> str:
         return self.parser.release_date
 
     @DATE.setter
-    def DATE(self, value):
+    def DATE(self, value: str):
         self.parser.release_date = value
         self.year_entry.setText(value)
 
     @property
-    def ALBUM(self):
+    def ALBUM(self) -> str:
         return self.parser.album
 
     @ALBUM.setter
-    def ALBUM(self, value):
+    def ALBUM(self, value: str):
         self.parser.album = value
         self.album_entry.setText(value)
         self.album_entry_input.setText(value)
 
     @property
-    def ALBUMARTIST(self):
+    def ALBUMARTIST(self) -> str:
         return self.parser.band
 
     @ALBUMARTIST.setter
-    def ALBUMARTIST(self, value):
+    def ALBUMARTIST(self, value: str):
         self.parser.band = value
         self.band_entry.setText(value)
         self.band_entry_input.setText(value)
 
     @property
-    def url(self):
+    def url(self) -> str:
         return self.parser.url
 
     @property
-    def genres(self):
+    def genres(self) -> List[str]:
         return self.parser.genres
 
     @property
-    def work_dir(self):
+    def work_dir(self) -> str:
         return self.parser.work_dir
 
     @work_dir.setter
-    def work_dir(self, value):
+    def work_dir(self, value: str):
         self.display_dir.setText(value)
         self.parser.work_dir = value
 
@@ -85,23 +87,26 @@ class ParserInteract(BaseGui):
     def start_preload(self):
         self.parser.Preload.start()
 
-    def write_tags(self, lyrics_only: bool=False) -> bool:
+    def write_tags(self, lyrics_only: bool = False) -> bool:
         return self.parser.write_tags(lyrics_only=lyrics_only)
 
     def read_files(self):
         self.parser.read_files()
 
-    def save_ready(self):
+    def save_ready(self) -> bool:
         return bool(self.parser)
 
-    def set_cover_art(self, value):
+    def set_cover_art(self, value: bytearray):
         self.parser.cover_art = value
 
 
 class DataModel(ParserInteract):
     """ Transfer data between GUI and parser and manage GUI data model. """
 
-    def __init__(self):
+    cover_art: Optional[ResizablePixmap]
+    table: CustomQStandardItemModel
+
+    def __init__(self) -> None:
 
         super().__init__()
 
@@ -118,18 +123,19 @@ class DataModel(ParserInteract):
         SharedVars.re_init()
 
     @staticmethod
-    def _parser_to_gui(data):
+    def _parser_to_gui(data: Union[str, float, Iterable]) -> str:
 
         if isinstance(data, str):
             return data
         elif isinstance(data, (int, float)):
             return str(data)
-        elif isinstance(data, list):
+        elif isinstance(data, (list, tuple)):
             return ", ".join(sorted(data))
         else:
             return ""
 
     def _gui_to_parser(self):
+        col: int
 
         # TODO non-atomic
         for h in GUI_HEADERS:
@@ -145,7 +151,7 @@ class DataModel(ParserInteract):
 
             setattr(self.parser, h, temp)
 
-    def __display_image__(self, image=None):
+    def __display_image__(self, image: Optional[bytearray] = None):
         """ shows cover art image preview in main window. """
 
         if image:
@@ -164,6 +170,7 @@ class DataModel(ParserInteract):
     @exception(log_gui)
     def __update_model__(self):
         """ Synchronizes the parser and Gui table. """
+        col: int
 
         if len(self.parser):
 
@@ -207,33 +214,29 @@ class DataModel(ParserInteract):
         self.tableView.selectRow(index[0].row())
 
         entries = [
-            self.number_detail,
-            self.title_detail,
-            None,
-            self.artist_detail,
-            self.composer_detail,
-            None,
-            self.lyrics_detail,
-            self.file_detail
+            (0, self.number_detail),
+            (1, self.title_detail),
+            (3, self.artist_detail),
+            (4, self.composer_detail),
+            (6, self.lyrics_detail),
+            (7, self.file_detail)
         ]
 
         log_gui.debug("connect detail function")
 
-        for col, e in enumerate(entries):
-            if e is not None:
-                e.disconnect()
-                e.setText(self.table.item(row, col).text())
-                # col_inner = col is a hack to change the
-                # scope of col otherwise lambda will refer
-                # to actual value of col since it is in
-                # outer scope
-                # None is the default argument for text since QTextEdit
-                # signal doesn´t retutn text
-                e.textChanged.connect(lambda text=None, col_inner=col:
-                                      self.__text_check__(row, col_inner,
-                                                          text))
+        for col, ent in entries:
+            ent.disconnect()
+            ent.setText(self.table.item(row, col).text())
+            # col_inner = col is a hack to change the
+            # scope of col otherwise lambda will refer
+            # to actual value of col since it is in
+            # outer scope
+            # None is the default argument for text since QTextEdit
+            # signal doesn´t retutn text
+            ent.textChanged.connect(
+                lambda text=None, c=col: self.__text_check__(row, c, text))
 
-    def __text_check__(self, row, col, text):
+    def __text_check__(self, row: int, col: int, text: Optional[str]):
         """ Watch text changes in detail entry fields and
             sync them back to table"""
 

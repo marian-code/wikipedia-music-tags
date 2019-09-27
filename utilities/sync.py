@@ -1,6 +1,7 @@
 # Module for variable synchronization between application and GUI
 
 from threading import Barrier, Lock
+from typing import Union
 
 __all__ = ["SharedVars"]
 
@@ -12,35 +13,27 @@ class SharedVars:
         the questions asked in application to to PyQt (Tkinter) frontend.
     """
 
-    write_lyrics = None
-    select_genre = None
-    assign_artists = None
-    write_tags = None
-    wait = None
-    switch = None
-    done = False
-    load = False
-
     # action description
-    describe = ""
-
-    # caught exceptions
-    ask_exit = None
+    describe: str = ""
+    ask_exit: str = ""
+    switch: str = ""
 
     # switches
-    wait_exit = False
-    terminate_app = False
-
-    # threads
-    parser_running = False
+    write_json: bool = False
+    offline_debbug: bool = False
+    write_lyrics: bool = False
+    assign_artists: bool = False
 
     # exceptions
-    warning = None
-    exception = None
+    has_warning: str = ""
+    has_exception: str = ""
 
-    # mics
-    write_json = False
-    offline_debbug = False
+    # control
+    wait_exit: bool = False
+    terminate_app: bool = False
+    wait: bool = False
+    done: bool = False
+    load: bool = False
     lock = Lock()
     barrier = Barrier(2)
 
@@ -71,9 +64,17 @@ class SharedVars:
         cls.parser_running = False
 
         # exceptions
-        cls.warning = None
-        cls.exception = None
+        cls.has_warning = None
+        cls.has_exception = None
 
     @classmethod
-    def info(cls, msg):
-        cls.describe = msg
+    def info(cls, msg: str):
+        cls.describe = str(msg)
+
+    @classmethod
+    def warning(cls, msg: Union[Exception, str]):
+        cls.has_warning = str(msg)
+
+    @classmethod
+    def exception(cls, msg: Union[Exception, str]):
+        cls.has_exception = str(msg)

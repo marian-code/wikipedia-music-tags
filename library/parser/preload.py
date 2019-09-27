@@ -1,11 +1,14 @@
-import os
+from os.path import isfile, join
 from time import sleep
+from typing import Any, Optional, Type
 
 from lazy_import import lazy_callable, lazy_module
 
 from wiki_music.utilities import (
     SharedVars, ThreadWithTrace, for_all_methods, log_parser, module_path,
     normalize_caseless, time_methods)
+
+from .base import ParserBase
 
 nc = normalize_caseless
 
@@ -17,9 +20,9 @@ pickle = lazy_module("pickle")
 sys = lazy_module("sys")
 re = lazy_module("re")
 
-
 # TODO doesn't work without GUI
 def terminate(message: str):
+
     SharedVars.ask_exit = message
     SharedVars.wait_exit = True
 
@@ -31,35 +34,34 @@ def terminate(message: str):
 
 
 @for_all_methods(time_methods, exclude=["Preload"])
-class WikiCooker:
+class WikiCooker(ParserBase):
 
-    def __init__(self, protected_vars=True):
+    def __init__(self, protected_vars: bool) -> None:
 
-        # control
-        self.wiki_downloaded = False
-        self.soup_ready = False
-        self.preload_running = False
-        self.getter_lock = Lock()
-        self.error_msg = None
-
-        self._url = None
-
-        # pass reference of current class instance to subclass
-        self.Preload.outer_instance = self
+        super().__init__(protected_vars=protected_vars)
 
         if protected_vars:
-            # variables
-            self.album = ""
-            self.band = ""
             self.formated_html = None
             self.info_box_html = None
             self.page = None
             self.soup = None
 
+        # control
+        self.wiki_downloaded: bool = False
+        self.soup_ready: bool = False
+        self.preload_running: bool = False
+        self.getter_lock: Any = Lock()
+        self.error_msg: Optional[str] = None
+
+        self._url = ""
+
+        # pass reference of current class instance to subclass
+        self.Preload.outer_instance = self
+
     class Preload:
 
         _preload_thread = None
-        outer_instance = None
+        outer_instance = Any
 
         @classmethod
         def start(cls):
@@ -92,37 +94,36 @@ class WikiCooker:
                 cls.outer_instance.preload_running = False
 
     @property
-    def url(self):
-        if self._url is None:
+    def url(self) -> str:
+        if not self._url:
             try:
-                self._url = str(self.page.url)
+                self._url = str(self.page.url)  # type: ignore
             except AttributeError:
-                self._url = os.path.join(module_path(), "output", self.album,
-                                         'page.pkl')
+                self._url = join(module_path(), "output", self.album,
+                                 "page.pkl")
         return self._url
 
     def _check_band(self) -> bool:
 
         try:
-            for child in self.info_box_html.children:
+            for child in self.info_box_html.children:  # type: ignore
                 if child.find(href="/wiki/Album") is not None:
                     album_artist = (child
                                     .find(href="/wiki/Album")
                                     .parent.get_text())
                     break
 
-        except AttributeError as e:
+        except AttributeError:
             return False
         else:
             if fuzz.token_set_ratio(nc(self.band),
                nc(album_artist)) < 90:
                 b = re.sub(r"[Bb]y|[Ss]tudio album", "", album_artist).strip()
-                e = (f"The Wikipedia entry for album: {self.album} belongs to "
+                m = (f"The Wikipedia entry for album: {self.album} belongs to "
                      f"band: {b}\nThis probably means that entry for: "
                      f"{self.album} by {self.band} does not exist.")
-                print(e)
-                log_parser.exception(e)
-                terminate(e)
+                log_parser.exception(m)
+                terminate(m)
 
                 return False
             else:
@@ -146,7 +147,7 @@ class WikiCooker:
 
         self.preload_running = False
 
-    def get_wiki(self, preload=False) -> str:
+    def get_wiki(self, preload=False) -> Optional[str]:
 
         # when function is called from application,
         # wait until all preloads are finished and then continue
@@ -162,7 +163,7 @@ class WikiCooker:
         else:
             return self._from_web()
 
-    def _from_web(self) -> str:
+    def _from_web(self) -> Optional[str]:
 
         searches = [f"{self.album} ({self.band} album)",
                     f"{self.album} (album)",
@@ -203,11 +204,10 @@ class WikiCooker:
 
         return self.error_msg
 
-    def _from_disk(self) -> str:
+    def _from_disk(self) -> Optional[str]:
 
-        fname = os.path.join(module_path(), "output", self.album, 'page.pkl')
-        if os.path.isfile(fname):
-            with open(fname, 'rb') as infile:
+        if isfile(self.url):
+            with open(self.url, 'rb') as infile:
                 self.page = pickle.load(infile)
             self.error_msg = None
             self.wiki_downloaded = True
@@ -216,13 +216,13 @@ class WikiCooker:
 
         return self.error_msg
 
-    def cook_soup(self) -> str:
+    def cook_soup(self) -> Optional[str]:
 
         if self.soup_ready:
             return self.error_msg
 
         # make BeautifulSoup black magic
-        self.soup = BeautifulSoup(self.page.html(), features="lxml")
+        self.soup = BeautifulSoup(self.page.html(), features="lxml")  # type: ignore
         self.formated_html = self.soup.get_text()
         self.info_box_html = self.soup.find("table",
                                             class_="infobox vevent haudio")

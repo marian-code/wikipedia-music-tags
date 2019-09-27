@@ -1,9 +1,66 @@
-class VariableProxy:
+from typing import List
+
+from wiki_music.utilities import MultiLog, log_parser
+
+__all__ = ["ParserBase"]
+
+SList = List[str]  # list of strings
+IList = List[int]  # list of ints
+NList = List[SList]  # nested list
+
+
+class ParserBase:
     """ Properties with same names as tags act as a proxy to parser variables
         for convenient access."""
 
-    def __init__(self):
-        pass
+    files: SList
+    bracketed_types: SList
+
+    def __init__(self, protected_vars: bool) -> None:
+
+        # lists 1D
+        self.contents: SList = []
+        self.tracks: SList = []
+        self.types: SList = []
+        self.disc_num: IList = []
+        self.disk_sep: IList = []
+        self.disks: List[list] = []
+        self.genres: SList = []
+        self.header: SList = []
+        self.lyrics: SList = []
+        self.NLTK_names: SList = []
+        self.numbers: SList = []
+        self.personnel: SList = []
+        self._bracketed_types: SList = []
+        self._files: SList = []
+
+        # lists 2D
+        self.appearences: NList = []
+        self.artists: NList = []
+        self.composers: NList = []
+        self.sub_types: NList = []
+        self.subtracks: NList = []
+
+        # bytearray
+        self.cover_art: bytearray = bytearray()
+
+        # strings
+        self.release_date: str = ""
+        self.selected_genre: str = ""
+
+        # atributes protected from GUIs reinit method
+        # when new search is started
+        if protected_vars:
+            self.album: str = ""
+            self.band: str = ""
+            self.work_dir: str = ""
+            self.log: MultiLog = MultiLog(log_parser)
+    
+    def __len__(self):
+        return len(self.numbers)
+
+    def __bool__(self):
+        return self.__len__()
 
     @property
     def ALBUM(self) -> str:
@@ -22,19 +79,19 @@ class VariableProxy:
         self.band = value
 
     @property
-    def ARTIST(self) -> list:
+    def ARTIST(self) -> NList:
         return self.artists
 
     @ARTIST.setter
-    def ARTIST(self, value: list):
+    def ARTIST(self, value: NList):
         self.artists = value
 
     @property
-    def COMPOSER(self) -> list:
+    def COMPOSER(self) -> NList:
         return self.composers
 
     @COMPOSER.setter
-    def COMPOSER(self, value: list):
+    def COMPOSER(self, value: NList):
         self.composers = value
 
     @property
@@ -54,11 +111,11 @@ class VariableProxy:
         self.release_date = value
 
     @property
-    def DISCNUMBER(self) -> list:
+    def DISCNUMBER(self) -> IList:
         return self.disc_num
 
     @DISCNUMBER.setter
-    def DISCNUMBER(self, value: list):
+    def DISCNUMBER(self, value: IList):
         self.disc_num = value
 
     @property
@@ -70,51 +127,51 @@ class VariableProxy:
         self.selected_genre = value
 
     @property
-    def LYRICS(self) -> list:
+    def LYRICS(self) -> SList:
         return self.lyrics
 
     @LYRICS.setter
-    def LYRICS(self, value: list):
+    def LYRICS(self, value: SList):
         self.lyrics = value
 
     @property
-    def UNSYNCEDLYRICS(self) -> list:
+    def UNSYNCEDLYRICS(self) -> SList:
         return self.lyrics
 
     @UNSYNCEDLYRICS.setter
-    def UNSYNCEDLYRICS(self, value: list):
+    def UNSYNCEDLYRICS(self, value: SList):
         self.lyrics = value
 
     @property
-    def TITLE(self) -> list:
+    def TITLE(self) -> SList:
         return self.tracks
 
     @TITLE.setter
-    def TITLE(self, value: list):
+    def TITLE(self, value: SList):
         self.tracks = value
 
     @property
-    def TRACKNUMBER(self) -> list:
+    def TRACKNUMBER(self) -> SList:
         return self.numbers
 
     @TRACKNUMBER.setter
-    def TRACKNUMBER(self, value: list):
+    def TRACKNUMBER(self, value: SList):
         self.numbers = value
 
     @property
-    def FILE(self) -> list:
+    def FILE(self) -> SList:
         return self.files
 
     @FILE.setter
-    def FILE(self, value: list):
+    def FILE(self, value: SList):
         self.files = value
 
     @property
-    def TYPE(self) -> list:
+    def TYPE(self) -> SList:
         return self.bracketed_types
 
     @TYPE.setter
-    def TYPE(self, value: list):
+    def TYPE(self, value: SList):
         self.bracketed_types = value
 
 
@@ -123,7 +180,7 @@ class VariableProxy:
 from wiki_music.gui.qt_importer import Signal, QObject
 
 
-class GuiVariableProxy(VariableProxy, QObject):
+class GuiInOut(ParserInOut, QObject):
 
     selectedGenreChanged = Signal(str)
     releaseDateChanged = Signal(str)

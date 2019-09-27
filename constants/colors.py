@@ -4,11 +4,11 @@ __all__ = ["GREEN", "LGREEN", "RESET", "LYELLOW", "LBLUE", "CYAN"]
 
 init(convert=True, autoreset=True)
 
-GREEN = Fore.GREEN
-LGREEN = Fore.LIGHTGREEN_EX
-RESET = Fore.RESET
-LYELLOW = Fore.LIGHTYELLOW_EX
-LBLUE = Fore.LIGHTBLUE_EX
-CYAN = Fore.CYAN
-RED = Fore.RED
-LRED = Fore.LIGHTRED_EX
+GREEN: str = Fore.GREEN
+LGREEN: str = Fore.LIGHTGREEN_EX
+RESET: str = Fore.RESET
+LYELLOW: str = Fore.LIGHTYELLOW_EX
+LBLUE: str = Fore.LIGHTBLUE_EX
+CYAN: str = Fore.CYAN
+RED: str = Fore.RED
+LRED: str = Fore.LIGHTRED_EX

@@ -14,7 +14,7 @@ class BaseGui(QMainWindow, Ui_MainWindow):
         Connects buttons and input fields signals to methods.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         # call QMainWindow __init__ method
         super().__init__()
@@ -25,8 +25,8 @@ class BaseGui(QMainWindow, Ui_MainWindow):
         self.__initUI__()
 
         # misc
-        self.work_dir = ""
-        self.log = MultiLog(log_gui)
+        self.work_dir: str = ""
+        self.log: MultiLog = MultiLog(log_gui)
 
     def __initUI__(self):
         self.setWindowTitle("Wiki Music")

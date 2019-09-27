@@ -1,15 +1,16 @@
 from os.path import basename, isfile
+from typing import Optional, Tuple, Callable
 
 from wiki_music.constants.paths import DIR_FILE
 from wiki_music.gui.qt_importer import (Property, QBuffer, QByteArray, QEvent,
                                         QFileDialog, QHBoxLayout, QImage,
-                                        QIODevice, QLabel, QPixmap, QPoint,
-                                        QRect, QResizeEvent, QRubberBand,
-                                        QSize, QSizeGrip, QSizePolicy,
-                                        QSortFilterProxyModel, QStandardItem,
-                                        QStandardItemModel, QStyleFactory, Qt,
-                                        QTableWidget, QVBoxLayout, QWidget,
-                                        Signal)
+                                        QIODevice, QLabel, QModelIndex,
+                                        QPixmap, QPoint, QRect, QResizeEvent,
+                                        QRubberBand, QSize, QSizeGrip,
+                                        QSizePolicy, QSortFilterProxyModel,
+                                        QStandardItem, QStandardItemModel,
+                                        QStyleFactory, Qt, QTableWidget,
+                                        QVBoxLayout, QWidget, Signal)
 from wiki_music.utilities.gui_utils import get_music_path
 
 __all__ = ["NumberSortModel", "CustomQStandardItem", "ImageTable",
@@ -18,10 +19,11 @@ __all__ = ["NumberSortModel", "CustomQStandardItem", "ImageTable",
 
 class NumberSortModel(QSortFilterProxyModel):
 
-    def lessThan(self, left_index, right_index):
+    def lessThan(self, left_index: QModelIndex,
+                 right_index: QModelIndex) -> bool:
 
-        left_var = left_index.data(Qt.EditRole)
-        right_var = right_index.data(Qt.EditRole)
+        left_var: str = left_index.data(Qt.EditRole)
+        right_var: str = right_index.data(Qt.EditRole)
 
         try:
             return float(left_var) < float(right_var)
@@ -39,7 +41,7 @@ class CustomQStandardItem(QStandardItem):
     even though the object stores the full path
     """
 
-    def data(self, role):
+    def data(self, role: Qt.ItemDataRole) -> str:
         if role != Qt.DisplayRole:
             return super(CustomQStandardItem, self).data(role)
         else:
@@ -49,10 +51,10 @@ class CustomQStandardItem(QStandardItem):
             else:
                 return filtered
 
-    def real_data(self, role):
+    def real_data(self, role: Qt.ItemDataRole) -> str:
         return super(CustomQStandardItem, self).data(role)
 
-    def text(self):
+    def text(self) -> str:
         text_text = super(CustomQStandardItem, self).text()
         text_data = self.real_data(Qt.DisplayRole)
 
@@ -64,18 +66,19 @@ class CustomQStandardItem(QStandardItem):
 
 class CustomQStandardItemModel(QStandardItemModel):
 
-    def col_index(self, name):
+    def col_index(self, name: str) -> int:
 
         for column in range(self.columnCount()):
             if self.headerData(column, Qt.Horizontal) == name:
                 return column
 
-        return None
+        raise KeyError(f"No column with name {name}")
 
 
 class ImageWidget(QWidget):
 
-    def __init__(self, text, img, parent=None):
+    def __init__(self, text: str, img: bytearray,
+                 parent: Optional[QWidget] = None) -> None:
         QWidget.__init__(self, parent)
 
         self._text = text
@@ -97,23 +100,23 @@ class ImageWidget(QWidget):
         self.lbPixmap.setPixmap(QPixmap(image).scaledToWidth(150))
         self.lbText.setText(self._text)
 
-    @Property(str)
-    def img(self):
+    @Property(bytearray)
+    def img(self) -> bytearray:
         return self._img
 
     @img.setter
-    def total(self, value):
+    def total(self, value: bytearray):
         if self._img == value:
             return
         self._img = value
         self.initUi()
 
     @Property(str)
-    def text(self):
+    def text(self) -> str:
         return self._text
 
     @text.setter
-    def text(self, value):
+    def text(self, value: str):
         if self._text == value:
             return
         self._text = value
@@ -122,70 +125,71 @@ class ImageWidget(QWidget):
 
 class ImageTable(QTableWidget):
 
-    def __init__(self, parent=None):
+    maxColumns: int
+    actualCol: int
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
         QTableWidget.__init__(self, parent)
 
-        self.max_columns = 4
+        self.maxColumns = 4
         self.actualCol = -1
         self.setColumnCount(1)
         self.setRowCount(1)
-        self.resizeColumnsToContents()
-        self.resizeRowsToContents()
-        # self.cellClicked.connect(self.onCellClicked)
+        self.resizeToContents()
         self.horizontalHeader().setVisible(False)
         self.verticalHeader().setVisible(False)
         self.setShowGrid(False)
 
-    """
-    @Slot(int, int)
-    def onCellClicked(self, row, column):
-        w = self.cellWidget(row, column)
-        print(row, column)
-    """
-
     def add_pic(self, label, picture):
 
-        if self.actualCol < self.max_columns:
+        if self.actualCol < self.maxColumns:
             self.actualCol += 1
             if self.rowCount() == 1:
                 self.setColumnCount(self.columnCount() + 1)
-        elif self.actualCol == self.max_columns:
+        elif self.actualCol == self.maxColumns:
             self.actualCol = 0
             self.setRowCount(self.rowCount() + 1)
         else:
-            # TODO raise some exception
-            pass
+            raise Exception("Exception in adding picture to table. Actual"
+                            " column exceeded value of max columns")
 
-        i = self.rowCount() - 1
-        j = self.actualCol
-        lb = ImageWidget(label, picture)
-        self.setCellWidget(i, j, lb)
+        self.setCellWidget(*self.ij, ImageWidget(label, picture))
+        self.resizeToContents()
 
+    @property
+    def ij(self) -> Tuple[int, int]:
+        return self.rowCount() - 1, self.actualCol
+
+    def resizeToContents(self):
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
 
 
 class ResizableRubberBand(QRubberBand):
 
-    def __init__(self, *args, **kwargs):
+    aspect_ratio: Optional[float]
+
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.aspect_ratio = None
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QEvent):
 
         if self.aspect_ratio:
             size = QSize(*self.aspect_ratio)
             size.scale(self.size(), Qt.KeepAspectRatio)
             self.resize(size)
 
-    def set_aspect_ratio(self, ratio):
+    def set_aspect_ratio(self, ratio: float):
         self.aspect_ratio = ratio
         self.resizeEvent(None)
 
 
 class ResizablePixmap(QLabel):
 
-    def __init__(self, bytes_image):
+    bytes_image_edit: bytearray
+
+    def __init__(self, bytes_image: bytearray) -> None:
         QLabel.__init__(self)
         self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.setAlignment(Qt.AlignCenter)
@@ -193,29 +197,29 @@ class ResizablePixmap(QLabel):
 
         self.update_pixmap(bytes_image)
 
-    def update_pixmap(self, bytes_image):
+    def update_pixmap(self, bytes_image: bytearray):
         self.bytes_image_edit = bytes_image
         self.current_pixmap = self._bytes2pixmap(bytes_image)
         self.scale()
 
-    def scale(self, fromResize=False):
+    def scale(self, fromResize: bool = False):
         # use a single central method for scaling; there's no need to call it upon
         # creation and also resize() won't work anyway in a layout
         self.setPixmap(self.current_pixmap.scaled(self.width(), self.height(),
             Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QEvent):
         super(ResizablePixmap, self).resizeEvent(event)
         self.scale(True)
 
     @staticmethod
-    def _bytes2pixmap(raw_image):
+    def _bytes2pixmap(raw_image: bytearray) -> QPixmap:
         image = QImage()
         image.loadFromData(raw_image)
         return QPixmap(image)
 
     @staticmethod
-    def _pixmap2bytes(pixmap):
+    def _pixmap2bytes(pixmap: QPixmap) -> bytearray:
 
         byte_array = QByteArray()
         buffer = QBuffer(byte_array)
@@ -224,21 +228,27 @@ class ResizablePixmap(QLabel):
         return byte_array.data()
 
     @property
-    def image_dims(self):
+    def image_dims(self) -> Tuple[int, int]:
         return self.width(), self.height()
 
 
 class SelectablePixmap(ResizablePixmap):
 
-    selectionActive = Signal(bool)
+    currentQRubberBand: Optional[ResizableRubberBand]
+    rubberBandOffset: Optional[QPoint]
+    moveDirection: Optional[Qt.Orientation]
+    rubberBandRatio: Optional[float]
+    pixmapRect: QRect
 
-    def __init__(self, bytes_image):
+    selectionActive: Signal = Signal(bool)
+
+    def __init__(self, bytes_image: bytearray) -> None:
         super().__init__(bytes_image)
 
         # activate mouse tracking to change cursor on rubberband hover
         self.setMouseTracking(True)
         self.currentQRubberBand = None
-        self.rubber_band_offset = None
+        self.rubberBandOffset = None
         self.moveDirection = 0
         self.rubberBandRatio = None
 
@@ -250,7 +260,7 @@ class SelectablePixmap(ResizablePixmap):
         if self.currentQRubberBand:
             self.currentQRubberBand.set_aspect_ratio(self.rubberBandRatio)
 
-    def create_selection(self, pos):
+    def create_selection(self, pos: QPoint):
         if self.currentQRubberBand:
             self.cancel_selection()
         self.currentQRubberBand = ResizableRubberBand(QRubberBand.Rectangle, self)
@@ -267,7 +277,7 @@ class SelectablePixmap(ResizablePixmap):
         self.originQPoint = None
         self.selectionActive.emit(False)
 
-    def scale(self, fromResize=False):
+    def scale(self, fromResize: bool = False):
         if fromResize and self.currentQRubberBand:
             # keep data for rubber resizing, before scaling
             oldPixmapRect = self.pixmap().rect()
@@ -314,12 +324,12 @@ class SelectablePixmap(ResizablePixmap):
         self.rubberInnerRect = QRect(self.rubberTop.bottomLeft(),
                                      self.rubberBottom.topRight())
 
-    def eventFilter(self, source, event):
+    def eventFilter(self, source, event: QEvent):
         if event.type() in (QEvent.Resize, QEvent.Move):
             self.updateMargins()
         return super(SelectablePixmap, self).eventFilter(source, event)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QEvent):
         pos = event.pos()
         
         if (not self.currentQRubberBand or
@@ -351,9 +361,9 @@ class SelectablePixmap(ResizablePixmap):
             self.originQPoint = self.currentQRubberBand.geometry().topLeft()
             self.moveDirection = Qt.Horizontal
         else:
-            self.rubber_band_offset = pos - self.currentQRubberBand.pos()
+            self.rubberBandOffset = pos - self.currentQRubberBand.pos()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QEvent):
         pos = event.pos()
         if event.buttons() == Qt.NoButton and self.currentQRubberBand:
             if pos in self.rubberTopLeft or pos in self.rubberBottomRight:
@@ -369,8 +379,8 @@ class SelectablePixmap(ResizablePixmap):
             else:
                 self.unsetCursor()
         elif event.buttons():
-            if self.rubber_band_offset:
-                target = pos - self.rubber_band_offset
+            if self.rubberBandOffset:
+                target = pos - self.rubberBandOffset
                 rect = QRect(target, self.currentQRubberBand.size())
                 # limit positioning of the selection to the image rectangle
                 if rect.x() < self.pixmapRect.x():
@@ -405,19 +415,20 @@ class SelectablePixmap(ResizablePixmap):
                 rect = QRect(self.originQPoint, pos)
                 self.currentQRubberBand.setGeometry(rect.normalized())
 
-    def mouseReleaseEvent(self, event):
-        self.rubber_band_offset = None
+    def mouseReleaseEvent(self, event: QEvent):
+        self.rubberBandOffset = None
         self.originQPoint = None
         self.moveDirection = 0
 
 
 class RememberDir:
+    start_dir: str
 
-    def __init__(self, window_instance):
+    def __init__(self, window_instance: object) -> None:
 
         self.window_instance = window_instance
 
-    def get_dir(self):
+    def get_dir(self) -> str:
         self.start_dir = QFileDialog.getExistingDirectory(self.window_instance,
                                                           "Open Folder",
                                                           self.start_dir)

@@ -5,9 +5,9 @@ import time
 import webbrowser
 from subprocess import Popen
 from threading import Thread, current_thread
+from typing import Optional
 
 import package_setup
-from wiki_music.application import get_lyrics, get_wiki
 from wiki_music.constants.paths import MP3_TAG
 from wiki_music.gui import (BaseGui, CoverArtSearch, DataModel,
                             NumberSortModel, RememberDir)
@@ -26,7 +26,9 @@ class Checkers(BaseGui):
         __init__ should be redefined.
     """
 
-    def __init__(self):
+    remember: Optional[str]
+
+    def __init__(self) -> None:
 
         super().__init__()
 
@@ -58,7 +60,7 @@ class Checkers(BaseGui):
         the sends them back to app
         """
 
-        def msg_to_bool(out):
+        def msg_to_bool(out: QMessageBox.StandardButton) -> bool:
             if out == QMessageBox.Yes:
                 return True
             else:
@@ -109,7 +111,7 @@ class Checkers(BaseGui):
                 SharedVars.write_lyrics = msg_to_bool(msg.exec_())
 
             SharedVars.load = False
-            SharedVars.switch = None
+            SharedVars.switch = ""
             SharedVars.wait = False
 
         if not SharedVars.done:
@@ -125,18 +127,18 @@ class Checkers(BaseGui):
 
     def __exception_check__(self):
 
-        if SharedVars.exception:
+        if SharedVars.has_exception:
             msg = QMessageBox(QMessageBox.Critical, "Exception",
-                              SharedVars.exception)
+                              SharedVars.has_exception)
             msg.setDetailedText(open(r"logs/wiki_music_parser.log",
                                      "r").read())
             msg.exec_()
-            SharedVars.exception = None
+            SharedVars.has_exception = ""
 
-        if SharedVars.warning:
+        if SharedVars.has_warning:
             QMessageBox(QMessageBox.Warning, "Warning",
-                        SharedVars.warning).exec_()
-            SharedVars.warning = None
+                        SharedVars.has_warning).exec_()
+            SharedVars.has_warning = ""
 
         if SharedVars.ask_exit:
             msg = QMessageBox(QMessageBox.Question, "Warning",
@@ -154,7 +156,7 @@ class Checkers(BaseGui):
                 sys.exit(self.exec_())  # TODO untested
             else:
                 SharedVars.wait_exit = False
-                SharedVars.ask_exit = None
+                SharedVars.ask_exit = ""
 
         self.exception_timer.start(500)
 
@@ -170,7 +172,7 @@ class Checkers(BaseGui):
 
         self.remember = SharedVars.describe
 
-        if SharedVars.describe.strip() != "":
+        if SharedVars.describe.strip():
             if (self.remember == SharedVars.describe and
                 "Done" not in SharedVars.describe):  # noqa E129
                 SharedVars.describe += " ."
@@ -180,9 +182,7 @@ class Checkers(BaseGui):
 
 
 class Buttons(BaseGui):
-    """ This class is not stand-alone. It should be inherited and attributes in
-        __init__ should be redefined.
-    """
+    """ This class is not stand-alone. It should be inherited. """
 
     @exception(log_gui)
     def __open_dir__(self):
@@ -316,7 +316,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
     # methods that bind to gui elements
     @exception(log_gui)
-    def __save_all__(self, lyrics_only):
+    def __save_all__(self, lyrics_only: bool):
 
         # first stop any running preload, as it is not needed any more
         self.stop_preload()
@@ -388,7 +388,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
             message.setText(msg)
 
     @exception(log_gui)
-    def __run_search__(self, *args):
+    def __run_search__(self):
 
         if not self.__check_input_is_present__():
             return
@@ -399,12 +399,12 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         self.__init_parser__()
         self.__start_checkers__()
 
-        main_app = Thread(target=get_wiki, name="WikiSearch", args=(True,))
+        main_app = Thread(target=self.parser.run_wiki, name="WikiSearch")
         main_app.daemon = True
         main_app.start()
 
     @exception(log_gui)
-    def __run_lyrics_search__(self, *args):
+    def __run_lyrics_search__(self):
 
         self.stop_preload()
 
@@ -414,7 +414,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         log_gui.info("starting lyrics search")
 
         self.__start_checkers__()
-        main_app = Thread(target=get_lyrics, name="LyricsSearch", args=(True,))
+        main_app = Thread(target=self.parser.run_lyrics, name="LyricsSearch")
         main_app.start()
 
 if __name__ == "__main__":

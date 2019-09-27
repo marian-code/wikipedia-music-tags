@@ -6,6 +6,7 @@ Lyrical Nonsense, Musixmatch, darklyrics
 """
 
 from lazy_import import lazy_callable
+from typing import Dict
 
 from wiki_music.utilities import (exception, get_google_api_key, log_lyrics,
                                   normalize, we_are_frozen)
@@ -81,7 +82,7 @@ def save_lyrics(parser):
 
 
 @exception(log_lyrics)
-def get_lyrics(artist: str, album: str, song: str) -> dict:
+def get_lyrics(artist: str, album: str, song: str) -> Dict[str, str]:
 
     log_lyrics.info("starting lyricsfinder ")
 
@@ -102,10 +103,3 @@ def get_lyrics(artist: str, album: str, song: str) -> dict:
 
     return lyrics
 
-if __name__ == "__main__":
-
-    # testing
-    from pprint import pprint
-    pprint(get_lyrics("Swallow The Sun",
-                      "When a Shadow is Forced Into the Light",
-                      "When a Shadow Is Forced into the Light"))

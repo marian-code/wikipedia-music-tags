@@ -1,17 +1,20 @@
+from typing import Any, List, Tuple
+
 from lazy_import import lazy_module
 
 from wiki_music.utilities import (
     NoTracklistException, SharedVars, log_parser, normalize_caseless)
 
 re = lazy_module("re")
-nc = normalize_caseless
+
+__all__ = ["DataExtractors"]
 
 
 class DataExtractors:
     """ Extracts various table formats from wikipedia. """
 
     @classmethod
-    def _from_table(cls, tables: list) -> list:
+    def _from_table(cls, tables: list) -> List[List[List[str]]]:
 
         data_collect = []
         for table in tables:
@@ -61,7 +64,7 @@ class DataExtractors:
         return data_collect
 
     @classmethod
-    def _from_list(cls, tables: list) -> list:
+    def _from_list(cls, tables: Any) -> List[List[str]]:
 
         table = tables.find_next_sibling("ol")
         if table is None:
@@ -70,14 +73,13 @@ class DataExtractors:
         try:
             rows = [ch for ch in table.children if ch.string != "\n"]
         except AttributeError as e:
-            print(e)
             log_parser.warning(e)
             msg = ("No tracklist found!\n"
                    "It is probaly contained in some unknown format")
-            SharedVars.warning = msg
+            SharedVars.warning(msg)
             raise NoTracklistException(msg)
 
-        data = []
+        data: list = []
         for i, row in enumerate(rows):
             data.append([])
 
@@ -105,10 +107,10 @@ class DataExtractors:
         return data
 
     @classmethod
-    def get_track(cls, data: str) -> (list, list):
+    def get_track(cls, data: str) -> Tuple[list, list]:
 
-        tracks = []
-        subtracks = []
+        tracks: list = []
+        subtracks: list = []
 
         # extract tracks and subtracks
         temp = data.split("\n")
@@ -127,7 +129,7 @@ class DataExtractors:
                 if tmp[start + 1:end].replace(":", "").isdigit():
                     temp[j] = cls.cut_out(tmp, start, end)
                 # odstranenie bonus track
-                if "bonus" in nc(tmp[start + 1:end]):
+                if "bonus" in normalize_caseless(tmp[start + 1:end]):
                     temp[j] = cls.cut_out(tmp, start, end)
 
         tracks.append(temp[0].strip())

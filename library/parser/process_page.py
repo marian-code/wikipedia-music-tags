@@ -1,118 +1,42 @@
+from typing import List
+
 from fuzzywuzzy import process
 from lazy_import import lazy_callable, lazy_module
 
 from wiki_music import GUI_RUNNING
-from wiki_music.constants.colors import GREEN, LBLUE, LGREEN, LYELLOW, RESET
 from wiki_music.constants.parser_const import *
-from wiki_music.constants.tags import EXTENDED_TAGS
-from wiki_music.utilities import (NoTracklistException, SharedVars,
-                                  for_all_methods, get_image, log_parser,
+from wiki_music.utilities import (NLTK, NoTracklistException, SharedVars,
+                                  caseless_contains, complete_N_dim,
+                                  delete_N_dim, flatten_set, for_all_methods,
+                                  get_image, log_parser, normalize,
+                                  normalize_caseless, replace_N_dim,
                                   time_methods, warning)
-from wiki_music.utilities.parser_utils import *  # pylint: disable=unused-wildcard-import
-from wiki_music.utilities.utils import *  # pylint: disable=unused-wildcard-import
 
-from ..ID3_tags import read_tags, write_tags
+from .base import ParserBase
 from .extractors import DataExtractors
+from .in_out import ParserInOut
 from .preload import WikiCooker
-from .proxy import VariableProxy
 
 nc = normalize_caseless
 
 Thread = lazy_callable("threading.Thread")
 fuzz = lazy_callable("fuzzywuzzy.fuzz")
 find_dates = lazy_callable("datefinder.find_dates")
-Parallel = lazy_callable("joblib.Parallel")
-delayed = lazy_callable("joblib.delayed")
 
 os = lazy_module("os")
 re = lazy_module("re")
-pickle = lazy_module("pickle")
 NLTK.run_import()  # imports nltk in separate thread
 
 __all__ = ["WikipediaParser"]
 
-colorama_init(autoreset=True)
-
 
 @for_all_methods(time_methods)
-class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
+class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
-    def __init__(self, protected_vars=True):
+    def __init__(self, protected_vars: bool = True) -> None:
 
-        # atributes protected from GUIs reinit method
-        # when new search is started
         WikiCooker.__init__(self, protected_vars=protected_vars)
-        VariableProxy.__init__(self)
-
-        # lists 1D
-        self.contents = []
-        self.tracks = []
-        self.types = []
-        self.disc_num = []
-        self.disk_sep = []
-        self.disks = []
-        self.genres = []
-        self.header = []
-        self.lyrics = []
-        self.NLTK_names = []
-        self.numbers = []
-        self.personnel = []
-        self._bracketed_types = []
-
-        # lists 2D
-        self.appearences = []
-        self.artists = []
-        self.composers = []
-        self.sub_types = []
-        self.subtracks = []
-        self.data_collect = None
-
-        # bytearray
-        self.cover_art = None
-
-        # strings
-        if protected_vars:
-            self.work_dir = None
-            self.log = MultiLog(log_parser)
-        self.release_date = None
-        self.selected_genre = None
-        self._debug_folder = None
-
-    def __len__(self):
-        return len(self.numbers)
-
-    def __bool__(self):
-        return self.__len__()
-
-    @property
-    def bracketed_types(self):
-        if not self._bracketed_types:
-            self._bracketed_types = bracket(self.types)
-            return self._bracketed_types
-        else:
-            return self._bracketed_types
-
-    @property
-    def debug_folder(self):
-        if self._debug_folder is None:
-            _win_name = win_naming_convetion(self.album, dir_name=True)
-            self._debug_folder = os.path.join("output", _win_name)
-
-        return self._debug_folder
-
-    @property
-    def files(self):
-        if len(self._files) < len(self.tracks):
-            self.reassign_files()
-
-        return self._files
-
-    @files.setter
-    def files(self, files):
-        self._files = files
-
-    def list_files(self):
-        self.files = list_files(self.work_dir)
+        ParserInOut.__init__(self, protected_vars=protected_vars)
 
     @warning(log_parser)
     def get_release_date(self):
@@ -139,11 +63,14 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
 
                 # match "/wiki/SOMETHING" where SOMWETHING is not Music_genre
                 ref = re.compile(r"/wiki/(?!Music_genre)")
-                gndr = (genres_html.findAll(href=ref))
+                gndr = genres_html.findAll(href=ref)
                 self.genres = [g.string for g in gndr]
                 break
         else:
             self.genres = []
+
+        if len(self.genres) == 1:
+            self.selected_genre = self.genres[0]
 
     @warning(log_parser)
     def get_cover_art(self):
@@ -196,9 +123,8 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
         try:
             self.extract_names()
         except Exception as e:
-            print(e)
             log_parser.exception(e)
-            SharedVars.exception = e
+            SharedVars.exception(e)
             self.NLTK_names = []
 
         self.NLTK_names = set(self.NLTK_names + self.personnel)
@@ -259,37 +185,14 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                             if n not in comp:
                                 self.composers[i].append(n)
 
-    def basic_out(self):
-
-        os.makedirs(self.debug_folder, exist_ok=True)
-
-        # save page object for offline debbug
-        fname = os.path.join(self.debug_folder, 'page.pkl')
-        with open(fname, 'wb') as output:
-            pickle.dump(self.page, output, pickle.HIGHEST_PROTOCOL)
-
-        # save formated html to file
-        html = self.soup.prettify()
-        fname = os.path.join(self.debug_folder, 'page.html')
-        if not os.path.isfile(fname):
-            with open(fname, 'w', encoding='utf8') as outfile:
-                outfile.write(html)
-
-        # save html converted to text
-        fname = os.path.join(self.debug_folder, 'page.txt')
-        if not os.path.isfile(fname):
-            with open(fname, 'w', encoding='utf8') as outfile:
-                outfile.write(self.formated_html)
-
     def get_contents(self):
 
         contents = self.soup.find("div", class_="toc")
         try:
             contents = contents.get_text()
         except AttributeError as e:
-            print(e)
             log_parser.warning(e)
-            SharedVars.warning = str(e)
+            SharedVars.warning(e)
 
             contents = []
 
@@ -407,7 +310,7 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                         if not ta:
                             self.appearences[i].extend(ta)
 
-        num_length = len(self.numbers)
+        num_length = len(self)
         for i, app in enumerate(self.appearences):
             self.appearences[i] = list(map(int, app))
         for i, app in enumerate(self.appearences):
@@ -417,45 +320,46 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
 
         tables = self.soup.findAll("table", class_="tracklist")
 
-        if tables is not None:
-            self.data_collect = self._from_table(tables)
+        if tables:
+            data = self._from_table(tables)
         else:
             try:
                 tables = self.soup.find(id="Track_listing").parent
             except AttributeError as e:
-                print(e)
                 log_parser.warning(e)
                 msg = (f"No tracklist found!\nURL: {self.url}\nprobably "
                        f"doesn´t belong to album: {self.album} by {self.band}")
-                SharedVars.warning = msg
+                SharedVars.warning(msg)
                 raise NoTracklistException(msg)
             else:
-                self.data_collect = self._from_list(tables)
+                data = self._from_list(tables)
 
-    def process_tracks(self):
+        self.process_tracks(data)
+
+    def process_tracks(self, data: List[List[str]]):
 
         self.disk_sep.append(0)
 
         index = 1
-        for CD_data in self.data_collect:
+        for CD in data:
 
-            self.disks.append([f"{self.album} CD {index}", len(self.numbers)])
+            self.disks.append([f"{self.album} CD {index}", len(self)])
             index += 1
-            for row in CD_data:
-                if "no" in nc(row[0]):
+            for song in CD:
+                if "no" in nc(song[0]):
                     # table header - possibly use in future
                     # posladny stlpec je length a ten väčšinou netreba
-                    if "length" in nc(row[-1]):
-                        self.header.append(row[:-1])
+                    if "length" in nc(song[-1]):
+                        self.header.append(song[:-1])
                     else:
-                        self.header.append(row)
-                elif row[0].replace(".", "").isdigit():
-                    self.numbers.append(row[0].replace(".", ""))
-                    tmp1, tmp2 = self.get_track(row[1])
+                        self.header.append(song)
+                elif song[0].replace(".", "").isdigit():
+                    self.numbers.append(song[0].replace(".", ""))
+                    tmp1, tmp2 = self.get_track(song[1])
                     self.tracks.extend(tmp1)
                     self.subtracks.extend(tmp2)
 
-                    cols = len(row)
+                    cols = len(song)
                     if cols > 3:
                         self.artists.append([])
                         self.composers.append([])
@@ -464,7 +368,7 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                         # artists we assign them to artists or composers
                         # based on label in header
                         for i in range(2, cols - 1):
-                            a = self.get_artist(row[i])
+                            a = self.get_artist(song[i])
                             try:
                                 score = process.extractOne(self.header[-1][i],
                                                            HEADER_CATEGORY,
@@ -480,18 +384,18 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                     else:
                         self.artists.append([] * 1)
                         self.composers.append([] * 1)
-                elif "total" in nc(row[0]):
+                elif "total" in nc(song[0]):
                     # total length summary
                     pass
                 else:
                     # if all else passes than line must be disc title
-                    self.disks[-1] = [row[0], len(self.numbers)]
+                    self.disks[-1] = [song[0], len(self)]
 
         # bonus track are sometimes marked as another disc
         disks_filtered = [d for d in self.disks if "bonus" not in nc(d[0])]
 
         self.disk_sep = [i[1] for i in disks_filtered]
-        self.disk_sep.append(len(self.numbers))
+        self.disk_sep.append(len(self))
         self.disks = [i[0] for i in disks_filtered]
 
         # assign disc number to tracks
@@ -582,8 +486,8 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
 
     def complete(self):
 
-        to_complete = [self.composers, self.artists, self.personnel]
-        delete = ["", " "]
+        to_complete = (self.composers, self.artists, self.personnel)
+        delete: list = ["", " "]
 
         # complete everything with everything
         for to_replace in to_complete:
@@ -609,191 +513,18 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                 if isinstance(t, list):
                     tc[i] = sorted(list(set(t)))
 
-    def disk_write(self):
-
-        for i, tracklist in enumerate(self.tracklist_2_str(to_file=True), 1):
-            fname = os.path.join(self.debug_folder, f"tracklist_{i}.txt")
-            with open(fname, "w", encoding="utf-8") as f:
-                f.write(tracklist)
-
-        # save found personel to file
-        with open(os.path.join(self.debug_folder, "personnel.txt"),
-                  "w", encoding="utf8") as f:
-
-            f.write(self.personnel_2_str())
-
-    def tracklist_2_str(self, to_file=True) -> list:
-
-        def _set_color():
-            if to_file:
-                return [""] * 3
-            else:
-                return GREEN, LGREEN, RESET
-
-        # compute number of spaces
-        spaces, length = count_spaces(self.tracks, self.bracketed_types)
-
-        G, LG, R = _set_color()
-
-        # convert to string
-        tracklists = []
-        for j, (ds, hd) in enumerate(zip(self.disks, self.header)):
-            s = ""
-            s += f"{G}\n{j + 1}. Disk:{R} {ds}"
-            if len(hd) >= 2:
-                s += f" {LG}{hd[0]} {hd[1]}"
-            if len(hd) >= 3:
-                s += f"{' '*(length + len(hd[1]))}{hd[2]}"
-            if len(hd) >= 4:
-                s += f", {hd[3]}"
-            s += f"{R}\n"
-
-            for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
-                s += (f"{self.numbers[i]:>2}. {self.tracks[i]} "
-                      f"{self.bracketed_types[i]}{spaces[i]} "
-                      f"{', '.join(self.artists[i] + self.composers[i])}\n")
-
-                for k, (sbtr, sbtp) in enumerate(zip(self.subtracks[i],
-                                                     self.sub_types[i])):
-                    s += (f"  {write_roman(k + 1)}. {sbtr} {sbtp}\n")
-
-            tracklists.append(s)
-
-        return tracklists
-
-    def print_tracklist(self):
-        print("\n".join(self.tracklist_2_str(to_file=False)))
-
-    def personnel_2_str(self):
-
-        s = ""
-        if not self.personnel:
-            s += "---\n"
-
-        for pers, app in zip(self.personnel, self.appearences):
-
-            if app:
-                s += pers + " - "
-                temp = 50
-
-                for k, a in enumerate(app):
-                    for j, _ in enumerate(self.disk_sep[:-1]):
-
-                        if (a > self.disk_sep[j] and
-                            a < self.disk_sep[j + 1]):  # noqa E129
-
-                            if j != temp:
-                                s += f"{self.disks[j]}: {self.numbers[a]}"
-                                temp = j
-                            else:
-                                s += self.numbers[a]
-
-                            if k != len(app) - 1:
-                                s += ", "
-                            break
-                    else:
-                        continue
-
-                s += u'\n'
-            else:
-                s += pers + u'\n'
-
-        return s
-
     def merge_artist_personnel(self):
 
         for person, appear in zip(self.personnel, self.appearences):
             for a in appear:
                 self.artists[a].append(person)
 
-    def reassign_files(self):
+    def merge_artist_composers(self):
 
-        wnc = win_naming_convetion
-        max_length = len(max(self.tracks, key=len))
+        for i, (c, a) in enumerate(zip(self.composers, self.artists)):
+            self.composers[i] = sorted(list(filter(None, set(c + a))))
 
-        # write data to ID3 tags
-        disk_files = list_files(self.work_dir)
-        files = []
-
-        print(GREEN + "\nFound files:")
-        print(*disk_files, sep="\n")
-        print(GREEN + "\nAssigning files to tracks:")
-
-        for i, tr in enumerate(self.tracks):
-            self.tracks[i] = tr.strip()
-
-            for path in disk_files:
-                f = os.path.split(path)[1]
-                if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
-
-                    print(LYELLOW + tr + RESET,
-                          "-" * (1 + max_length - len(tr)) + ">", path)
-                    files.append(path)
-                    break
-            else:
-                print(LBLUE + tr + RESET, "." * (2 + max_length - len(tr)),
-                      "Does not have a matching file!")
-
-                files.append(None)
-
-        self.files = files
-
-    def data_to_dict(self) -> list:
-
-        dict_data = []
-        for i, _ in enumerate(self.tracks):
-
-            tags = dict()
-
-            for t in EXTENDED_TAGS:
-                attr = getattr(self, t)
-                if isinstance(attr, list):
-                    tags[t] = attr[i]
-                else:
-                    tags[t] = attr
-
-            dict_data.append(tags)
-
-        if SharedVars.write_json:
-            yaml_dump(dict_data, self.work_dir)
-            print("Saved YAML file")
-
-        return dict_data
-
-    def read_files(self):
-
-        # initialize variables
-        self.__init__(protected_vars=False)
-
-        self.list_files()
-
-        for fl in self.files:
-
-            for key, value in read_tags(fl).items():
-
-                # TODO need more elegant way to avoid this difference
-                # between read tags and parser attributes
-                if key == "COMMENT":
-                    continue
-
-                if isinstance(getattr(self, key), list):
-                    getattr(self, key).append(value)
-                else:
-                    setattr(self, key, value)
-
-        if self.files:
-            # look for aditional artists in brackets behind track names and
-            # complete artists names again with new info
-            self.info_tracks()
-
-            self.log.info("Files loaded sucesfully")
-        else:
-            self.album = ""
-            self.band = ""
-            self.selected_genre = ""
-            self.release_date = ""
-
-            self.log.info("No music files to Load")
+        self.artists = [""] * len(self.composers)
 
     def extract_names(self):
 
@@ -847,17 +578,3 @@ class WikipediaParser(DataExtractors, WikiCooker, VariableProxy):
                           if fuzz.token_set_ratio(n, self.tracks) < 90]
 
         self.NLTK_names = filtered_names
-
-    def write_tags(self, lyrics_only: bool=False) -> bool:
-
-        if not any(self.files):
-            return False
-        else:
-            # for data in self.data_to_dict():
-            #     write_tags(data, lyrics_only=lyrics_only)
-
-            Parallel(n_jobs=len(self), prefer="threads")(
-                delayed(write_tags)(data, lyrics_only=lyrics_only)
-                for data in self.data_to_dict())
-
-            return True

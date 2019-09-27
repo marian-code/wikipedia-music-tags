@@ -6,6 +6,7 @@ __all__ = ["ThreadWithTrace", "NLTK", "bracket", "write_roman",
 import os
 import sys
 from threading import Lock, Thread
+from typing import Tuple, Generator, Union
 
 import lazy_import
 from fuzzywuzzy import fuzz
@@ -18,6 +19,7 @@ yaml = lazy_import.lazy_module("yaml")
 
 
 class ThreadWithTrace(Thread):
+
     def __init__(self, *args, **keywords):
         Thread.__init__(self, *args, **keywords)
         self.killed = False
@@ -118,9 +120,10 @@ def write_roman(num: int):
     roman[1] = "I"
 
 
-def roman_num(num: int) -> str:
+def roman_num(num: int) -> Union[Generator, str]:
+    roman: dict
 
-    for r in roman.keys():  # pylint: disable=E0602
+    for r in roman.keys():  # pylint: disable=E0602  # type: ignore
         x, _ = divmod(num, r)
         yield roman[r] * x  # pylint: disable=E0602
         num -= (r * x)
@@ -156,7 +159,7 @@ def caseless_contains(string: str, in_text: str) -> bool:
         return False
 
 
-def count_spaces(tracks: list, types: list) -> (list, int):
+def count_spaces(tracks: list, types: list) -> Tuple[list, int]:
     """ Counts max length of elements in list and croesponding spaces for
     each item to fit that length.\n
 
@@ -257,10 +260,9 @@ def replace_N_dim(to_replace: list, to_find: str):
                 to_replace[i] = ret
     else:
         return to_replace.replace(to_find, "").strip()
-        # return re.sub(to_find, "", to_replace).strip()
 
 
-def delete_N_dim(to_delete: list, to_find: list):
+def delete_N_dim(to_delete: list, to_find: list) -> list:  # type: ignore
     """ `to_delete` is a list which contains undesired elements.
     Changes to this list are made in-place.\n
     `to_find` argument is the list which contains full strings.\n
@@ -275,14 +277,11 @@ def delete_N_dim(to_delete: list, to_find: list):
        Input data.
     """
 
-    if isinstance(to_delete, list):
-        if to_delete:
-            if isinstance(to_delete[0], list):
-                for i, td in enumerate(to_delete):
-                    to_delete[i] = delete_N_dim(td, to_find)
-            else:
-                return [td for td in to_delete if td not in to_find]
+    if to_delete:
+        if isinstance(to_delete[0], list):
+            for i, td in enumerate(to_delete):
+                to_delete[i] = delete_N_dim(td, to_find)
         else:
-            return []
+            return [td for td in to_delete if td not in to_find]
     else:
-        raise TypeError("to_delete must be a list instance")
+        return []

@@ -1,5 +1,6 @@
 from ast import literal_eval
 from collections import OrderedDict
+from typing import Dict, Union
 
 from mutagen.id3 import (APIC, COMM, ID3, TALB, TCOM, TCON, TDRC, TIT2, TPE1,
                          TPE2, TPOS, TRCK, USLT, ID3NoHeaderError, PictureType)
@@ -9,48 +10,48 @@ from .tag_base import TagBase
 
 class TagMp3(TagBase):
 
-    def __init__(self, filename):
+    map_keys = OrderedDict([
+        ("TALB", "ALBUM"),
+        ("TPE2", "ALBUMARTIST"),
+        ("TPE1", "ARTIST"),
+        ("COMM", "COMMENT"),
+        ("TCOM", "COMPOSER"),
+        ("TDRC", "DATE"),
+        ("TPOS", "DISCNUMBER"),
+        ("TCON", "GENRE"),
+        ("USLT::eng", "LYRICS"),
+        ("TIT2", "TITLE"),
+        ("TRCK", "TRACKNUMBER"),
+        ("APIC", "COVERART")]
+    )
 
-        self.map_keys = OrderedDict([
-            ("TALB", "ALBUM"),
-            ("TPE2", "ALBUMARTIST"),
-            ("TPE1", "ARTIST"),
-            ("COMM", "COMMENT"),
-            ("TCOM", "COMPOSER"),
-            ("TDRC", "DATE"),
-            ("TPOS", "DISCNUMBER"),
-            ("TCON", "GENRE"),
-            ("USLT::eng", "LYRICS"),
-            ("TIT2", "TITLE"),
-            ("TRCK", "TRACKNUMBER"),
-            ("APIC", "COVERART")]
-        )
+    map_clacsses = {
+        "TALB": TALB,
+        "TPE2": TPE2,
+        "TPE1": TPE1,
+        "COMM": COMM,
+        "TCOM": TCOM,
+        "TDRC": TDRC,
+        "TPOS": TPOS,
+        "TCON": TCON,
+        "USLT::eng": USLT,
+        "TIT2": TIT2,
+        "TRCK": TRCK,
+        "APIC": APIC
+    }
 
-        self.map_clacsses = {
-            "TALB": TALB,
-            "TPE2": TPE2,
-            "TPE1": TPE1,
-            "COMM": COMM,
-            "TCOM": TCOM,
-            "TDRC": TDRC,
-            "TPOS": TPOS,
-            "TCON": TCON,
-            "USLT::eng": USLT,
-            "TIT2": TIT2,
-            "TRCK": TRCK,
-            "APIC": APIC
-        }
+    def __init__(self, filename: str):
 
         super().__init__(filename)
 
-    def _open(self, filename):
+    def _open(self, filename: str):
 
         try:
             self.song = ID3(filename=filename)
         except ID3NoHeaderError:
             print("Cannot read Mp3 tags")
 
-    def _find_variable_key(self, tag):
+    def _find_variable_key(self, tag: str) -> str:
 
         tag = self.reverse_map[tag].split(":")[0]
 
@@ -58,7 +59,9 @@ class TagMp3(TagBase):
             if tag in k:
                 return k
 
-    def _read(self):
+        return ""
+
+    def _read(self) -> Dict[str, Union[str, bytearray]]:
 
         tags = dict()
         for key, value in self.map_keys.items():
@@ -88,7 +91,7 @@ class TagMp3(TagBase):
 
         return tags
 
-    def _write(self, tag, value):
+    def _write(self, tag: str, value: Union[str, bytearray]):
 
         tag_cls = self.reverse_map[tag]
 

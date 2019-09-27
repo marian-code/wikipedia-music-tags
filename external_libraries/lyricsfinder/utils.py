@@ -1,7 +1,7 @@
 """Utitlities."""
 
 import re
-from typing import List
+from typing import List, Tuple, Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -11,12 +11,16 @@ from requests import Response
 class UrlData:
     """Url stuff."""
 
+    _resp: Optional[Response]
+    _html: Optional[str]
+    _bs: Optional[BeautifulSoup]
+
     def __init__(self, url: str):
         """Build url."""
         self.url = url
-        self.headers = {}
+        self.headers: dict = {}
 
-        self.html_parser = "lxml"
+        self.html_parser: str = "lxml"
 
         self._resp = None
         self._html = None
@@ -62,46 +66,41 @@ def search(query: str, api_key: str) -> List:
     items = data.get("items", [])
     return items
 
-def generate_url(artist: str, album: str, song: str) -> List:
+def generate_url(artist: str, album: str, song: str) -> List[dict]:
 
-    urls = []
+    # the list of words that are not capitalized, may not be exhaustive!!
+    DONT_CAPITALIZE: Tuple[str, ...] = ("on", "at", "by", "or", "a", "an", "of", "and", "but")
+    # no = ["under","between", "over", "after","without","until",
+    #       "because","every","this","those", "many", ]
+    # maybe = ["and","but",]
 
-    artist = re.sub(r"\(|\)|\'", "", artist)
-    album = re.sub(r"\(|\)|\'", "", album)
-    song = re.sub(r"\(|\)|\'", "", song)
+    def r(string: str, replace: str) -> str:
+        return string.replace(" ", replace)
+
+    urls: List[dict] = []
+
+    artist = re.sub(r"\(|\)|\'", "", artist).strip().lower()
+    album = re.sub(r"\(|\)|\'", "", album).strip().lower()
+    song = re.sub(r"\(|\)|\'", "", song).strip().lower()
 
     # darklyrics
-    urls.append({"link": "http://www.darklyrics.com/lyrics/" + artist.lower().replace(" ", "") + "/" + album.lower().replace(" ", "") + ".html"})
-
-    # Anime Lyrics
-    # useless - some Japanese lyrics
-    
+    urls.append({"link": f"http://www.darklyrics.com/lyrics/{r(artist, '')}/" +
+                         f"{r(album, '')}.html"})
     # AZLyrics
-    urls.append({"link": "https://www.azlyrics.com/lyrics/" + artist.lower().replace(" ", "") + "/" + song.lower().replace(" ", "") + ".html"})
-    
+    urls.append({"link": f"https://www.azlyrics.com/lyrics/{r(artist, '')}/" +
+                         f"{r(song, '')}.html"})
     # Genius
-    urls.append({"link": "https://genius.com/" + artist.strip().lower().capitalize().replace(" ", "-") + "-" + song.strip().lower().replace(" ", "-") + "-lyrics"})
-    
+    urls.append({"link": f"https://genius.com/{r(artist.capitalize(), '-')}" +
+                         f"-{r(song, '-')}-lyrics"})
     # Lyricsmode
-    urls.append({"link": "http://www.lyricsmode.com/lyrics/l/" + artist.lower().replace(" ", "_") + "/" + song.lower().replace(" ", "_") + ".html"})
-    
-    # Lyrical Nonsense
-    # useless - some Japanese lyrics
-    
+    urls.append({"link": f"http://www.lyricsmode.com/lyrics/l/" +
+                         f"{r(artist, '_')}/{r(song, '_')}.html"})    
     # Musixmatch
-    song = song.split()
-    # the list of words that arte not capitalized, may not be exhaustive!!
-    do_not_capitatize =["on", "at", "by", "or", "a", "an", "of", "and", "but"]
-    # no = ["under","between", "over", "after","without","until", "because","every","this","those", "many", ]
-    # maybe = ["and","but",]
-    song[0] = song[0].capitalize()
-    for i in range(1, len(song)):
-        if song[i] not in do_not_capitatize:
-            song[i] = song[i].capitalize()
-
-    song = "-".join(song)        
-
-    urls.append({"link": "https://www.musixmatch.com/lyrics/" + artist.strip().upper().replace(" ", "-") + "/" + song})
+    song = "-".join([s.capitalize() for s in song.split()
+                     if s not in DONT_CAPITALIZE]).capitalize()
+    urls.append({"link": f"https://www.musixmatch.com/lyrics/" +
+                         f"{r(artist.upper(), '-')}/{song}"})
+    # Lyrical Nonsense, Anime Lyrics - useless, some Japanese lyrics    
 
     return urls
 
@@ -117,9 +116,13 @@ def safe_filename(name: str, file_ending: str = ".json") -> str:
 def clean_lyrics(lyrics: str) -> str:
     """Perform some simple operations to clean the lyrics."""
     lyrics = lyrics.strip()
-    lyrics = re.sub(r"[^\w\[\]()/ \"',\.:\-\n?!]+", "", lyrics)  # remove unwanted characters
-    lyrics = re.sub(r" +", " ", lyrics)  # reduce to one space only
-    lyrics = re.sub(r"\n{2,}", "\n\n", lyrics)  # reduce to max 2 new lines in a row
-    lyrics = re.sub(r" +?\n", "\n", lyrics)  # remove space before newline
+    # remove unwanted characters
+    lyrics = re.sub(r"[^\w\[\]()/ \"',\.:\-\n?!]+", "", lyrics)
+    # reduce to one space only
+    lyrics = re.sub(r" +", " ", lyrics)
+    # reduce to max 2 new lines in a row
+    lyrics = re.sub(r"\n{2,}", "\n\n", lyrics)
+    # remove space before newline
+    lyrics = re.sub(r" +?\n", "\n", lyrics)
 
     return lyrics

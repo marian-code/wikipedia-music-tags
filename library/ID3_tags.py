@@ -1,5 +1,6 @@
-from os.path import join, split
 import re
+from os.path import join, split
+from typing import Dict, Optional, Union
 
 from mutagen import MutagenError
 
@@ -12,7 +13,7 @@ __all__ = ["read_tags", "write_tags"]
 
 
 @exception(log_tags)
-def write_tags(data: dict, lyrics_only):
+def write_tags(data: Dict[str, Union[str, float, list]], lyrics_only: bool):
 
     def write(tag, value=None):
 
@@ -38,7 +39,7 @@ def write_tags(data: dict, lyrics_only):
         song = taglib.File(data["FILE"])
     except MutagenError as e:
         print(f'Couldn´t open file {data["FILE"]} for writing')
-        SharedVars.exception = str(e)
+        SharedVars.exception(e)
         log_tags.exception(e)
     else:
 
@@ -74,21 +75,22 @@ def write_tags(data: dict, lyrics_only):
             song.save()
         except (MutagenError, TypeError, ValueError) as e:
             print(f'Couldn´t save file {data["FILE"]}')
-            SharedVars.exception = str(e)
+            SharedVars.exception(e)
             log_tags.exception(e)
         else:
             print(GREEN + "Tags written succesfully!")
 
 
 @exception(log_tags)
-def read_tags(song_file: str) -> dict:
+def read_tags(song_file: str) -> Optional[dict]:
 
     try:
         song = taglib.File(song_file)
     except MutagenError as e:
         print(RED + "Error in reading file: " + RESET + song_file)
-        SharedVars.exception = str(e)
+        SharedVars.exception(e)
         log_tags.exception(e)
+        return None
     else:
         tags = dict(song.tags)
 

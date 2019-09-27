@@ -1,6 +1,7 @@
 import os
 from time import perf_counter
 from functools import wraps
+from typing import NoReturn, Callable, Union
 from threading import current_thread
 from .sync import SharedVars
 from .utils import module_path
@@ -11,16 +12,14 @@ def exception(logger):
     A decorator that wraps the passed in function and logs
     exceptions should one occur
     """
-    def real_wrapper(function):
+    def real_wrapper(function: Callable) -> Callable:
         @wraps(function)
         def wrapper(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
             except Exception as e:
-                e = f"Unhandled golbal exception: {e}"
-                logger.exception(e)
-                print(e)
-                SharedVars.exception = str(e)
+                logger.exception(f"Unhandled golbal exception: {e}")
+                SharedVars.exception(f"Unhandled golbal exception: {e}")
 
         return wrapper
     return real_wrapper
@@ -29,7 +28,7 @@ def exception(logger):
 def synchronized(lock):
     """ Synchronization decorator. """
 
-    def real_wrapper(function):
+    def real_wrapper(function: Callable) -> Callable:
         @wraps(function)
         def wrapper(*args, **kwargs):
             lock.acquire()
@@ -46,27 +45,27 @@ def warning(logger):
     exceptions should one occur
     """
 
-    def real_wrapper(function):
+    def real_wrapper(function: Callable) -> Callable:
         @wraps(function)
         def wrapper(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
             except AttributeError as e:
-                print(e)
                 logger.warning(e)
-                SharedVars.warning = str(e)
+                SharedVars.warning(e)
             except Exception as e:
-                print(e)
                 logger.warning(e)
-                SharedVars.warning = str(e)
+                SharedVars.warning(e)
 
         return wrapper
     return real_wrapper
 
 
 class Timer:
+    start: float
+    end: float
 
-    def __init__(self, function_name):
+    def __init__(self, function_name: str) -> None:
         self.function_name = function_name
         self.start = 0
         self.end = 0
@@ -87,14 +86,14 @@ def time_methods(function):
     """ A decorator that wraps the passed in function and function exec time.
     """
     @wraps(function)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Callable:
         with Timer(function.__name__):
             return function(*args, **kwargs)
 
     return wrapper
 
 
-def for_all_methods(decorator, exclude=[]):
+def for_all_methods(decorator, exclude: list = []) -> Callable:
     """ Decorates class methods, except the ones in excluded list. """
 
     @wraps(decorator)

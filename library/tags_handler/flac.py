@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Dict, Union
 
 from mutagen.flac import FLAC, FLACNoHeaderError, Picture
 from mutagen.id3 import PictureType
@@ -8,33 +9,33 @@ from .tag_base import TagBase
 
 class TagFlac(TagBase):
 
-    def __init__(self, filename):
+    map_keys = OrderedDict([
+        ("album", "ALBUM"),
+        ("albumartist", "ALBUMARTIST"),
+        ("artist", "ARTIST"),
+        ("comment", "COMMENT"),
+        ("composer", "COMPOSER"),
+        ("date", "DATE"),
+        ("discnumber", "DISCNUMBER"),
+        ("genre", "GENRE"),
+        ("lyrics", "LYRICS"),
+        ("title", "TITLE"),
+        ("tracknumber", "TRACKNUMBER"),
+        ("picture", "COVERART")]
+    )
 
-        self.map_keys = OrderedDict([
-            ("album", "ALBUM"),
-            ("albumartist", "ALBUMARTIST"),
-            ("artist", "ARTIST"),
-            ("comment", "COMMENT"),
-            ("composer", "COMPOSER"),
-            ("date", "DATE"),
-            ("discnumber", "DISCNUMBER"),
-            ("genre", "GENRE"),
-            ("lyrics", "LYRICS"),
-            ("title", "TITLE"),
-            ("tracknumber", "TRACKNUMBER"),
-            ("picture", "COVERART")]
-        )
+    def __init__(self, filename: str):
 
         super().__init__(filename)
 
-    def _open(self, filename):
+    def _open(self, filename: str):
 
         try:
             self.song = FLAC(filename=filename)
         except FLACNoHeaderError:
             print("Cannot read FLAC tags")
 
-    def _read(self):
+    def _read(self) -> Dict[str, Union[str, bytearray]]:
 
         tags = dict()
         for key, value in self.map_keys.items():
@@ -54,7 +55,7 @@ class TagFlac(TagBase):
 
         return tags
 
-    def _write(self, tag, value):
+    def _write(self, tag: str, value: Union[str, bytearray]):
 
         if tag == "COVERART":
 

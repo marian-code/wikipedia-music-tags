@@ -20,10 +20,6 @@ class Darklyrics(LyricsExtractor):
     def extract_lyrics(self, url_data, song, artist):
         """Extract lyrics."""
 
-        def p(*args):
-            if "Shadow" in song:
-                print(*args)
-
         bs = url_data.bs
 
         # get list of album tracks

@@ -1,6 +1,7 @@
 import os
 
 import lazy_import
+from typing import Optional, Tuple
 import win32clipboard
 from PIL import Image, ImageFile
 
@@ -9,6 +10,7 @@ from .utils import module_path
 sys = lazy_import.lazy_module("sys")
 winreg = lazy_import.lazy_module("winreg")
 requests = lazy_import.lazy_module("requests")
+urlopen = lazy_import.lazy_callable("urllib.request.urlopen")
 BytesIO = lazy_import.lazy_callable("io.BytesIO")
 
 __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
@@ -66,7 +68,7 @@ def get_music_path() -> str:
         return os.path.join(os.path.expanduser("~"), "music")
 
 
-def get_image(address: str) -> bytearray:
+def get_image(address: str) -> Optional[bytearray]:
 
     if address.startswith("http"):
         return requests.get(address).content
@@ -78,19 +80,20 @@ def get_image(address: str) -> bytearray:
         except Exception as e:
             print(f"Address: {address} could not be opened in "
                   f"online or offline mode. {e}")
+            return None
 
 
 def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytearray:
 
     file_stream = BytesIO(image)
-    image = Image.open(file_stream)
+    img = Image.open(file_stream)
 
     if x and y:
-        image = image.resize((x, y), Image.LANCZOS)
+        img = img.resize((x, y), Image.LANCZOS)
 
     file_stream = BytesIO()
-    image.save(file_stream, FORMAT, optimize=True, quality=quality,
-               progressive=True)
+    img.save(file_stream, FORMAT, optimize=True, quality=quality,
+             progressive=True)
 
     return file_stream.getvalue()
 
@@ -109,7 +112,7 @@ def get_icon() -> str:
         return icon
 
 
-def get_sizes(uri: str) -> (str, [int, int]):
+def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
     """ Get file size *and* image size (None if not known) of picture on the
     internet without downloading it.\n
 

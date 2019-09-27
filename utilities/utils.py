@@ -1,18 +1,18 @@
 import unicodedata
-from urllib.request import urlopen
+from shutil import rmtree
+from typing import NoReturn, Tuple, Union
 
 import lazy_import
-from shutil import rmtree
+
 from .sync import SharedVars
 
-init = lazy_import.lazy_callable("colorama.init")
 os = lazy_import.lazy_module("os")
 sys = lazy_import.lazy_module("sys")
 re = lazy_import.lazy_module("re")
 yaml = lazy_import.lazy_module("yaml")
 argparse = lazy_import.lazy_module("argparse")
 
-__all__ = ["colorama_init", "list_files", "to_bool", "normalize",
+__all__ = ["list_files", "to_bool", "normalize",
            "we_are_frozen", "module_path", "win_naming_convetion",
            "flatten_set", "clean_logs", "yaml_load", "input_parser",
            "MultiLog", "get_google_api_key"]
@@ -43,11 +43,6 @@ class MultiLog:
     def exception(self, message):
         self.logger.exception(message)
         SharedVars.exception = message
-
-
-def colorama_init(**kwargs):
-    """ Colorama initialize foe Windows """
-    init(convert=True, **kwargs)
 
 
 def list_files(work_dir: str) -> list:
@@ -105,7 +100,7 @@ def module_path() -> str:
         return os.path.join(os.path.dirname(__file__), "..")
 
 
-def get_google_api_key():
+def get_google_api_key() -> Union[str, NoReturn]:
 
     # load google api key for lyrics search
     _file = os.path.join(module_path(), "files", "google_api_key.txt")
@@ -172,7 +167,7 @@ def yaml_load(work_dir: str) -> dict:
         return yaml.full_load(infile)
 
 
-def input_parser():
+def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     """ Parse command line input parameters. """
 
     parser = argparse.ArgumentParser(description="Description of your program")
@@ -190,11 +185,14 @@ def input_parser():
                         type=str)
     parser.add_argument("-w", "--work_dir", default=os.getcwd(),
                         help="working directory", type=str)
+    parser.add_argument("-W", "--With_log", default=False,
+                        action="store_false", help="Print loggning output, "
+                        "applies only to console app")
 
     args = parser.parse_args()
 
     return (args.yaml, args.offline_debbug, args.lyrics_only,
-            args.album, args.band, args.work_dir)
+            args.album, args.band, args.work_dir, args.With_log)
 
 
 def loading():

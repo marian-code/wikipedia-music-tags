@@ -27,3 +27,6 @@ files/google_api_key.txt
 
 # data folder
 data/
+
+# mypy typechecking folder
+.mypy_cache

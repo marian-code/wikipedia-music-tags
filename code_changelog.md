@@ -12,8 +12,6 @@
 - tcl files are not needed for PyQt version but cx_freeze includes them
 
 ### Ideas
-- maybe integrate application to parser?
-- introduce typing https://docs.python.org/3/library/typing.html this will bind app to python version 3.7, maybe to a great idea?
 - parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 - parser should probably include one API channel to comunicate with "outer" world. Now communication is becoming messy and it is not clear how changes in parser API are affecting other classes that are using it.
@@ -28,9 +26,21 @@
 
 # Change Log
 
+### 27.5.2019
+- typechecking is now in most modules
+- integrated application into parser
+- all files now support typing, although there are some workarounds, mainly
+  for properties and lazy imports
+- wrote first test
+
+### 26.5.2019
+- introduced typechecking to parser and use of mypy linting
+- split parser to one more file that contais class which takes
+  care of input and output
+
 ### 23.9.2019
 - fixed some image editing bugs
-- unable to do something with crop selection does not respecting image borders,
+- unable to do something with crop selection not respecting image borders,
   logic is too complex CPU rockets to 30%, aaaah. Need to find some way.
 - I got saved by StackOverflow https://stackoverflow.com/questions/58053735/get-real-size-of-qpixmap-in-qlabel/58063020#58063020
 - wrote some simple tests for GUI
