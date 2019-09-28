@@ -130,11 +130,12 @@ python gui.py
 
 ## Running the tests
 
-There are no predefined tests at the moment
+Tests are in early development stage. Make sure all tests in tests dir pass. For now we still heavily rely on exploratory testing
 
 ## Coding style tests
 
-Coding style adheres on PEP8 style guide so just use PEP8 lintner and read the docs.
+Coding style adheres on PEP8 style guide so just use PEP8 lintner and read the docs. 
+We also use type anotations together with mypy static typechecking.
 
 ## Contributing
 
