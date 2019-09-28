@@ -1,2 +1,0 @@
-class NoTracklistException(Exception):
-    pass
