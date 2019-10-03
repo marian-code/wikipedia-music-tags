@@ -1,26 +1,23 @@
 import os
+import pickle  # lazy loaded
 from abc import abstractmethod
 from typing import Any, List
 
-from lazy_import import lazy_callable, lazy_module
-
 from wiki_music.constants.colors import GREEN, LBLUE, LGREEN, LYELLOW, RESET
 from wiki_music.constants.tags import EXTENDED_TAGS
-from wiki_music.utilities import (SharedVars, bracket, count_spaces,
-                                  list_files, normalize_caseless,
-                                  win_naming_convetion, write_roman, yaml_dump)
+from wiki_music.utilities import (SharedVars, ThreadPool, bracket,
+                                  count_spaces, list_files, log_parser,
+                                  normalize_caseless, win_naming_convetion,
+                                  write_roman, yaml_dump)
 
 from ..ID3_tags import read_tags, write_tags
 from ..lyrics import save_lyrics
 from .base import ParserBase
 
-pickle = lazy_module("pickle")
-
-Parallel = lazy_callable("joblib.Parallel")
-delayed = lazy_callable("joblib.delayed")
-
 wnc = win_naming_convetion
 nc = normalize_caseless
+
+log_parser.debug("in_out imports done")
 
 __all__ = ["ParserInOut"]
 
@@ -246,9 +243,15 @@ class ParserInOut(ParserBase):
             # for data in self.data_to_dict():
             #     write_tags(data, lyrics_only=lyrics_only)
 
+            ThreadPool(target=write_tags,
+                       args=[(data, lyrics_only)
+                              for data in self.data_to_dict()])
+
+            """
             Parallel(n_jobs=len(self), prefer="threads")(
                 delayed(write_tags)(data, lyrics_only=lyrics_only)
                 for data in self.data_to_dict())
+            """
 
             return True
 

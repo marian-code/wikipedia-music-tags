@@ -18,6 +18,8 @@ class ParserBase:
 
     def __init__(self, protected_vars: bool) -> None:
 
+        log_parser.debug("parser base")
+
         # lists 1D
         self.contents: SList = []
         self.tracks: SList = []
@@ -55,6 +57,8 @@ class ParserBase:
             self.band: str = ""
             self.work_dir: str = ""
             self.log: MultiLog = MultiLog(log_parser)
+
+        log_parser.debug("parser base done")        
     
     def __len__(self):
         return len(self.numbers)

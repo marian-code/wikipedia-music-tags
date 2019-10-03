@@ -21,15 +21,16 @@ fuzzywuzzy>=0.17.0
 lazy-import>=0.2.2
 lxml>=4.2.1
 nltk>=3.3
-requests>=2.18.4
-wikipedia>=1.4.0
+mutagen>=1.42.0
 numpy>=1.14.3
+Pillow>=6.2.0
+pyyaml>=5.1.2
 PyQt5>=5.11.3
 python-Levenshtein>=0.12.0
 pywin32>=224
-mutagen>=1.42.0
-joblib>=0.13.2
 QtPy>=1.7.0
+requests>=2.18.4
+wikipedia>=1.4.0
 ```
 
 Multiple Qt backends are supported with the help of QtPy. So you can substitute 
@@ -58,61 +59,79 @@ After this a window will open. In the collections tab download **popular**. Defa
 ```
 C:\nltk_data
 ```
-This is best leaved as is otherwise you will have to modify setup scripts for cx_Freeze. But other than this the location doesn´t really matter.
+This is best leaved as is.
 
-If you want to try and package script you also need to install
+If you want to try and package script you also need to install pyinstaller.
 ```
-cx-Freeze>=5.1.1
+pip install pyinstaller>=3.5
 ```
 
 packages that are not necessary:
 * *python-Levenshtein* makes fuzzywuzzy a whole lot faster
 * *lxml* makes Beautifulsoup a whole lot faster
-* *PyQt5* if you want to use Tkinter GUI (deprecated) or console mode or other Qt backend
+* *PyQt5* if you want to use console mode or other Qt backend
 
-The module was written so it could run on any platform with python installation. But it is only tested under Windows with Anaconda 5.2.0. With only some minor modifications it should be able to run on Linux and Os X too. Problems concern mainly default paths and interaction with clipboard in GUI.
+The module was written so it could run on any platform with python installation. But it is only tested under Windows 10 with Anaconda 5.2.0. With only some minor modifications it should be able to run on Linux and Os X too. Problems concern mainly default paths and interaction with clipboard in GUI.
 
 If you want to utilize lyrics search you will have to get a [Google Developer API Key](https://console.developers.google.com/projectselector/apis/library/customsearch.googleapis.com/) **(Strongly Recommended)** with the 'Custom Search' API enabled. The link should take one there once logged in. This is a requirement of [LyricsFinder](https://github.com/GieselaDev/LyricsFinder) module. When you have the key create a file named **google_api_key.txt** under **files** directory and copy the key there.
 
 ### Installing
 
-There´s no installing yet but the module can be packaged with cx_Freeze 
+There´s no installing yet but the module can be packaged with pyinstaller 
 although it is still considerably buggy.
-So to get it just:
+
+If you want to just get the script:
 
 ```
 git clone <repo address>
 ```
-If you don´t want to package the module, skip to the next section
+If you don´t want to package the module, skip to the next section.
 
-You can package the script with cx_Freeze but in this stage it is still kind of buggy. If you decide to do so, before the first run of the respective setup script uncomment the line:
-```
-# generate_excludes()
-```
-This will generate list of modules to exclude, because cx_Freeze loves to include your whole python instalation. Also change these variables to suit your system:
-```
-os.environ['TCL_LIBRARY']
-os.environ['TK_LIBRARY']
-```
-If you chose different than default location for nltk data you will have to modify variable
-```
-nltk_path
-```
-to your selected location.
+If you decide to package the script: (for now only **console** version packaging is working)
 
-After this you can proceed with the packaging.
+If you have installed pyinstaller the steps are following:
+I **strongly recomend** that you create a virtual environment before proceeding,
+with only requirements needed for this project. Otherwise pyinstaller will
+bundle too many useless libraries in freezed app. The freezed app size can easily
+get over 1GB then. For the same reasons Anaconda installation is even worse
+because it has so many libraries by default. If for saome strange reason you don't want to
+create virtual env you can use option 
+```
+--exclude-module=
+```
+in freeze.py to exclude unwanted libraries. In python virtual environment can be
+created and activated by:
+```
+python3 -m venv /path/to/new/virtual/environment
+source <venv>/bin/activate (Posix)
+<venv>\Scripts\activate.bat (Windows)
+```
+in Anaconda (env with pip):
+```
+conda create --prefix /path/to/new/virtual/environment pip
+conda activate /path/to/new/virtual/environment
+```
+Once you have done that there is one optional optimization. You can use 'vanilla'
+numpy to further reduce size of freezed app. Vanilla numpy build can be downloaded
+from here: [numpy vanilla](https://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy). The problem with regular numpy is building against OPENBLAS (pip version ~40MB) or Intel MKL (Anaconda version ~ 300MB). Once you've downloaded wheel package for your python version, install it by:
+```
+pip install <package-name>.whl
+```
+Now you are ready to go, change to dir:
+```
+cd setup/
+```
+and build by:
+```
+python freeze.py
+```
+When building in virtual env the frozen app should have ~ 75MB. Without vanilla numpy ~105MB.
 
-GUI is written in PyQt5. To build it:
+This will generate list two directories under setup/ folder: dist/ and build/.
+build contains just pyinstaller help files and **dist/wiki_music** contains 
+packaged console app. 
 
-```
-setup_Qt.py build
-```
-This version of setup might be still buggy and is under developement
-
-There is a third commandline-only option which is the most stable. To build it:
-```
-setup_cmd.py build
-```
+There is no building for GUI versionn yet.
 
 ## Running the code
 
@@ -139,7 +158,10 @@ We also use type anotations together with mypy static typechecking.
 
 ## Contributing
 
-There are some TODOs scattered around the code and created issues so thats a good place to start. There is also a list of TODOs maintained in [code_changelog](https://github.com/marian-code/wikipedia-music-tags/blob/master/code_changelog.md) file. Base user interface layout should be changed only with the use of Qt designer and use of files:
+There are some TODOs scattered around the code and created issues so thats a good place to start. 
+There is also a list of TODOs maintained in 
+[code_changelog](https://github.com/marian-code/wikipedia-music-tags/blob/master/code_changelog.md) file. 
+Base user interface layout should be changed only with the use of Qt designer and use of files:
 ```
 art_dialog_base.ui
 Qt_layout.ui

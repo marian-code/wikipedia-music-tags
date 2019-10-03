@@ -1,8 +1,8 @@
-import re
-from os.path import join, split
+import re  # lazy loaded
+from os import path
 from typing import Dict, Optional, Union
 
-from mutagen import MutagenError
+import mutagen  # lazy loaded
 
 from wiki_music.constants.colors import GREEN, LRED, LYELLOW, RED, RESET
 from wiki_music.constants.tags import TAGS
@@ -37,7 +37,7 @@ def write_tags(data: Dict[str, Union[str, float, list]], lyrics_only: bool):
 
     try:
         song = taglib.File(data["FILE"])
-    except MutagenError as e:
+    except mutagen.MutagenError as e:
         print(f'Couldn´t open file {data["FILE"]} for writing')
         SharedVars.exception(e)
         log_tags.exception(e)
@@ -73,7 +73,7 @@ def write_tags(data: Dict[str, Union[str, float, list]], lyrics_only: bool):
 
         try:
             song.save()
-        except (MutagenError, TypeError, ValueError) as e:
+        except (mutagen.MutagenError, TypeError, ValueError) as e:
             print(f'Couldn´t save file {data["FILE"]}')
             SharedVars.exception(e)
             log_tags.exception(e)
@@ -86,7 +86,7 @@ def read_tags(song_file: str) -> Optional[dict]:
 
     try:
         song = taglib.File(song_file)
-    except MutagenError as e:
+    except mutagen.MutagenError as e:
         print(RED + "Error in reading file: " + RESET + song_file)
         SharedVars.exception(e)
         log_tags.exception(e)
@@ -95,13 +95,13 @@ def read_tags(song_file: str) -> Optional[dict]:
         tags = dict(song.tags)
 
         if not tags["TITLE"]:
-            path, f = split(song_file)
+            path, f = path.split(song_file)
             # match digits, zero or one whitespace characters,
             # zero or one dot, zero or one dash,
             # zero or one whitespace characters
             f = re.sub(r"\d\s?\.?-?\s?", "", f)
 
-            tags["TITLE"] = join(path, f).strip()
+            tags["TITLE"] = path.join(path, f).strip()
 
         for s in ("ARTIST", "COMPOSER"):
             tags[s] = sorted(re.split(r",\s?", tags[s]))

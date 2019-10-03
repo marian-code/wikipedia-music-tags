@@ -1,20 +1,19 @@
 import signal
 import sys
+try:
+    import package_setup
+except:
+    pass  # not needed for frozen app
 
-import package_setup
 from wiki_music.constants.colors import GREEN, RESET
 from wiki_music.library import WikipediaRunner
 from wiki_music.utilities import SharedVars, input_parser, we_are_frozen
-
-if __name__ == "__main__":
-    from utilities.utils import clean_logs
-    clean_logs()
 
 
 # add signal handler to exit gracefully
 # upon Ctrl+C
 def signal_handler(sig, frame):
-    print('Captured Ctrl+C, exiting...')
+    print("\nAborting by user request...")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -33,19 +32,15 @@ if __name__ == "__main__":
     parser.with_log = with_log
     parser.list_files()
 
-    if parser.album is None:
+    if not parser.album:
         print(GREEN + "Enter album name: " + RESET, end="")
         parser.album = str(input())
-    if parser.band is None:
+    if not parser.band:
         print(GREEN + "Enter band name: " + RESET, end="")
         parser.band = str(input())
     print(RESET)
 
     if only_lyrics:
         parser.run_lyrics()
-        if not we_are_frozen():
-            input("\nPRESS ENTER TO CONTINUE...")
     else:
         parser.run_wiki()
-        if not we_are_frozen():
-            input("\nPRESS ENTER TO CONTINUE...")

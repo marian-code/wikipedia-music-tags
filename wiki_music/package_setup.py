@@ -17,10 +17,9 @@ def module_path():
 # append package parent directory to path
 sys.path.append(os.path.realpath(os.path.join(module_path(), "..")))
 
+"""
 if we_are_frozen():
-    from multiprocessing import freeze_support
-    freeze_support()
-
     f = open(os.devnull, 'w')
     sys.stdout = f
     sys.stderr = f
+"""

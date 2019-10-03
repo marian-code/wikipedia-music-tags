@@ -90,10 +90,12 @@ def generate_url(artist: str, album: str, song: str) -> List[dict]:
     urls.append({"link": f"https://www.azlyrics.com/lyrics/{r(artist, '')}/" +
                          f"{r(song, '')}.html"})
     # Genius
-    urls.append({"link": f"https://genius.com/{r(artist.capitalize(), '-')}" +
-                         f"-{r(song, '-')}-lyrics"})
+    link = (f"https://genius.com/{r(artist.capitalize(), '-')}"
+            f"-{r(song, '-')}-lyrics").replace("&", "and")
+    urls.append({"link": link})  # sometimes annotated version is present
+    urls.append({"link": f"{link}-annotated"})
     # Lyricsmode
-    urls.append({"link": f"http://www.lyricsmode.com/lyrics/l/" +
+    urls.append({"link": f"http://www.lyricsmode.com/lyrics/{artist[0]}/" +
                          f"{r(artist, '_')}/{r(song, '_')}.html"})    
     # Musixmatch
     song = "-".join([s.capitalize() for s in song.split()

@@ -1,8 +1,14 @@
-from os.path import isfile, join
-from time import sleep
+import pickle  # lazy loaded
+import re  # lazy loaded
+import sys
+import time  # lazy loaded
+from os import path
+from threading import Lock
 from typing import Any, Optional, Type
 
-from lazy_import import lazy_callable, lazy_module
+import bs4  # lazy loaded
+import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import wikipedia as wiki  # lazy loaded
 
 from wiki_music.utilities import (
     SharedVars, ThreadWithTrace, for_all_methods, log_parser, module_path,
@@ -12,13 +18,7 @@ from .base import ParserBase
 
 nc = normalize_caseless
 
-fuzz = lazy_callable("fuzzywuzzy.fuzz")
-Lock = lazy_callable("threading.Lock")
-BeautifulSoup = lazy_callable("bs4.BeautifulSoup")
-wiki = lazy_module("wikipedia")
-pickle = lazy_module("pickle")
-sys = lazy_module("sys")
-re = lazy_module("re")
+log_parser.debug("cooker imports done")
 
 # TODO doesn't work without GUI
 def terminate(message: str):
@@ -27,7 +27,7 @@ def terminate(message: str):
     SharedVars.wait_exit = True
 
     while SharedVars.wait_exit:
-        sleep(0.05)
+        time.sleep(0.05)
 
     if SharedVars.terminate_app:
         sys.exit()
@@ -40,6 +40,8 @@ class WikiCooker(ParserBase):
 
         super().__init__(protected_vars=protected_vars)
 
+        log_parser.debug("cooker imports")
+
         if protected_vars:
             self.formated_html = None
             self.info_box_html = None
@@ -50,13 +52,15 @@ class WikiCooker(ParserBase):
         self.wiki_downloaded: bool = False
         self.soup_ready: bool = False
         self.preload_running: bool = False
-        self.getter_lock: Any = Lock()
+        self.getter_lock: Lock = Lock()
         self.error_msg: Optional[str] = None
 
         self._url = ""
 
         # pass reference of current class instance to subclass
         self.Preload.outer_instance = self
+
+        log_parser.debug("cooker imports done")
 
     class Preload:
 
@@ -99,8 +103,8 @@ class WikiCooker(ParserBase):
             try:
                 self._url = str(self.page.url)  # type: ignore
             except AttributeError:
-                self._url = join(module_path(), "output", self.album,
-                                 "page.pkl")
+                self._url = path.join(module_path(), "output",
+                                      self.album, "page.pkl")
         return self._url
 
     def _check_band(self) -> bool:
@@ -153,7 +157,7 @@ class WikiCooker(ParserBase):
         # wait until all preloads are finished and then continue
         if not preload:
             while self.preload_running:
-                sleep(0.05)
+                time.sleep(0.05)
 
         if self.wiki_downloaded:
             return self.error_msg
@@ -206,7 +210,7 @@ class WikiCooker(ParserBase):
 
     def _from_disk(self) -> Optional[str]:
 
-        if isfile(self.url):
+        if path.isfile(self.url):
             with open(self.url, 'rb') as infile:
                 self.page = pickle.load(infile)
             self.error_msg = None
@@ -222,7 +226,7 @@ class WikiCooker(ParserBase):
             return self.error_msg
 
         # make BeautifulSoup black magic
-        self.soup = BeautifulSoup(self.page.html(), features="lxml")  # type: ignore
+        self.soup = bs4.BeautifulSoup(self.page.html(), features="lxml")  # type: ignore
         self.formated_html = self.soup.get_text()
         self.info_box_html = self.soup.find("table",
                                             class_="infobox vevent haudio")

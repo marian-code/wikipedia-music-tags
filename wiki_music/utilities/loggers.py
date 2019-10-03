@@ -1,15 +1,15 @@
 import logging
-from os.path import join
+from os import path, makedirs
 from threading import get_ident
 
 from wiki_music.constants.paths import LOG_DIR
 
 
 def log_name(name: str) -> str:
-    return join(LOG_DIR, f"wiki_music_{name}.log")
+    return path.join(LOG_DIR, f"wiki_music_{name}.log")
 
 
-def get_logger(name: str, logfile: str, mode: str = "a") -> logging.Logger:
+def get_logger(name: str, logfile: str, mode: str = "w") -> logging.Logger:
 
     log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)
@@ -29,16 +29,19 @@ FORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
                               "%(message)s \n\t",
                               datefmt="%H:%M:%S")
 
+# create dir to store logs
+makedirs(LOG_DIR, exist_ok=True)
+
 # loggging for app
-log_app = get_logger('wiki_music_app', log_name("app"), mode="w")
+log_app = get_logger('wiki_music_app', log_name("app"))
 
 # logging for gui
-log_gui = get_logger('wiki_music_GUI', log_name("GUI"), mode="w")
+log_gui = get_logger('wiki_music_GUI', log_name("GUI"))
 
-# logging for ID3_tags
+# logging for ID3_tags, previously in mode='a'
 log_tags = get_logger("wiki_music_tags", log_name("ID3_tags"))
 
-# logging for parser
+# logging for parser, previously in mode='a'
 log_parser = get_logger("wiki_music_parser", log_name("parser"))
 
 # logging for lyrics

@@ -1,9 +1,9 @@
-from os.path import join
+from os import path
 from threading import Thread
 from typing import Iterable, Optional, Tuple
 
 from wiki_music.external_libraries.google_images_download import (
-    google_images_download, google_images_download_offline)
+    google_images_download, google_images_download_offline)  # lazy loaded
 from wiki_music.gui import BaseGui, ImageTable, SelectablePixmap
 from wiki_music.gui.qt_importer import (QDialog, QHBoxLayout, QIcon,
                                         QMessageBox, QSize, Qt, QTimer,
@@ -283,7 +283,7 @@ class PictureEdit(QDialog, Ui_dialog):
 
         if self.save_file:
             self.log.info("Cover art saved to file")
-            self.picture.save_image(join(save_dir, "Folder.jpg"))
+            self.picture.save_image(path.join(save_dir, "Folder.jpg"))
         if self.clipboard:
             self.log.info("Cover art copied to clipboard")
             self.picture.send2clipboard()
@@ -303,6 +303,9 @@ class CoverArtSearch(BaseGui):
             QMessageBox(QMessageBox.Information, "Message",
                         "You must input Artist and Album first").exec_()
             return
+
+        import sys
+        print(sys.modules["wiki_music.external_libraries.lyricsfinder"])
 
         if SharedVars.offline_debbug:
             self.gimd = google_images_download_offline.googleimagesdownload()

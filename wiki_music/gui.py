@@ -1,9 +1,9 @@
 # pylint: disable=no-name-in-module
 import os
+import subprocess  # lazy loaded
 import sys
-import time
-import webbrowser
-from subprocess import Popen
+import time  # lazy loaded
+import webbrowser  # lazy loaded
 from threading import Thread, current_thread
 from typing import Optional
 
@@ -17,8 +17,7 @@ from wiki_music.gui.qt_importer import (
 from wiki_music.utilities import (SharedVars, clean_logs, exception, log_gui,
                                   synchronized, we_are_frozen)
 
-if __name__ == "__main__":
-    clean_logs()
+log_gui.debug("finished imports")
 
 
 class Checkers(BaseGui):
@@ -216,7 +215,7 @@ class Buttons(BaseGui):
     def __run_Mp3tag__(self):
 
         if self.work_dir:
-            Popen([MP3_TAG, f"/fp:{self.work_dir}"])
+            subprocess.Popen([MP3_TAG, f"/fp:{self.work_dir}"])
         else:
             QMessageBox(QMessageBox.Information, "Message",
                         "You must select directory first!").exec_()
@@ -242,14 +241,19 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
     def __init__(self):
 
+        log_gui.debug("init superclass")
         super().__init__()
+        log_gui.debug("init superclass done")
 
+        log_gui.debug("setup overlay")
         # set overlay functions
         self.__setup_overlay__()
 
+        log_gui.debug("start checkers")
         # start checkers
         self.__init_checkers__()
         self.__start_checkers__()
+        log_gui.debug("start checkers done")
 
     # setup methods
     def __setup_overlay__(self):

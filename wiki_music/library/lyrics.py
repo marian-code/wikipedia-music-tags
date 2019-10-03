@@ -5,21 +5,15 @@ Anime Lyrics, AZLyrics, Genius, Lyricsmode, \
 Lyrical Nonsense, Musixmatch, darklyrics
 """
 
-from lazy_import import lazy_callable
-from typing import Dict
+import logging
+from typing import Dict, Optional
 
-from wiki_music.utilities import (exception, get_google_api_key, log_lyrics,
-                                  normalize, we_are_frozen)
+import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+
 from wiki_music.constants.colors import GREEN, RESET
-
-if not we_are_frozen():
-    log_lyrics.propagate = False
-
-Parallel = lazy_callable("joblib.Parallel")
-delayed = lazy_callable("joblib.delayed")
-fuzz = lazy_callable("fuzzywuzzy.fuzz")
-LyricsManager = lazy_callable("external_libraries.lyricsfinder"
-                              ".lyrics.LyricsManager")
+from wiki_music.external_libraries import lyricsfinder  # lazy loaded
+from wiki_music.utilities import (ThreadPool, exception, get_google_api_key,
+                                  log_lyrics, normalize, we_are_frozen)
 
 GOOGLE_API_KEY = get_google_api_key()
 
@@ -57,10 +51,18 @@ def save_lyrics(parser):
 
     log_lyrics.info("Download lyrics")
 
+    # manager must be initialized in main thread
+    manager = lyricsfinder.LyricsManager()
+
+    # adjust logging level for frozen app
+    if we_are_frozen():
+        name = "wiki_music.external_libraries.lyricsfinder.lyrics"
+        logging.getLogger(name).setLevel("ERROR")
+
     # run search
-    lyrics = Parallel(n_jobs=len(parser), prefer="threads")(
-        delayed(get_lyrics)(parser.band, parser.album, t)
-        for t in tracks.keys())
+    lyrics = ThreadPool(target=get_lyrics,
+                        args=[(manager, parser.band, parser.album, t)
+                               for t in tracks.keys()]).run()
 
     log_lyrics.info("Assign lyrics to tracks")
 
@@ -82,24 +84,19 @@ def save_lyrics(parser):
 
 
 @exception(log_lyrics)
-def get_lyrics(artist: str, album: str, song: str) -> Dict[str, str]:
+def get_lyrics(manager, artist: str, album: str, song: str
+              ) -> Dict[str, Optional[str]]:
 
-    log_lyrics.info("starting lyricsfinder ")
+    lyrics = next(manager.search_lyrics(song, album, artist,
+                  google_api_key=GOOGLE_API_KEY), None)
 
-    l = LyricsManager()
-
-    lyrics = next(l.search_lyrics(song, album, artist,
-                                  google_api_key=GOOGLE_API_KEY), None)
-
-    if lyrics is None:
+    if not lyrics:
         log_lyrics.info(f"Couldn't find lyrics for: {artist} - {song}")
-        lyrics = {"lyrics": None, "artist": artist, "title": song}
+        return {"lyrics": None, "artist": artist, "title": song}
     else:
         log_lyrics.info(f"Saved lyrics for: {artist} - {song}")
-        lyrics = lyrics.to_dict()
-        lyrics["title"] = song
-        lyrics["lyrics"] = normalize(lyrics["lyrics"].replace("\r", "")
-                                     .replace("\n", "\r\n"))
+        l = lyrics.to_dict()
+        l["title"] = song
+        l["lyrics"] = normalize(l["lyrics"].replace("\r", "").replace("\n", "\r\n"))
 
-    return lyrics
-
+        return l

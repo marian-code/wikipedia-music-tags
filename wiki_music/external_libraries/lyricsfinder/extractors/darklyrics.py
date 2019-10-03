@@ -6,6 +6,7 @@ from datetime import datetime
 
 from ..extractor import LyricsExtractor
 from ..models.lyrics import Lyrics
+from ..models import exceptions
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +25,9 @@ class Darklyrics(LyricsExtractor):
 
         # get list of album tracks
         track_list = bs.find('div', class_='albumlyrics')
+
+        if not track_list:
+            raise exceptions.NoLyrics
 
         # get table header
         header = track_list.find("h2").text

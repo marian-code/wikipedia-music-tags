@@ -1,8 +1,6 @@
+import collections
 from abc import ABC, abstractmethod
 from typing import Dict
-from collections import OrderedDict
-from os.path import join, split
-from wiki_music.constants.tags import TAGS
 
 
 class SelectiveDict(dict):
@@ -84,7 +82,7 @@ class TagBase(ABC):
     @staticmethod
     def get_reversed(map_keys: Dict[str, str]) -> Dict[str, str]:
 
-        reverse_map: Dict[str, str] = OrderedDict()
+        reverse_map: Dict[str, str] = collections.OrderedDict()
 
         for key, value in map_keys.items():
             reverse_map[value] = key

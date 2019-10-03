@@ -5,6 +5,7 @@ from datetime import datetime
 
 from ..extractor import LyricsExtractor
 from ..models.lyrics import Lyrics
+from ..models import exceptions
 
 log = logging.getLogger(__name__)
 
@@ -21,12 +22,21 @@ class Genius(LyricsExtractor):
         """Extract lyrics."""
         bs = url_data.bs
 
-        lyrics_window = bs.find_all("div", {"class": "lyrics"})[0]
+        try:
+            lyrics_window = bs.find_all("div", {"class": "lyrics"})[0]
+        except IndexError:
+            # Oops! Page not found message
+            if bs.find("h1", {"class": "render_404-headline"}):
+                raise exceptions.NoLyrics
+
         lyrics = lyrics_window.text.strip()
 
         title = bs.find("h1", attrs={"class": "header_with_cover_art-primary_info-title"}).text
         artist = bs.select_one("a.header_with_cover_art-primary_info-primary_artist").string
-        date_str = bs.find(text="Release Date").parent.find_next_sibling("span").string
+        try:
+            date_str = bs.find(text="Release Date").parent.find_next_sibling("span").string
+        except AttributeError:
+            date_str = "January 1, 2000"
         release_date = datetime.strptime(date_str, "%B %d, %Y")
 
         return Lyrics(title, lyrics, artist=artist, release_date=release_date)

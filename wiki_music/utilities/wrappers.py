@@ -1,8 +1,9 @@
 import os
-from time import perf_counter
 from functools import wraps
-from typing import NoReturn, Callable, Union
 from threading import current_thread
+import time  # lazy loaded
+from typing import Callable, NoReturn, Union
+
 from .sync import SharedVars
 from .utils import module_path
 
@@ -67,17 +68,23 @@ class Timer:
 
     def __init__(self, function_name: str) -> None:
         self.function_name = function_name
+        self.path = os.path.join(module_path(), "profiling", "timing_stats.txt")
         self.start = 0
         self.end = 0
 
+        if not os.path.isfile(self.path):
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            with open(self.path, "w") as f:
+                f.write("")
+
     def __enter__(self):
-        self.start = perf_counter()
+        self.start = time.perf_counter()
         return self
 
     def __exit__(self, *args):
-        self.end = perf_counter()
-        path = os.path.join(module_path(), "profiling", "timing_stats.txt")
-        with open(path, "a") as f:
+        self.end = time.perf_counter()
+
+        with open(self.path, "a") as f:
             f.write(f"{current_thread().name:15} --> {self.function_name:30}"
                     f"{(self.end - self.start):8.4f}s\n")
 

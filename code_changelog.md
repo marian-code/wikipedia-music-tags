@@ -4,19 +4,14 @@
 - write automated tests
 
 ### Freezing problems
-- frozen code doesn't run on x86 systems, need 32bit python installation to build 32bit app
-- freezed Qt app is too big ~ 0.65GB - most files probably not needed
-- use "zip_include_packages" in cx_freeze setup to reduce size refer to:  
-    https://github.com/anthony-tuininga/cx_Freeze/issues/256  
-    https://stackoverflow.com/questions/27281317/cx-freeze-preventing-including-unneeded-packages
-- tcl files are not needed for PyQt version but cx_freeze includes them
+- freeze gui version
 
 ### Ideas
 - parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 - parser should probably include one API channel to comunicate with "outer" world. Now communication is becoming messy and it is not clear how changes in parser API are affecting other classes that are using it.
 - add cue spliting and audion conversions
-- change SharedVars class for Qt signals
+- change SharedVars class for Qt signals, would need to migrate to QThreads, Qsignals dont work with threading module
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -25,6 +20,52 @@
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 2.10.2019
+- now we are using a separate virtual environment for building freezed app
+  size is reduced to ~ 100MB which is still a lot but accetable
+- console app is now working ok
+- further reduction of frozen app size by use of vanilla numpy which is not
+  built against OPENBLAS or Intel MKL. Pre-built wheels are available at:
+  https://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy The finall size is now ~75MB
+- updated package dependencies
+- fixed few bugs and enhanced lyricsfinding
+- new hook for wiki_music hidden imports
+- cleanup to install script
+- thorough cleanup in imports, all lazy modules are now marked in root init file,
+  we have a lot cleaner and readable imports code
+
+### 2.10.2019
+- tried to get rid of lazy_import package, replaced wth custom LazyLoad class
+  stolen from tensorflow https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/util/lazy_loader.py
+  as a result got weird interactions with logger and freezing
+- now we are monkey patching necessary pyinstaller hooks
+- new custom hook for nltk to include only data we need, size reduced by ~0.5GB
+- final freezed app is still too big, because of conda numpy being built against
+  mkl library. Solution is to create virtual env and install pip version
+  of numpy. refer to:
+  https://github.com/pyinstaller/pyinstaller/issues/2270
+  https://stackoverflow.com/questions/43886822/pyinstaller-with-pandas-creates-over-500-mb-exe/48846546#48846546
+  https://github.com/conda-forge/numpy-feedstock/issues/84
+- having a virtual environment could potentialy solve problem with too many
+  unecessary includes in freezed app
+- nltk.ne_chunk() numpy dependency cannot be avoided
+- alternatives are spaCy which has even more dependencies, including mkl and
+  Stanford NLP parser, but that requires java virtual machine running. So
+  basically both are worth shit, for our purposes.
+ 
+### 1.10.2019
+- setting up pyinstaller to work with console version - success
+- setup is also delicate job, but maybe a little less buggy than cx_Freeze
+- got rid of joblib dependency, substituted with custom ThreadPool
+- implemented custom hook for lazy_import
+- implemented custom runtime hook for nltk
+- pyinstaller setup is now contained in separate dir - wiki_music/setup
+
+### 30.9.2019
+- been plying around with cx_Freeze, it's useless, cant get it to work
+  after hours of experiments
+- abandon cx_Freeze, substitute with pyinstaller
 
 ### 27.5.2019
 - typechecking is now in most modules

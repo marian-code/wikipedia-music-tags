@@ -1,28 +1,30 @@
+import collections  # lazy loaded
+import os
+import sys
+import time  # lazy loaded
+from threading import Lock, Thread
+from typing import Any, Callable, Generator, List, Optional, Tuple, Union
+
+import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import yaml  # lazy loaded
+
+from wiki_music.constants.colors import GREEN, RESET
+
+from .loggers import log_parser
+from .utils import normalize
+
 __all__ = ["ThreadWithTrace", "NLTK", "bracket", "write_roman",
            "roman_num", "normalize", "normalize_caseless", "caseless_equal",
            "caseless_contains", "count_spaces", "yaml_dump",
-           "complete_N_dim", "replace_N_dim", "delete_N_dim"]
-
-import os
-import sys
-from threading import Lock, Thread
-from typing import Tuple, Generator, Union
-
-import lazy_import
-from fuzzywuzzy import fuzz
-from wiki_music.constants.colors import GREEN, RESET
-
-from .utils import normalize
-
-OrderedDict = lazy_import.lazy_callable("collections.OrderedDict")
-yaml = lazy_import.lazy_module("yaml")
+           "complete_N_dim", "replace_N_dim", "delete_N_dim",
+           "ThreadPool", "yaml_load"]
 
 
 class ThreadWithTrace(Thread):
 
-    def __init__(self, *args, **keywords):
+    def __init__(self, *args, **keywords) -> None:
         Thread.__init__(self, *args, **keywords)
-        self.killed = False
+        self.killed: bool = False
 
     def start(self):
         self.__run_backup = self.run
@@ -72,8 +74,14 @@ class NLTK(metaclass=NltkMeta):
 
         def imp():
             with cls.lock:
-                import nltk
-                cls._nltk = nltk
+                log_parser.debug("import nltk")
+                try:
+                    import nltk
+                    cls._nltk = nltk
+                except Exception as e:
+                    log_parser.debug(f"failed to import nltk: {e}")
+                else:
+                    log_parser.debug("import nltk done")
 
         if not cls.import_running:
 
@@ -81,6 +89,46 @@ class NLTK(metaclass=NltkMeta):
             # load NLTK in separate thread
             Thread(target=imp, name="ImportNLTK").start()
 
+
+class ThreadWithReturn(Thread):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super(ThreadWithReturn, self).__init__(*args, **kwargs)
+
+        self._return: Any = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+
+    def join(self, timeout=Optional[float]) -> Any:
+        super(ThreadWithReturn, self).join(timeout=timeout)
+
+        return self._return
+
+
+class ThreadPool:
+
+    def __init__(self, target:Callable[..., list] = lambda *args: [],
+                 args:List[tuple] = [tuple()]) -> None:
+
+        self._args = args
+        self._target = target
+
+    def run(self, timeout=60) -> list:
+
+        threads: List[ThreadWithReturn] = []
+        for i, a in enumerate(self._args):
+            threads.append(ThreadWithReturn(target=self._target, args=a,
+                                            name=f"ThreadPoolWorker-{i}"))
+            threads[-1].daemon = True
+            threads[-1].start()
+        
+        for i, l in enumerate(threads):
+            threads[i] = l.join()
+
+        return threads
+    
 
 def bracket(data: list) -> list:
     """ Puts elements of the list in brackets.\n
@@ -104,7 +152,7 @@ def bracket(data: list) -> list:
 def write_roman(num: int):
     """ Convert integer to roman number """
 
-    roman = OrderedDict()
+    roman = collections.OrderedDict()
     roman[1000] = "M"
     roman[900] = "CM"
     roman[500] = "D"
@@ -198,6 +246,13 @@ def yaml_dump(dict_data: list, save_dir: str):
     print(GREEN + "\nSaving YAML file: " + RESET + _path + "\n")
     with open(_path, "w") as outfile:
         yaml.dump(dict_data, outfile, default_flow_style=False)
+
+
+def yaml_load(work_dir: str) -> dict:
+    """ Loads yaml format file to dictionary. """
+
+    with open(work_dir, "r") as infile:
+        return yaml.full_load(infile)
 
 
 def _find_N_dim(array, template):

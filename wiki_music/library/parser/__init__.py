@@ -1,4 +1,4 @@
-from lazy_import import lazy_callable
+from time import sleep
 
 from wiki_music.constants.colors import CYAN, GREEN, RESET
 from wiki_music.utilities import (SharedVars, exception, flatten_set, log_app,
@@ -6,16 +6,18 @@ from wiki_music.utilities import (SharedVars, exception, flatten_set, log_app,
 
 from .process_page import WikipediaParser
 
-sleep = lazy_callable("time.sleep")
-
 
 class WikipediaRunner(WikipediaParser):
 
     def __init__(self, GUI: bool = True, protected_vars: bool = True) -> None:
 
+        log_parser.debug("init parser runner")
+
         super().__init__(protected_vars=protected_vars)
         self.GUI = GUI
         self.with_log = False
+
+        log_parser.debug("init parser runner done")
 
     @exception(log_parser)
     def run_wiki(self):
@@ -226,9 +228,9 @@ class WikipediaRunner(WikipediaParser):
             self.log_print(msg_WHITE="Writing to disk")
             self.disk_write()
 
-            # print out found tracklist
-            self.log_print(msg_GREEN="Found Track list(s)")
-            self.print_tracklist()
+        # print out found tracklist
+        self.log_print(msg_GREEN="Found Track list(s)")
+        self.print_tracklist()
 
         # merge artists and personel which have some apperences
         self.merge_artist_personnel()
@@ -239,30 +241,34 @@ class WikipediaRunner(WikipediaParser):
                 print(CYAN + "Input genre:", end="")
                 self.genre = input()
             else:
-                print(CYAN + "Specify which genre you want to write:")
+                print(CYAN + "Specify which genre you want to write: [1.]")
                 for i, gen in enumerate(self.genres, 1):
                     print(f"{i}. {gen}")
 
                 print("Input number:", CYAN, end="")
-                index = int(input()) - 1
+                index = input()
+                try:
+                    index = int(index) -1
+                except ValueError:
+                    index = 0
 
                 self.selected_genre = self.genres[index]
 
         # decide what to do with artists
-        print(CYAN + "Do you want to assign artists to composers? (y/n)",
+        print(CYAN + "Do you want to assign artists to composers? ([y]/n)",
               RESET, end=" ")
         if to_bool(input()):
             self.merge_artist_composers()
 
         # decide if you want to find lyrics
-        print(CYAN + "\nDo you want to find and save lyrics? (y/n): " +
+        print(CYAN + "\nDo you want to find and save lyrics? ([y]/n): " +
               RESET, end="")
         SharedVars.write_lyrics = to_bool(input())
 
         # download lyrics
         self.save_lyrics()
         
-        print(CYAN + "Write data to ID3 tags? (y/n): " + RESET, end="")
+        print(CYAN + "Write data to ID3 tags? ([y]/n): " + RESET, end="")
         if to_bool(input()):
             if not self.write_tags(lyrics_only=False):
                 self.log_print(msg_WHITE="Cannot write tags because there are no "

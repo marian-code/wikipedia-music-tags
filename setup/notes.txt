@@ -1,7 +1,0 @@
-- need to copy almost all source files to build dir
-- pytaglib is not found, need to include it manualy in build dir
-- profiling dir needs to be included manually too
-- files in dirs build/.../lib/wiki_music are not included. notably these are external_libraries, ui and maybe others
-- freezed app does not show pictures
-- need to include platforms folder from ...\site-packages\PyQt5\Qt\plugins\ build dir, otherwise qt error
-- freezed app has weird qt style

@@ -1,4 +1,4 @@
-from os.path import basename, isfile
+from os import path
 from typing import Optional, Tuple, Callable
 
 from wiki_music.constants.paths import DIR_FILE
@@ -14,7 +14,7 @@ from wiki_music.gui.qt_importer import (Property, QBuffer, QByteArray, QEvent,
 from wiki_music.utilities.gui_utils import get_music_path
 
 __all__ = ["NumberSortModel", "CustomQStandardItem", "ImageTable",
-           "ResizableRubberBand"]
+           "ResizablePixmap", "CustomQStandardItemModel", "RememberDir"]
 
 
 class NumberSortModel(QSortFilterProxyModel):
@@ -46,8 +46,8 @@ class CustomQStandardItem(QStandardItem):
             return super(CustomQStandardItem, self).data(role)
         else:
             filtered = super(CustomQStandardItem, self).data(role)
-            if isfile(filtered):
-                return basename(filtered)
+            if path.isfile(filtered):
+                return path.basename(filtered)
             else:
                 return filtered
 

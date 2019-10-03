@@ -34,8 +34,8 @@ class SharedVars:
     wait: bool = False
     done: bool = False
     load: bool = False
-    lock = Lock()
-    barrier = Barrier(2)
+    lock: Lock = Lock()
+    barrier: Barrier = Barrier(2)
 
     @classmethod
     def re_init(cls):

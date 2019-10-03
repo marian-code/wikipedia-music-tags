@@ -1,9 +1,11 @@
+import re  # lazy loaded
+from threading import Thread
 from typing import List
 
-from fuzzywuzzy import process
-from lazy_import import lazy_callable, lazy_module
+import datefinder  # lazy loaded
+import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import fuzzywuzzy.process as process  # lazy loaded
 
-from wiki_music import GUI_RUNNING
 from wiki_music.constants.parser_const import *
 from wiki_music.utilities import (NLTK, NoTracklistException, SharedVars,
                                   caseless_contains, complete_N_dim,
@@ -19,13 +21,9 @@ from .preload import WikiCooker
 
 nc = normalize_caseless
 
-Thread = lazy_callable("threading.Thread")
-fuzz = lazy_callable("fuzzywuzzy.fuzz")
-find_dates = lazy_callable("datefinder.find_dates")
-
-os = lazy_module("os")
-re = lazy_module("re")
 NLTK.run_import()  # imports nltk in separate thread
+
+log_parser.debug("parser imports done")
 
 __all__ = ["WikipediaParser"]
 
@@ -35,8 +33,12 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     def __init__(self, protected_vars: bool = True) -> None:
 
+        log_parser.debug("init parser")
+
         WikiCooker.__init__(self, protected_vars=protected_vars)
         ParserInOut.__init__(self, protected_vars=protected_vars)
+
+        log_parser.debug("init parser done")
 
     @warning(log_parser)
     def get_release_date(self):
@@ -45,7 +47,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             if child.find(class_="published") is not None:
                 dates = child.find(class_="published")
 
-                dates = find_dates(str(dates))
+                dates = datefinder.find_dates(str(dates))
                 date_year = [d.strftime('%Y') for d in dates]
                 date_year = list(set(date_year))
 
@@ -370,10 +372,9 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                         for i in range(2, cols - 1):
                             a = self.get_artist(song[i])
                             try:
-                                score = process.extractOne(self.header[-1][i],
-                                                           HEADER_CATEGORY,
-                                                           score_cutoff=90,
-                                                           scorer=fuzz.ratio)
+                                score = process.extractOne(
+                                    self.header[-1][i], HEADER_CATEGORY,
+                                    score_cutoff=90, scorer=fuzz.ratio)
                             except:
                                 self.artists[-1].extend(a)
                             else:

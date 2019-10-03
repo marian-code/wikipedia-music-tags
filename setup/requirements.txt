@@ -5,15 +5,19 @@ fuzzywuzzy>=0.17.0
 lazy-import>=0.2.2
 lxml>=4.2.1
 nltk>=3.3
-requests>=2.18.4
-wikipedia>=1.4.0
+mutagen>=1.42.0
 numpy>=1.14.3
+Pillow>=6.2.0
+pyyaml>=5.1.2
 PyQt5>=5.11.3
 python-Levenshtein>=0.12.0
 pywin32>=224
-mutagen>=1.42.0
-joblib>=0.13.2
 QtPy>=1.7.0
+requests>=2.18.4
+wikipedia>=1.4.0
+
+# optional - for freezing
+pyinstaller>=3.5  # installs altgraph, future, pefile, pywin32-ctypes
 
 
 

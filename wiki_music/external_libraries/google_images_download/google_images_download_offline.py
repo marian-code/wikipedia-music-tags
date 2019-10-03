@@ -1,10 +1,14 @@
+import logging
 import os
-from typing import List, Tuple, NoReturn
+from typing import List, NoReturn, Tuple
 
 from PIL import Image
 
 from wiki_music.constants.paths import ROOT_DIR  # pylint: disable=import-error
 
+log = logging.getLogger(__name__)
+
+log.info("Loaded Offline google images download")
 
 class googleimagesdownload:
 
@@ -56,7 +60,7 @@ class googleimagesdownload:
 
     def list_files(self) -> List[str]:
 
-        folder: str = os.path.join(ROOT_DIR, "tests", "offline_debug")
+        folder: str = os.path.join(ROOT_DIR, "..", "tests", "offline_debug")
 
         return [os.path.join(folder, f.name) for f in os.scandir(folder)
                 if f.is_file() and f.name.casefold().endswith(("jpg", "png"))]

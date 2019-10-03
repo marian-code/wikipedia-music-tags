@@ -1,20 +1,18 @@
+import argparse  # lazy loaded
+import os
+import re  # lazy loaded
+import sys
 import unicodedata
 from shutil import rmtree
 from typing import NoReturn, Tuple, Union
 
-import lazy_import
+import yaml  # lazy loaded
 
 from .sync import SharedVars
 
-os = lazy_import.lazy_module("os")
-sys = lazy_import.lazy_module("sys")
-re = lazy_import.lazy_module("re")
-yaml = lazy_import.lazy_module("yaml")
-argparse = lazy_import.lazy_module("argparse")
-
 __all__ = ["list_files", "to_bool", "normalize",
            "we_are_frozen", "module_path", "win_naming_convetion",
-           "flatten_set", "clean_logs", "yaml_load", "input_parser",
+           "flatten_set", "clean_logs", "input_parser",
            "MultiLog", "get_google_api_key"]
 
 
@@ -74,7 +72,7 @@ def to_bool(string: str) -> bool:
         Input value.
     """
 
-    return string.casefold() in ("y", "yes", "t", "true")
+    return string.casefold() in ("y", "yes", "t", "true", "")
 
 
 def normalize(text: str) -> str:
@@ -108,9 +106,9 @@ def get_google_api_key() -> Union[str, NoReturn]:
         f = open(_file, "r")
         return f.read().strip()
     except Exception:
-        raise Exception("You must input Google api key. Refer to repository "
-                        "for instructions "
-                        "https://github.com/marian-code/wikipedia-music-tags")
+        raise Exception("You must input Google api key. Refer to "
+                        "https://github.com/marian-code/wikipedia-music-tags "
+                        f"for instructions. Expected key file at: {_file}")
 
 
 def win_naming_convetion(string: str, dir_name=False) -> str:
@@ -142,6 +140,7 @@ def flatten_set(array: list) -> set:
     return set([item for sublist in array for item in sublist])
 
 
+# TODO probably not needed any more
 def clean_logs():
     """ Attempts to clear the log files from previous run in logs directory.
     """
@@ -160,13 +159,6 @@ def clean_logs():
             print(e)
 
 
-def yaml_load(work_dir: str) -> dict:
-    """ Loads yaml format file to dictionary. """
-
-    with open(work_dir, "r") as infile:
-        return yaml.full_load(infile)
-
-
 def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     """ Parse command line input parameters. """
 
@@ -180,9 +172,9 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     parser.add_argument("-l", "--lyrics_only", action="store_true",
                         help="Download only lyrics?")
     parser.add_argument("-a", "--album", default=None, help="Album name",
-                        type=str)
+                        nargs="*")
     parser.add_argument("-b", "--band", default=None, help="Band name",
-                        type=str)
+                        nargs="*")
     parser.add_argument("-w", "--work_dir", default=os.getcwd(),
                         help="working directory", type=str)
     parser.add_argument("-W", "--With_log", default=False,
@@ -190,6 +182,11 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
                         "applies only to console app")
 
     args = parser.parse_args()
+
+    if args.album:
+        args.album = " ".join(args.album)
+    if args.band:
+        args.band = " ".join(args.band)
 
     return (args.yaml, args.offline_debbug, args.lyrics_only,
             args.album, args.band, args.work_dir, args.With_log)

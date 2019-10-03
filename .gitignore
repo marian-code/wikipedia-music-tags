@@ -3,7 +3,7 @@
 .vscode/
 
 # python
-wiki_music/__pycache__/
+__pycache__/
 
 # testing 
 wiki_music/test_music/
@@ -28,3 +28,13 @@ wiki_music/data/
 
 # mypy typechecking folder
 .mypy_cache
+
+# pyinstaller
+setup/build/
+setup/dist/
+
+# deprecated
+deprecated/
+
+# exclude compiled files
+*.py[cod]

@@ -1,22 +1,18 @@
+import io  # lazy loaded
 import os
-
-import lazy_import
+import sys
+import urllib  # lazy loaded
+import winreg  # lazy loaded
 from typing import Optional, Tuple
-import win32clipboard
-from PIL import Image, ImageFile
+
+import PIL  # lazy loaded
+import requests  # lazy loaded
+import win32clipboard  # lazy loaded
 
 from .utils import module_path
 
-sys = lazy_import.lazy_module("sys")
-winreg = lazy_import.lazy_module("winreg")
-requests = lazy_import.lazy_module("requests")
-urlopen = lazy_import.lazy_callable("urllib.request.urlopen")
-BytesIO = lazy_import.lazy_callable("io.BytesIO")
-
 __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
            "comp_res", "get_image_size", "get_icon", "send_to_clipboard"]
-
-FORMAT = Image.registered_extensions()[".jpg"]
 
 
 def abstract_warning():
@@ -25,7 +21,7 @@ def abstract_warning():
                               "reimplemented by inheriting class")
 
 
-def send_to_clipboard(data: bytearray, clip_type=win32clipboard.CF_DIB):
+def send_to_clipboard(data: bytearray, clip_type=None):
     """ Pastes data to clipboard.\n
 
     Parameters
@@ -35,19 +31,26 @@ def send_to_clipboard(data: bytearray, clip_type=win32clipboard.CF_DIB):
     data: bytearray
         data to paste to clipboard
     """
+    clip_data: bytes
 
-    file_stream = BytesIO(data)
-    image = Image.open(file_stream)
+    file_stream = io.BytesIO(data)
+    image = PIL.Image.open(file_stream)
 
-    clip_stream = BytesIO()
+    clip_stream = io.BytesIO()
     image.convert("RGB").save(clip_stream, "BMP")
-    data = clip_stream.getvalue()[14:]
+    clip_data = clip_stream.getvalue()[14:]
     clip_stream.close()
 
-    win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(clip_type, data)
-    win32clipboard.CloseClipboard()
+    if os.name == "nt":
+        if not clip_type:
+            clip_type = win32clipboard.CF_DIB
+
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(clip_type, clip_data)
+        win32clipboard.CloseClipboard()
+    else:
+        raise NotImplementedError("Only Windows clipboard is supported at the moment")
 
 
 def get_music_path() -> str:
@@ -68,7 +71,7 @@ def get_music_path() -> str:
         return os.path.join(os.path.expanduser("~"), "music")
 
 
-def get_image(address: str) -> Optional[bytearray]:
+def get_image(address: str) -> Optional[bytes]:
 
     if address.startswith("http"):
         return requests.get(address).content
@@ -83,15 +86,17 @@ def get_image(address: str) -> Optional[bytearray]:
             return None
 
 
-def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytearray:
+def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytes:
 
-    file_stream = BytesIO(image)
-    img = Image.open(file_stream)
+    FORMAT = PIL.Image.registered_extensions()[".jpg"]
+
+    file_stream = io.BytesIO(image)
+    img = PIL.Image.open(file_stream)
 
     if x and y:
-        img = img.resize((x, y), Image.LANCZOS)
+        img = img.resize((x, y), PIL.Image.LANCZOS)
 
-    file_stream = BytesIO()
+    file_stream = io.BytesIO()
     img.save(file_stream, FORMAT, optimize=True, quality=quality,
              progressive=True)
 
@@ -123,12 +128,12 @@ def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
     """
 
     try:
-        fl = urlopen(uri)
+        fl = urllib.request.urlopen(uri)
         size = fl.headers.get("content-length")
         if size:
             size = int(size)
 
-        p = ImageFile.Parser()
+        p = PIL.ImageFile.Parser()
         while True:
             data = fl.read(1024)
             if not data:

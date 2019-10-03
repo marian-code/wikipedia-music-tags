@@ -26,18 +26,19 @@ class LyricsManager:
         cls.extractors = LyricsExtractor.extractors
         log.info("loaded {} extractors".format(len(cls.extractors)))
 
-    @classmethod
-    def extract_lyrics(cls, url: str, song: str, artist: str) -> Lyrics:
+    def extract_lyrics(self, url: str, song: str, artist: str) -> Lyrics:
         """Extract lyrics from url."""
         #log.info("extracting lyrics from url \"{}\"".format(url))
         url_data = UrlData(url)
-        for ext in cls.extractors:
+        for ext in self.extractors:
 
             if not ext.can_handle(url_data):
                 continue
 
-            log.debug("using {} for {}".format(ext, url_data))
             extractor = ext()
+
+            log.debug("using {} for {}".format(ext, url_data))
+            
             try:
                 lyrics = extractor.extract_lyrics(url_data, song, artist)
             except exceptions.NoLyrics:

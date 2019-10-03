@@ -46,3 +46,6 @@ class LyricsExtractor(metaclass=LyricsExtractorMount):
     def extract_lyrics(self, url_data: UrlData) -> "Lyrics":
         """Return a Lyrics object for the given url, html or bs."""
         raise NotImplementedError
+
+    def __str__(self):
+        return "<Extractor {}>".format(self.name)

@@ -16,6 +16,8 @@ class BaseGui(QMainWindow, Ui_MainWindow):
 
     def __init__(self) -> None:
 
+        log_gui.debug("init base")
+
         # call QMainWindow __init__ method
         super().__init__()
         # call Ui_MainWindow user interface setup method
@@ -27,6 +29,8 @@ class BaseGui(QMainWindow, Ui_MainWindow):
         # misc
         self.work_dir: str = ""
         self.log: MultiLog = MultiLog(log_gui)
+
+        log_gui.debug("init base done")
 
     def __initUI__(self):
         self.setWindowTitle("Wiki Music")

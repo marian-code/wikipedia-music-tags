@@ -5,6 +5,7 @@ import re
 
 from ..extractor import LyricsExtractor
 from ..models.lyrics import Lyrics
+from ..models import exceptions
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +24,15 @@ class AZLyrics(LyricsExtractor):
         bs = url_data.bs
 
         center = bs.body.find("div", {"class": "col-xs-12 col-lg-8 text-center"})
+        
+        if not center:
+            # 503 Service Temporarily Unavailable
+            if re.search(r"50[0-9]", bs.find("title").text):
+                raise exceptions.NotAllowedError
+            # if song is not present AZLyrics returns title page
+            elif bs.find("title").text == "AZLyrics - Song Lyrics from A to Z":
+                raise exceptions.NoLyrics
+        
         lyrics = center.find("div", {"class": None}).text
 
         lyrics = re.sub(r"<br>", " ", lyrics)

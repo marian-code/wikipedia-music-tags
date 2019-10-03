@@ -108,6 +108,8 @@ class DataModel(ParserInteract):
 
     def __init__(self) -> None:
 
+        log_gui.debug("init data model")
+
         super().__init__()
 
         self.cover_art = None
@@ -115,6 +117,8 @@ class DataModel(ParserInteract):
         # create table with headers
         self.table = CustomQStandardItemModel()
         self.table.setHorizontalHeaderLabels(GUI_HEADERS)
+
+        log_gui.debug("init data model done")
 
     def __init_parser__(self):
         # TODO non-atomic

@@ -1,11 +1,8 @@
+import re  # lazy loaded
 from typing import Any, List, Tuple
-
-from lazy_import import lazy_module
 
 from wiki_music.utilities import (
     NoTracklistException, SharedVars, log_parser, normalize_caseless)
-
-re = lazy_module("re")
 
 __all__ = ["DataExtractors"]
 

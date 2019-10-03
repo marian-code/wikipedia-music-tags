@@ -16,6 +16,7 @@ import json
 import re
 import codecs
 import socket
+import logging
 from threading import Lock
 version = (3, 0)
 cur_version = sys.version_info
@@ -35,6 +36,10 @@ else:  # If the Current Version of Python is 2.x
     import httplib
     from httplib import IncompleteRead
     httplib._MAXHEADERS = 1000
+
+log = logging.getLogger(__name__)
+
+log.info("Loaded google images download")
 
 args_list = ["keywords", "keywords_from_file", "prefix_keywords", "suffix_keywords",
              "limit", "format", "color", "color_type", "usage_rights", "size",
@@ -123,6 +128,7 @@ def user_input():
 
 
 class googleimagesdownload:
+
     def __init__(self):
         self.thumbs = []
         self.fullsize_url = []
