@@ -3,7 +3,7 @@
 .vscode/
 
 # python
-__pycache__/
+#__pycache__/
 
 # testing 
 wiki_music/test_music/
