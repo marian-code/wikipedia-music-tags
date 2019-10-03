@@ -1,0 +1,23 @@
+hiddenimports =[
+    "wiki_music.external_libraries.lyricsfinder.extractors",
+    "wiki_music.external_libraries.lyricsfinder.extractors.animelyrics",
+    "wiki_music.external_libraries.lyricsfinder.extractors.azlyrics",
+    "wiki_music.external_libraries.lyricsfinder.extractors.darklyrics",
+    "wiki_music.external_libraries.lyricsfinder.extractors.genius",
+    "wiki_music.external_libraries.lyricsfinder.extractors.lyrical_nonsense",
+    "wiki_music.external_libraries.lyricsfinder.extractors.lyricsmode",
+    "wiki_music.external_libraries.lyricsfinder.extractors.musixmatch",
+    "package_setup",
+    "wikipedia",
+    "datefinder",
+    "PIL.Image",
+    "PIL.ImageFile",
+    "fuzzywuzzy.fuzz",
+    "fuzzywuzzy.process",
+    "re",
+    "bs4",
+    "io",
+    "yaml",
+    "win32clipboard",
+    "pickle"
+]

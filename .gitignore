@@ -12,7 +12,10 @@ wiki_music/logs/
 wiki_music_setup.log
 
 # build dir
-setup/
+setup/build/
+setup/dist/
+setup/wiki_music.spec
+setup/unnecessary_dependencies.txt
 
 # dir for file output
 wiki_music/output/

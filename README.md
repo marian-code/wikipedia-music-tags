@@ -92,9 +92,9 @@ If you decide to package the script: (for now only **console** version packaging
 If you have installed pyinstaller the steps are following:
 I **strongly recomend** that you create a virtual environment before proceeding,
 with only requirements needed for this project. Otherwise pyinstaller will
-bundle too many useless libraries in freezed app. The freezed app size can easily
+bundle too many useless libraries in frozen app. The freezed app size can easily
 get over 1GB then. For the same reasons Anaconda installation is even worse
-because it has so many libraries by default. If for saome strange reason you don't want to
+because it has so many libraries by default. If for some strange reason you don't want to
 create virtual env you can use option 
 ```
 --exclude-module=
