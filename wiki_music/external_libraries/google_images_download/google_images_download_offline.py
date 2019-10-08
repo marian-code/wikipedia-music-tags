@@ -4,13 +4,30 @@ from typing import List, NoReturn, Tuple
 
 from PIL import Image
 
-from wiki_music.constants.paths import ROOT_DIR  # pylint: disable=import-error
+from wiki_music.constants.paths import OFFLINE_DEBUG_IMAGES  # pylint: disable=import-error
+from wiki_music.utilities.utils import list_files
 
 log = logging.getLogger(__name__)
 
 log.info("Loaded Offline google images download")
 
 class googleimagesdownload:
+    """ Offline version imitating google images download. Main puprose is
+    offline testing.
+
+    Attributes
+    ----------
+    thumbs: List[bytearray]
+        list of dowloaded coverart thumbnails read in memory as bytearrays
+    fullsize_url: List[str]
+        list of urls pointing to fullsize pictures
+    fullsize_dim: List[Tuple[float, Tuple[int, int]]]
+        list of tuples containing size of image in Kb and dimensions
+    count: int
+        actual number of downloaded pictures
+    finished: bool
+        anounce finished downloading
+    """
 
     def __init__(self) -> None:
         self.thumbs: List[bytearray] = []
@@ -21,6 +38,14 @@ class googleimagesdownload:
         self._exit: bool = False
 
     def download(self, arguments: dict):
+        """ Start reding images from files.
+
+        Parameters
+        ----------
+        arguments: dict
+            dictionary of arguments, essentialy it is not needed. It is
+            included only to maintain simillarity with original version API
+        """
 
         dim: Tuple[int, int]
         disk_size: float
@@ -28,7 +53,8 @@ class googleimagesdownload:
         print(f"\nItem no.: 1 --> Item name = {arguments['keywords']}")
         print("Evaluating...")
 
-        files: List[str] = self.list_files()
+        files: List[str] = list_files(OFFLINE_DEBUG_IMAGES, file_type="image",
+                                      recurse=True)
         errorCount: int = 0
 
         for f in files:
@@ -56,14 +82,23 @@ class googleimagesdownload:
         self.finished = True
 
     def close(self):
+        """ Stop downloading images. """
+
         self._exit = True
 
-    def list_files(self) -> List[str]:
-
-        folder: str = os.path.join(ROOT_DIR, "..", "tests", "offline_debug")
-
-        return [os.path.join(folder, f.name) for f in os.scandir(folder)
-                if f.is_file() and f.name.casefold().endswith(("jpg", "png"))]
-
     def get_max(self) -> int:
-        return len(self.list_files())
+        """ Returns maximum number of loadable images. Needed to set progresbar
+        in GUI
+
+        See also
+        --------
+        :func:`wiki_music.utilities.utils.list_files`
+            to see list of suported files
+
+        Returns
+        -------
+        int
+            number of image files
+        """
+        return len(list_files(OFFLINE_DEBUG_IMAGES, file_type="image",
+                              recurse=True))

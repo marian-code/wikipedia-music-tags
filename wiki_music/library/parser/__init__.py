@@ -8,6 +8,23 @@ from .process_page import WikipediaParser
 
 
 class WikipediaRunner(WikipediaParser):
+    """ Toplevel Wikipedia Parser class which inherits all other parser
+    subclasses. This is the class that is intended for user interaction. Its
+    methods know how to run the parser in order to produce meaningfull results.
+
+    Warnings
+    --------
+    This is the only parser class that is ment for user interaction. Calling
+    its subclasses directly might result in unexpected behaviour.
+
+    Parameters
+    ----------
+    GUI: bool
+        if True - assume app is running in GUI mode\n
+        if False - assume app is running in CLI mode
+    protected_vars: bool
+        whether to initialize protected variables or not
+    """
 
     def __init__(self, GUI: bool = True, protected_vars: bool = True) -> None:
 
@@ -21,12 +38,15 @@ class WikipediaRunner(WikipediaParser):
 
     @exception(log_parser)
     def run_wiki(self):
+        """ Runs the whole wikipedia search, together with lyrics finding. """
+
         if self.GUI:
             self._run_wiki_gui()
         else:
             self._run_wiki_nogui()
 
     def _run_wiki_gui(self):
+        """ Runs wikipedia search with specifics of the GUI mode. """
 
         def wait_select(switch: str):
             SharedVars.switch = switch
@@ -80,7 +100,7 @@ class WikipediaRunner(WikipediaParser):
 
         # extract track list
         self.log.info("Extracting tracks")
-        self.get_tracks()
+        self._get_tracks()
 
         # extract personel names
         self.log.info("Extracting additional personnel")
@@ -142,48 +162,49 @@ class WikipediaRunner(WikipediaParser):
         self.log.info("Done")
 
     def _run_wiki_nogui(self):
+        """ Runs wikipedia search with specifics of the CLI mode. """
 
         # download wikipedia page
         if not SharedVars.offline_debbug:
 
-            self.log_print(msg_WHITE="Accessing Wikipedia...")
+            self._log_print(msg_WHITE="Accessing Wikipedia...")
 
             print("Searching for: " + GREEN + self.album + RESET +
                   " by " + GREEN + self.band)
 
         else:
-            self.log_print(msg_GREEN="Using offline cached page insted "
+            self._log_print(msg_GREEN="Using offline cached page insted "
                                      "of web page")
 
         error_msg = self.get_wiki()
         if error_msg:
-            self.log_print(msg_GREEN=error_msg, level="WARN")
+            self._log_print(msg_GREEN=error_msg, level="WARN")
             return
 
         else:
-            self.log_print(msg_GREEN="Found at: ", msg_WHITE=self.url)
+            self._log_print(msg_GREEN="Found at: ", msg_WHITE=self.url)
 
-            self.log_print(msg_WHITE="Cooking Soup")
+            self._log_print(msg_WHITE="Cooking Soup")
 
             error_msg = self.cook_soup()
             if error_msg:
-                self.log_print(msg_GREEN=error_msg, level="WARN")
+                self._log_print(msg_GREEN=error_msg, level="WARN")
 
                 return
             else:
-                self.log_print(msg_WHITE="Soup ready")
+                self._log_print(msg_WHITE="Soup ready")
 
         # get page contents
         self.get_contents()
 
         # find release date
         self.get_release_date()
-        self.log_print(msg_GREEN="Found release date",
+        self._log_print(msg_GREEN="Found release date",
                        msg_WHITE=self.release_date)
 
         # find list of genres
         self.get_genres()
-        self.log_print(msg_GREEN="Found genre(s)",
+        self._log_print(msg_GREEN="Found genre(s)",
                        msg_WHITE="\n".join(self.genres))
 
         if not we_are_frozen():
@@ -191,18 +212,18 @@ class WikipediaRunner(WikipediaParser):
             self.basic_out()
 
         # print out page contents
-        self.log_print(msg_GREEN="Found page contents",
+        self._log_print(msg_GREEN="Found page contents",
                 msg_WHITE="\n".join(self.contents))
 
         # extract track list
-        self.get_tracks()
+        self._get_tracks()
 
         # extract personel names
-        self.log_print(msg_GREEN="Extracting additional personnel")
+        self._log_print(msg_GREEN="Extracting additional personnel")
         self.get_personnel()
 
         # print out additional personnel
-        self.log_print(msg_GREEN="Found aditional personel")
+        self._log_print(msg_GREEN="Found aditional personel")
         if not we_are_frozen():
             print(self.personnel_2_str())
 
@@ -214,22 +235,22 @@ class WikipediaRunner(WikipediaParser):
         self.info_tracks()
 
         # extract writers, composers
-        self.log_print(msg_GREEN="Extracting composers")
+        self._log_print(msg_GREEN="Extracting composers")
         self.get_composers()
 
         # complete artists names
         self.complete()
 
-        self.log_print(msg_GREEN="Found composers",
+        self._log_print(msg_GREEN="Found composers",
                 msg_WHITE="\n".join(flatten_set(self.composers)))
 
         if not we_are_frozen():
             # save to files
-            self.log_print(msg_WHITE="Writing to disk")
+            self._log_print(msg_WHITE="Writing to disk")
             self.disk_write()
 
         # print out found tracklist
-        self.log_print(msg_GREEN="Found Track list(s)")
+        self._log_print(msg_GREEN="Found Track list(s)")
         self.print_tracklist()
 
         # merge artists and personel which have some apperences
@@ -270,20 +291,24 @@ class WikipediaRunner(WikipediaParser):
         
         print(CYAN + "Write data to ID3 tags? ([y]/n): " + RESET, end="")
         if to_bool(input()):
-            if not self.write_tags(lyrics_only=False):
-                self.log_print(msg_WHITE="Cannot write tags because there are no "
+            if not self.write_tags():
+                self._log_print(msg_WHITE="Cannot write tags because there are no "
                                     "coresponding files")
             else:
-                self.log_print(msg_GREEN="Done")
+                self._log_print(msg_GREEN="Done")
 
     @exception(log_parser)
     def run_lyrics(self):
+        """ Runs only the lyrics search. """        
+
         if self.GUI:
             self._run_lyrics_gui()
         else:
             self._run_lyrics_nogui()
 
     def _run_lyrics_gui(self):
+        """ Runs only lyrics search with specifics of the GUI mode. """
+
 
         self.log.info("Searching for lyrics")
 
@@ -297,22 +322,34 @@ class WikipediaRunner(WikipediaParser):
         SharedVars.barrier.wait()
 
     def _run_lyrics_nogui(self):
+        """ Runs only lyrics search with specifics of the CLI mode. """
 
         self.read_files()
 
         # find lyrics
-        self.log_print(msg_GREEN="Searching for lyrics")
+        self._log_print(msg_GREEN="Searching for lyrics")
 
         self.save_lyrics()
         
-        if not self.write_tags(lyrics_only=True):
-            self.log_print(msg_WHITE="Cannot write tags because there are no "
+        if not self.write_tags():
+            self._log_print(msg_WHITE="Cannot write tags because there are no "
                                 "coresponding files")
         else:
-            self.log_print(msg_GREEN="Done")
+            self._log_print(msg_GREEN="Done")
 
-    def log_print(self, msg_GREEN: str = "", msg_WHITE: str = "",
+    def _log_print(self, msg_GREEN: str = "", msg_WHITE: str = "",
                   level: str = "INFO"):
+        """ Redirects the input to sandard print function and to logger.
+
+        Parameters
+        ----------
+        msg_GREEN: str
+            message that shoul be highlighted in green in print output
+        msg_WHITE: str
+            message that should be left with the default font color
+        level: str
+            logger level for output message
+        """
 
         if msg_GREEN != "":
             print(GREEN + "\n" + msg_GREEN)

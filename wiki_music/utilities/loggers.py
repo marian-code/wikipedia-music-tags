@@ -1,3 +1,5 @@
+""" Logger initialization for package. """
+
 import logging
 from os import path, makedirs
 from threading import get_ident
@@ -6,10 +8,40 @@ from wiki_music.constants.paths import LOG_DIR
 
 
 def log_name(name: str) -> str:
+    """ Compiles standard logger name consisting of wiki_music_{name}.log
+
+    Parameters
+    ----------
+    name: str
+        unique logger name
+
+    Returns
+    -------
+    str
+        compiled logger name
+    """
+
     return path.join(LOG_DIR, f"wiki_music_{name}.log")
 
 
 def get_logger(name: str, logfile: str, mode: str = "w") -> logging.Logger:
+    """ Initializes logger with predefined formating and both file and
+    stdout handles.
+
+    Parameters
+    ----------
+    name: str
+        logger name
+    logfile: str
+        path where logger filehandle will redirect output
+    mode: str
+        write mode of filehandle - append/overwrite
+
+    Returns
+    -------
+    logging.Logger
+        instance of a new logger
+    """
 
     log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)

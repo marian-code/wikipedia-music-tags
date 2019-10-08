@@ -20,10 +20,19 @@ class Lyricsmode(LyricsExtractor):
     def extract_lyrics(url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
-        try:
-            lyrics_window = bs.find_all("p", {"id": "lyrics_text", "class": "ui-annotatable"})[0]
-        except IndexError:
-            if "oops" in bs.find("div", {"class": "song_name fs32"}).text.lower():
+
+        # 1st possible lyrics location
+        lyrics_window = bs.find("p", {"id": "lyrics_text",
+                                      "class": "ui-annotatable"})
+
+        # 2nd possible lyrics location
+        if not lyrics_window:
+            lyrics_window = bs.find("div", {"id": "lyrics_text"})
+
+        # check for 404 ERROR page not found
+        if not lyrics_window:
+            if "oops" in bs.find("div", {"class":
+                                         "song_name fs32"}).text.lower():
                 raise exceptions.NoLyrics
 
         lyrics = lyrics_window.text

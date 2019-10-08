@@ -1,0 +1,12 @@
+# optional - build docs. Do not install these extensions in virtual
+# environment you will polute it with a lot of unnecessary libs
+
+#installs: docutils, mistune
+m2r>=0.2.1
+
+# installs: sphinx, sphinxcontrib-serializinghtml, babel, requests, colorama,
+# Jinja2, imagesize, sphinxcontrib-htmlhelp, setuptools, docutils,
+# sphinxcontrib-jsmath, snowballstemmer, sphinxcontrib-applehelp,
+#packaging, sphinxcontrib-devhelp, sphinxcontrib-qthelp, alabaster,
+#Pygments, pytz, idna, urllib3, chardet, certifi, MarkupSafe, six, pyparsing
+sphinx_rtd_theme>=0.4.3

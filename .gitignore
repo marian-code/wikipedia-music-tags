@@ -3,25 +3,22 @@
 .vscode/
 
 # python
-#__pycache__/
+__pycache__/
 
 # testing 
-wiki_music/test_music/
-wiki_music/tests/function_tests/
-wiki_music/logs/
-wiki_music_setup.log
+tests/test_music/
+tests/function_tests/
 
 # build dir
 setup/build/
-setup/dist/
+setup/*dist/
 setup/wiki_music.spec
 setup/unnecessary_dependencies.txt
 
-# dir for file output
+# dir for file output, profiling, logs
 wiki_music/output/
-
-# profiling stats
 wiki_music/profiling/
+wiki_music/logs/
 
 # unique user files
 wiki_music/files/google_api_key.txt
@@ -32,12 +29,13 @@ wiki_music/data/
 # mypy typechecking folder
 .mypy_cache
 
-# pyinstaller
-setup/build/
-setup/dist/
-
 # deprecated
 deprecated/
 
 # exclude compiled files
 *.py[cod]
+
+# built version of documentation
+docs/_build/
+docs/_static/
+docs/_templates/

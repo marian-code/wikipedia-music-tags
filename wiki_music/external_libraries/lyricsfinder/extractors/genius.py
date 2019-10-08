@@ -28,6 +28,15 @@ class Genius(LyricsExtractor):
             # Oops! Page not found message
             if bs.find("h1", {"class": "render_404-headline"}):
                 raise exceptions.NoLyrics
+            # if album name == song name and we end up in album page
+            else:
+                # find tracklist
+                tracklist = bs.find(
+                    "div", {"class": "track_listing track_listing--columns"})
+                # extract new url
+                url_data.url = tracklist.find("a", {"title": song})["href"]
+                # call extraction method again
+                return Genius.extract_lyrics(url_data, song, artist)
 
         lyrics = lyrics_window.text.strip()
 

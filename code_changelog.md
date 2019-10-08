@@ -2,9 +2,19 @@
 
 ### Main problems
 - write automated tests
+- fix gui scaling and elements moving around
+- write docstrings
+- write documentation
+- write setup.py
+- publish to PyPi
+- create a github release
+- use underscores to mark private things
+- convers constants to re pattersn for better matching and use more re for better
+  extraction
 
 ### Freezing problems
-- freeze gui version
+- publish frozen apps
+- try compression options - upx
 
 ### Ideas
 - parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
@@ -12,6 +22,9 @@
 - parser should probably include one API channel to comunicate with "outer" world. Now communication is becoming messy and it is not clear how changes in parser API are affecting other classes that are using it.
 - add cue spliting and audion conversions
 - change SharedVars class for Qt signals, would need to migrate to QThreads, Qsignals dont work with threading module
+- include different backends than wikipedia
+- represent each song with its own class
+- we could support multiple preload instances running at once
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -21,7 +34,46 @@
 
 # Change Log
 
-### 2.10.2019
+### 8.10.2019
+- finished parser docsrings, now only gui remains
+- found bug, pickle is evidently unable to unpickle complex pages
+- revriten a lot of parser methods, more use of BeautifulSoup and re,
+  less unreadable and unreliable string searching, should result in better
+  extractions, but will be probably still full of bugs.
+- new methods should be a lot easier to maintain
+- added ne parser constants
+- added new types of exceptions, all extraction methods in parser now raise
+  if the extraction has gone wrong somehow
+- warnnings wrapper now catches only wiki_music defined exceptions
+
+### 7.10.2019
+- continue to write parser docstrings
+- writen new tags test
+- added some regex expresions to track extraction for shorter and cleaner code
+- we have docstrings for almost whole lib only gui lib remains
+- rewrote some getter methods in parser to be more robust and have less code
+
+### 6.10.2019
+- continue to write docstrings, so far we have documented constants,
+  external libraries, utilities, part of library and antry point scripts
+- some minor improvements to type anotations, use of TYPE_CHECKING constant
+- ThreadPool in parser_utils is now smart and doesnt spawn new threads
+  if it gets only one set of arguments
+- got rid of only_lyrics: bool argument in lyrics saving. It is useless because
+  of the code is selectively writing only the tags that have changed
+
+### 5.10.2019
+- found the bug that was preventing frozen gui code from running. There was
+  gui.py file and gui folder with other submodules which was evidentlly
+  confusing python. Renamed the gui folder to gui_lib and gui.py to app_gui.py
+- added version file
+- started building docs with sphinx and readthedocs theme
+- docs are looking good, so far the utilities and external_lbraries are documented
+
+### 4.10.2019
+- trying to freeze gui app, no success some wild bug is on loose
+
+### 3.10.2019
 - now we are using a separate virtual environment for building freezed app
   size is reduced to ~ 100MB which is still a lot but accetable
 - console app is now working ok

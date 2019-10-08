@@ -1,0 +1,37 @@
+API reference for wiki_music constants module
+=============================================
+
+
+This file describes wiki_music API reference. Beware, some things might not be
+up to date and all is subject to change since we are still in early development
+phase.
+
+wiki_music constants
+---------------------------
+
+.. automodule:: wiki_music.constants
+   :members:
+
+wiki_music constants.colors
+---------------------------
+
+.. automodule:: wiki_music.constants.colors
+   :members:
+
+wiki_music constants.parser_const
+---------------------------------
+
+.. automodule:: wiki_music.constants.parser_const
+   :members:
+
+wiki_music constants.paths
+--------------------------
+
+.. automodule:: wiki_music.constants.paths
+   :members:
+
+wiki_music constants.tags
+-------------------------
+
+.. automodule:: wiki_music.constants.tags
+   :members:

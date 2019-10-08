@@ -1,0 +1,14 @@
+ipython : parso, jedi, pickleshare, pygments, decorator, backcall, wcwidth, prompt-toolkit, ipython-genutils, traitlets
+pyinstaller : installs altgraph, future, pefile, pywin32-ctypes
+pylint : isort, mccabe, typed-ast, lazy-object-proxy, wrapt, astroid
+mypy : typing-extensions, mypy-extensions
+pep8
+
+unnecessary depends:
+--------------------------------
+Qt5Qml.dll
+Qt5Quick.dll
+Qt5Network.dll
+Qt5DBus.dll
+Qt5Svg.dll
+opengl32sw

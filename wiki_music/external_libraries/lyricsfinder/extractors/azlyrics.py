@@ -32,6 +32,14 @@ class AZLyrics(LyricsExtractor):
             # if song is not present AZLyrics returns title page
             elif bs.find("title").text == "AZLyrics - Song Lyrics from A to Z":
                 raise exceptions.NoLyrics
+            # if we get to the album page instead of song page
+            else:
+                # find tracklist
+                tracklist = bs.find("div", {"id", "listAlbum"})
+                # find song url
+                url_data.url = tracklist.find("a", text=song.title())["href"]
+                # call method again
+                return AZLyrics.extract_lyrics(url_data, song, artist)
         
         lyrics = center.find("div", {"class": None}).text
 

@@ -1,3 +1,5 @@
+""" Utility functions used by GUI classes. """
+
 import io  # lazy loaded
 import os
 import sys
@@ -9,20 +11,25 @@ import PIL  # lazy loaded
 import requests  # lazy loaded
 import win32clipboard  # lazy loaded
 
-from .utils import module_path
+from wiki_music.constants import FILES_DIR
 
 __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
            "comp_res", "get_image_size", "get_icon", "send_to_clipboard"]
 
 
 def abstract_warning():
-    """ Raises error when abstract method is called directly. """
+    """ Raises error when abstract method is called directly.
+    Raises
+    ------
+    NotImplementedError
+        this is the sole purpose of this function
+    """
     raise NotImplementedError("This method is abstaract and should be "
                               "reimplemented by inheriting class")
 
 
-def send_to_clipboard(data: bytearray, clip_type=None):
-    """ Pastes data to clipboard.\n
+def send_to_clipboard(data: bytearray, clip_type: Optional[int] = None):
+    """ Pastes data to clipboard.
 
     Parameters
     ----------
@@ -30,6 +37,12 @@ def send_to_clipboard(data: bytearray, clip_type=None):
         type of the clipboard
     data: bytearray
         data to paste to clipboard
+
+    Raises
+    ------
+    NotImplementedError
+        when unsupported platform is detected, and we don't know how to
+        interact with cilpboard
     """
     clip_data: bytes
 
@@ -54,7 +67,13 @@ def send_to_clipboard(data: bytearray, clip_type=None):
 
 
 def get_music_path() -> str:
-    """Returns the default music path for linux or windows"""
+    """Returns the default music path for linux or windows
+    
+    Returns
+    -------
+    str
+        string path pointing to music library location
+    """
 
     if os.name == "nt":
         sub_key = (r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
@@ -72,6 +91,21 @@ def get_music_path() -> str:
 
 
 def get_image(address: str) -> Optional[bytes]:
+    """ Based on addres decides if the image is online or local. If address
+    has http prefix, image is downloaded from internet. If not then it is read 
+    from disk.
+
+    Parameters
+    ----------
+    address:
+        string with path to picture on local PC or with http address
+
+    Returns
+    -------
+    bytes
+        bytes repesentation of image loaded to memory or None if address is
+        not valid
+    """
 
     if address.startswith("http"):
         return requests.get(address).content
@@ -87,6 +121,26 @@ def get_image(address: str) -> Optional[bytes]:
 
 
 def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytes:
+    """ Compress and/or change image resolution. If x and y dimension are
+    both specified than image is resized to these dimension otherwise it is
+    only compressed
+
+    Parameters
+    ----------
+    image: bytearray
+        bytes representation of image loaded to memory
+    quality: int
+        target quality to which we wanto compress the limits are (1, 99)
+    x: int
+        horizontal image dimension
+    y: int
+        vertical iage dimension
+
+    Returns
+    -------
+    bytes
+        bytes image compressed and resized than reloaded to memory
+    """
 
     FORMAT = PIL.Image.registered_extensions()[".jpg"]
 
@@ -103,14 +157,38 @@ def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytes:
     return file_stream.getvalue()
 
 
-def get_image_size(image) -> str:
+def get_image_size(image: bytearray) -> str:
+    """ get size of image in memory
+
+    Parameters
+    ----------
+    image: bytearray
+        bytes image in loaded in memory
+
+    Returns
+    -------
+    str
+        string with image size in Kb rounded to 2 decimal places
+    """
 
     return f"{sys.getsizeof(image) / 1024:.2f}"
 
 
 def get_icon() -> str:
+    """ returns application icon path
 
-    icon = os.path.join(module_path(), "files", "icon.ico")
+    Raises
+    ------
+    FileNotFoundError
+        if the path does not exist
+
+    Returns
+    -------
+    str
+        string with icon path
+    """
+
+    icon = os.path.join(FILES_DIR, "icon.ico")
     if not os.path.isfile(icon):
         raise FileNotFoundError(f"There is no icon file in: {icon}")
     else:
@@ -118,13 +196,23 @@ def get_icon() -> str:
 
 
 def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
-    """ Get file size *and* image size (None if not known) of picture on the
-    internet without downloading it.\n
+    """ Get file size and image size (None if not known) of picture on the
+    internet without downloading it.
 
     Parameters
     ----------
     uri: str
         picture url addres
+
+    References
+    ----------
+    https://stackoverflow.com/questions/15800704/get-image-size-without-loading-image-into-memory
+
+    Returns
+    -------
+    tuple
+        if the size can be obtained result is a tuple with picture size in Kb
+        and dimensions tuple as a second element   
     """
 
     try:

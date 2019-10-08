@@ -9,8 +9,10 @@ from .tag_base import TagBase
 
 
 class TagM4a(TagBase):
+    """ A low level implementation of tag handling for m4a files. """
+    __doc__ += TagBase.__doc__  # type: ignore
 
-    map_keys = OrderedDict([
+    _map_keys = OrderedDict([
         ("\xa9alb", "ALBUM"),
         ("aART", "ALBUMARTIST"),
         ("\xa9ART", "ARTIST"),
@@ -25,23 +27,20 @@ class TagM4a(TagBase):
         ("covr", "COVERART")]
     )
 
-    def __init__(self, filename: str):
-
-        super().__init__(filename)
-
     def _open(self, filename: str):
+        """ Function reading m4a file to mutagen.mp4.MP4 class. """
 
         try:
-            self.song = MP4(filename=filename)
+            self._song = MP4(filename=filename)
         except MP4MetadataError:
             print("Cannot read MP4 tags")
 
     def _read(self) -> Dict[str, Union[str, bytearray]]:
 
         tags = dict()
-        for key, value in self.map_keys.items():
+        for key, value in self._map_keys.items():  # pylint: disable=no-member
             try:
-                tag = self.song.tags[key]
+                tag = self._song.tags[key]
                 if isinstance(tag, list):
                     tag = tag[0]
                 if value in ("DISCNUMBER", "TRACKNUMBER"):
@@ -62,4 +61,4 @@ class TagM4a(TagBase):
         elif tag == "COVERART":
             value = [MP4Cover(value, imageformat=MP4Cover.FORMAT_JPEG)]  # type: ignore
 
-        self.song.tags[self.reverse_map[tag]] = value
+        self._song.tags[self.reverse_map[tag]] = value

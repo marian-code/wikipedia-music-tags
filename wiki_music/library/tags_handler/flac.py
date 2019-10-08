@@ -8,8 +8,10 @@ from .tag_base import TagBase
 
 
 class TagFlac(TagBase):
+    """ A low level implementation of tag handling for flac files. """
+    __doc__ += TagBase.__doc__  # type: ignore
 
-    map_keys = OrderedDict([
+    _map_keys = OrderedDict([
         ("album", "ALBUM"),
         ("albumartist", "ALBUMARTIST"),
         ("artist", "ARTIST"),
@@ -24,27 +26,24 @@ class TagFlac(TagBase):
         ("picture", "COVERART")]
     )
 
-    def __init__(self, filename: str):
-
-        super().__init__(filename)
-
     def _open(self, filename: str):
+        """ Function reading flac file to mutagen.flac.FLAC class. """
 
         try:
-            self.song = FLAC(filename=filename)
+            self._song = FLAC(filename=filename)
         except FLACNoHeaderError:
             print("Cannot read FLAC tags")
 
     def _read(self) -> Dict[str, Union[str, bytearray]]:
 
         tags = dict()
-        for key, value in self.map_keys.items():
+        for key, value in self._map_keys.items():  # pylint: disable=no-member
             try:
                 if key == "picture":
-                    tag = self.song.pictures[0].data
+                    tag = self._song.pictures[0].data
                     continue
                 else:
-                    tag = self.song.tags[key]
+                    tag = self._song.tags[key]
                     if isinstance(tag, list):
                         tag = tag[0]
                     tag = str(tag).strip()
@@ -66,7 +65,7 @@ class TagFlac(TagBase):
             pic.desc = "Front Cover"
 
             # first we have to delete previous pictures and then write new
-            self.song.clear_pictures()
-            self.song.add_picture(pic)
+            self._song.clear_pictures()
+            self._song.add_picture(pic)
         else:
-            self.song.tags[self.reverse_map[tag]] = value
+            self._song.tags[self.reverse_map[tag]] = value

@@ -1,8 +1,16 @@
+"""wiki_music root file: __init__ sets which modules are lazy imported on
+on package level and pulls in constants: __version__ and GUI_RUNNING."""
+
 from sys import argv
 from lazy_import import lazy_module
 
+try:
+    from version import __version__
+except ImportError:
+    __version__ = "unknown"  #: specifies version of the package
+
 if "gui" in argv[0].lower():
-    GUI_RUNNING = True
+    GUI_RUNNING = True  #: tells if GUI or CLI frontend is running
 else:
     GUI_RUNNING = False
 
@@ -24,6 +32,7 @@ lazy_module("wikipedia")
 lazy_module("webbrowser")
 lazy_module("subprocess")
 lazy_module("datefinder")
+lazy_module("collections")
 lazy_module("win32clipboard")
 lazy_module("fuzzywuzzy.fuzz")
 lazy_module("fuzzywuzzy.process")

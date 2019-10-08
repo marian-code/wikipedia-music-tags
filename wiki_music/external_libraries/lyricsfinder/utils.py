@@ -17,11 +17,11 @@ class UrlData:
 
     def __init__(self, url: str):
         """Build url."""
-        self.url = url
         self.headers: dict = {}
 
         self.html_parser: str = "lxml"
 
+        self._url = url
         self._resp = None
         self._html = None
         self._bs = None
@@ -50,6 +50,17 @@ class UrlData:
         if not self._bs:
             self._bs = BeautifulSoup(self.html, self.html_parser)
         return self._bs
+
+    @property
+    def url(self):
+        return self._url
+
+    @url.setter
+    def url(self, value: str):
+        self._url = value
+        self._resp = None
+        self._html = None
+        self._bs = None
 
 
 def search(query: str, api_key: str) -> List:
