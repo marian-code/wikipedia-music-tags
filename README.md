@@ -138,11 +138,11 @@ There is no building for GUI versionn yet.
 The module can be run from the command line. There are 2 options:
 1. command line mode:
 ```
-python application.py
+python app_cli.py
 ```
 2. PyQt5 GUI mode:
 ```
-python gui.py
+python app_gui.py
 ```
 
 **library** can also be used as a library for getting music tags, lyrics and writing them to files
