@@ -1,6 +1,8 @@
 # Wikipegia music tags parser
 
+[![license](https://img.shields.io/pypi/l/qtpy.svg)](./LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/wikipedia-music-tags/badge/?version=latest)](https://wikipedia-music-tags.readthedocs.io/en/latest/?badge=latest)
+[![Coverage Status](https://coveralls.io/repos/github/marian-code/wikipedia-music-tags/badge.svg?branch=master)](https://coveralls.io/github/marian-code/wikipedia-music-tags?branch=master)
 
 Python application which parses wikipedia for music tags and writes them to 
 files. Has also the ability to search for lyrics and album cover art.
