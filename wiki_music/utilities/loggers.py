@@ -2,7 +2,6 @@
 
 import logging
 from os import path, makedirs
-from threading import get_ident
 
 from wiki_music.constants.paths import LOG_DIR
 
@@ -77,5 +76,4 @@ log_tags = get_logger("wiki_music_tags", log_name("ID3_tags"))
 log_parser = get_logger("wiki_music_parser", log_name("parser"))
 
 # logging for lyrics
-_id = str(get_ident())
-log_lyrics = get_logger(_id, log_name(f"lyrics_{_id}"))
+log_lyrics = get_logger("wiki_music_lyrics", log_name("lyrics"))

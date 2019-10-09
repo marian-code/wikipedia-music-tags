@@ -12,8 +12,7 @@ from wiki_music.library import WikipediaRunner
 from wiki_music.utilities import SharedVars, input_parser, we_are_frozen
 
 
-# add signal handler to exit gracefully
-# upon Ctrl+C
+# add signal handler to exit gracefully upon Ctrl+C
 def signal_handler(sig, frame):
     print("\nAborting by user request...")
     sys.exit(0)
@@ -21,7 +20,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 
-if __name__ == "__main__":
+def main():
 
     parser = WikipediaRunner(GUI=False)
 
@@ -46,3 +45,7 @@ if __name__ == "__main__":
         parser.run_lyrics()
     else:
         parser.run_wiki()
+
+
+if __name__ == "__main__":
+    main()

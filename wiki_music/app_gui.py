@@ -12,10 +12,13 @@ from wiki_music.gui_lib.main_window import Window
 from wiki_music.gui_lib.qt_importer import QApplication
 
 
-if __name__ == "__main__":
-
+def main():
     current_thread().name = "GuiThread"
     app = QApplication(sys.argv)
     ui = Window()
     ui.show()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
+    

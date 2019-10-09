@@ -1,4 +1,4 @@
-from os import path
+from os import path, makedirs
 from typing import Callable, Optional, Tuple
 
 from wiki_music.constants.paths import DIR_FILE
@@ -427,7 +427,11 @@ class RememberDir:
 
     def __init__(self, window_instance: object) -> None:
 
+        # keep reference to main window for dialog centering
         self.window_instance = window_instance
+
+        # ensure directory for storing file exists
+        makedirs(path.dirname(DIR_FILE), exist_ok=True)
 
     def get_dir(self) -> str:
         self.start_dir = QFileDialog.getExistingDirectory(self.window_instance,

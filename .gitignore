@@ -9,6 +9,11 @@ __pycache__/
 tests/test_music/
 tests/function_tests/
 
+# install
+wiki_music.egg-info/
+build/
+dist/
+
 # build dir
 setup/build/
 setup/*dist/

@@ -15,7 +15,3 @@ pywin32>=224
 QtPy>=1.7.0
 requests>=2.18.4
 wikipedia>=1.4.0
-
-# optional - for freezing
-# installs: altgraph, future, pefile, pywin32-ctypes
-pyinstaller>=3.5

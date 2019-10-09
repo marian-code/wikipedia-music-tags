@@ -7,6 +7,7 @@
 - write documentation
 - write setup.py
 - publish to PyPi
+- publish to read the docs
 - create a github release
 - use underscores to mark private things
 - convers constants to re pattersn for better matching and use more re for better
@@ -33,6 +34,9 @@
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 9.10.2019
+- added license, mainfest and setup.py file
 
 ### 8.10.2019
 - finished parser docsrings, now only gui remains
