@@ -5,13 +5,12 @@
 - fix gui scaling and elements moving around
 - write docstrings
 - write documentation
-- write setup.py
 - publish to PyPi
-- publish to read the docs
 - create a github release
 - use underscores to mark private things
 - convers constants to re pattersn for better matching and use more re for better
   extraction
+- fix problem with no Qt bakend found in the installed package
 
 ### Freezing problems
 - publish frozen apps
@@ -37,6 +36,8 @@
 
 ### 9.10.2019
 - added license, mainfest and setup.py file
+- publish to read the docs, build is passing now after somme debugging
+- written setup.py file, instalation is working
 
 ### 8.10.2019
 - finished parser docsrings, now only gui remains

@@ -1,4 +1,4 @@
-""" wiki_music GUI entry point. """
+""" wiki_music CLI entry point. """
 
 import signal
 import sys

@@ -1,9 +1,13 @@
 # Wikipegia music tags parser
 
+[![Documentation Status](https://readthedocs.org/projects/wikipedia-music-tags/badge/?version=latest)](https://wikipedia-music-tags.readthedocs.io/en/latest/?badge=latest)
+
 Python application which parses wikipedia for music tags and writes them to 
 files. Has also the ability to search for lyrics and album cover art.
 
 ## Getting Started
+
+The docs can be found at [readthedocs](https://wikipedia-music-tags.readthedocs.io/en/latest/index.html). They are still under construction!
 
 Anyone is welcome to use it or contribute. All of the dependencies are fairly common so you shouldn't encounter any problems.
 I also use edited versions of [google-images-download](https://github.com/hardikvasa/google-images-download) and [LyricsFinder](https://github.com/GieselaDev/LyricsFinder), but 
@@ -27,7 +31,6 @@ Pillow>=6.2.0
 pyyaml>=5.1.2
 PyQt5>=5.11.3
 python-Levenshtein>=0.12.0
-pywin32>=224
 QtPy>=1.7.0
 requests>=2.18.4
 wikipedia>=1.4.0
