@@ -129,7 +129,7 @@ class Checkers(BaseGui):
         if SharedVars.has_exception:
             msg = QMessageBox(QMessageBox.Critical, "Exception",
                               SharedVars.has_exception)
-            msg.setDetailedText(open(log_parser.baseFilename,
+            msg.setDetailedText(open(log_parser.handlers[0].baseFilename,
                                      "r").read())
             msg.exec_()
             SharedVars.has_exception = ""

@@ -94,10 +94,13 @@ def list_files(work_dir: str, file_type: str = "music",
         returns list of files in folder with specified file_type
     """
 
-    found_files = []
+    found_files: List[str] = []
+    allowed_types: Tuple[str, ...]
 
     if file_type == "music":
-        allowed_types = (".m4a", ".mp3", ".flac", ".alac", ".wav", ".wma", ".ogg")
+        # TODO list of files we ail to support:
+        # (".m4a", ".mp3", ".flac", ".alac", ".wav", ".wma", ".ogg")
+        allowed_types = (".m4a", ".mp3", ".flac")
     elif file_type == "image":
         allowed_types = ("jpg", "png")
     else:
@@ -136,8 +139,8 @@ def to_bool(string: str) -> bool:
 
 
 def normalize(text: str) -> str:
-    """ NFKD string normalization 
-    
+    """ NFKD string normalization
+
     Parameters
     ----------
     text: str
@@ -153,7 +156,7 @@ def normalize(text: str) -> str:
 
 def we_are_frozen() -> bool:
     """ Checks if the running code is frozen (e.g by cx-Freeze, pyinstaller).
-    
+
     Returns
     -------
     bool
@@ -167,7 +170,7 @@ def we_are_frozen() -> bool:
 def module_path() -> str:
     """ Outputs root path of the module. Acounts for changes in path when
     app is frozen.
-    
+
     Returns
     -------
     str
@@ -205,9 +208,10 @@ def get_google_api_key() -> Union[str, NoReturn]:
         f = open(_file, "r")
         return f.read().strip()
     except Exception:
-        raise FileNotFoundError("You must input Google api key. Refer to "
-            "https://github.com/marian-code/wikipedia-music-tags "
-            f"for instructions. Expected key file at: {_file}")
+        msg = (f"You must input Google api key. Refer to "
+               f"https://github.com/marian-code/wikipedia-music-tags "
+               f"for instructions. Expected key file at: {_file}")
+        raise FileNotFoundError(msg)
 
 
 def win_naming_convetion(string: str, dir_name=False) -> str:
@@ -242,7 +246,7 @@ def flatten_set(array: List[list]) -> set:
     ----------
     array: list
         2D list to flatten
-        
+
     Returns
     -------
     set
@@ -259,7 +263,7 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     ----
     command line arguments are parsed and honoured only when running in
     CLI mode
-    
+
     Returns
     -------
     bool

@@ -11,7 +11,7 @@ from wiki_music.gui_lib.qt_importer import (QDialog, QHBoxLayout, QIcon,
 from wiki_music.ui import Ui_cover_art_search, Ui_dialog
 from wiki_music.utilities import (
     MultiLog, SharedVars, comp_res, exception, get_icon, get_image,
-    get_image_size, log_gui, send_to_clipboard)
+    get_image_size, log_gui)  # , send_to_clipboard)
 
 log_gui.debug("coverart imports done")
 
@@ -130,7 +130,7 @@ class SearchDialog(QDialog, Ui_cover_art_search):
 
     @property
     def max_columns(self) -> int:
-        return self.table.max_columns
+        return self.table.MAX_COLUMNS
 
     def add_pic(self, dimension: str, thumbnail: bytearray):
         self.table.add_pic(dimension, thumbnail)
@@ -288,7 +288,8 @@ class PictureEdit(QDialog, Ui_dialog):
             self.picture.save_image(path.join(save_dir, "Folder.jpg"))
         if self.clipboard:
             self.log.info("Cover art copied to clipboard")
-            self.picture.send2clipboard()
+            # TODO this is not used for now see discussion in gui_utils module
+            # self.picture.send2clipboard()
 
 
 class CoverArtSearch(BaseGui):
@@ -391,6 +392,10 @@ class CoverArtSearch(BaseGui):
 
         # create dialog to handle image editing
         self.image_dialog = PictureEdit(dimensions, get_image(url))
+        # TODO see discusion in gui utils module
+        # clipboard pasting is disabled for now !!!
+        self.image_dialog.ca_clipboard.stateChanged.connect(
+            self.__do_nothing__)
         self.image_dialog.exec_()
 
         if self.image_dialog.cancel:

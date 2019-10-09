@@ -1,12 +1,13 @@
 import os
 import sys
+import setup_tests
 
-# append package parent directory to path
-sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..")))
+print("\n".join(sys.path))
 
-from wiki_music.gui import SelectablePixmap
-from wiki_music.gui.cover_art import PictureEdit
-from wiki_music.gui.qt_importer import QApplication
+
+from wiki_music.gui_lib import SelectablePixmap
+from wiki_music.gui_lib.cover_art import PictureEdit
+from wiki_music.gui_lib.qt_importer import QApplication
 
 if __name__ == '__main__':
     with open("input.jpg", "rb") as f:

@@ -126,13 +126,13 @@ class ImageWidget(QWidget):
 
 class ImageTable(QTableWidget):
 
-    maxColumns: int
+    MAX_COLUMNS: int
     actualCol: int
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         QTableWidget.__init__(self, parent)
 
-        self.maxColumns = 4
+        self.MAX_COLUMNS = 4
         self.actualCol = -1
         self.setColumnCount(1)
         self.setRowCount(1)
@@ -143,11 +143,11 @@ class ImageTable(QTableWidget):
 
     def add_pic(self, label, picture):
 
-        if self.actualCol < self.maxColumns:
+        if self.actualCol < self.MAX_COLUMNS:
             self.actualCol += 1
             if self.rowCount() == 1:
                 self.setColumnCount(self.columnCount() + 1)
-        elif self.actualCol == self.maxColumns:
+        elif self.actualCol == self.MAX_COLUMNS:
             self.actualCol = 0
             self.setRowCount(self.rowCount() + 1)
         else:
@@ -204,8 +204,8 @@ class ResizablePixmap(QLabel):
         self.scale()
 
     def scale(self, fromResize: bool = False):
-        # use a single central method for scaling; there's no need to call it upon
-        # creation and also resize() won't work anyway in a layout
+        # use a single central method for scaling; there's no need to call it
+        # upon creation and also resize() won't work anyway in a layout
         self.setPixmap(self.current_pixmap.scaled(self.width(), self.height(),
             Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
@@ -264,7 +264,8 @@ class SelectablePixmap(ResizablePixmap):
     def create_selection(self, pos: QPoint):
         if self.currentQRubberBand:
             self.cancel_selection()
-        self.currentQRubberBand = ResizableRubberBand(QRubberBand.Rectangle, self)
+        self.currentQRubberBand = ResizableRubberBand(QRubberBand.Rectangle,
+                                                      self)
         self.currentQRubberBand.setStyle(QStyleFactory.create("Fusion"))
         self.currentQRubberBand.setGeometry(pos.x(), pos.y(), 1, 1)
         self.currentQRubberBand.show()
@@ -332,7 +333,7 @@ class SelectablePixmap(ResizablePixmap):
 
     def mousePressEvent(self, event: QEvent):
         pos = event.pos()
-        
+
         if (not self.currentQRubberBand or
             pos not in self.currentQRubberBand.geometry()):
             if pos not in self.pixmapRect:

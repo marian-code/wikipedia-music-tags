@@ -1,7 +1,7 @@
-""" wiki_music GUI entry point. """
+"""wiki_music GUI entry point."""
 
 import sys
-from threading import  current_thread
+from threading import current_thread
 
 try:
     import package_setup
@@ -19,6 +19,6 @@ def main():
     ui.show()
     sys.exit(app.exec_())
 
+
 if __name__ == "__main__":
     main()
-    

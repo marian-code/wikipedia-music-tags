@@ -7,14 +7,15 @@ import urllib  # lazy loaded
 import winreg  # lazy loaded
 from typing import Optional, Tuple
 
-import PIL  # lazy loaded
+from PIL import Image, ImageFile  # lazy loaded
 import requests  # lazy loaded
-import win32clipboard  # lazy loaded
+# TODO meditate on including clipboard interaction
+# import win32clipboard  # lazy loaded
 
 from wiki_music.constants import FILES_DIR
 
 __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
-           "comp_res", "get_image_size", "get_icon", "send_to_clipboard"]
+           "comp_res", "get_image_size", "get_icon"]  # , "send_to_clipboard"]
 
 
 def abstract_warning():
@@ -28,8 +29,15 @@ def abstract_warning():
                               "reimplemented by inheriting class")
 
 
+# TODO not used for now, need to rethink, maybe it is useless when we have
+# writing to tags, it has a complex dependency which does not play nice with
+# other platform except windows: pywin32>=224; platform_system == "Windows"
+# maybe this function sholud be removed.
+# ! in the future it might be replaced by PyQt QClipboard
+# ! https://www.tutorialspoint.com/pyqt/pyqt_qclipboard.htm
+"""
 def send_to_clipboard(data: bytearray, clip_type: Optional[int] = None):
-    """ Pastes data to clipboard.
+     Pastes data to clipboard.
 
     Parameters
     ----------
@@ -43,11 +51,11 @@ def send_to_clipboard(data: bytearray, clip_type: Optional[int] = None):
     NotImplementedError
         when unsupported platform is detected, and we don't know how to
         interact with cilpboard
-    """
+
     clip_data: bytes
 
     file_stream = io.BytesIO(data)
-    image = PIL.Image.open(file_stream)
+    image = Image.open(file_stream)
 
     clip_stream = io.BytesIO()
     image.convert("RGB").save(clip_stream, "BMP")
@@ -63,12 +71,14 @@ def send_to_clipboard(data: bytearray, clip_type: Optional[int] = None):
         win32clipboard.SetClipboardData(clip_type, clip_data)
         win32clipboard.CloseClipboard()
     else:
-        raise NotImplementedError("Only Windows clipboard is supported at the moment")
+        raise NotImplementedError("Only Windows clipboard is supported "
+                                  "at the moment")
+"""
 
 
 def get_music_path() -> str:
     """Returns the default music path for linux or windows
-    
+
     Returns
     -------
     str
@@ -83,7 +93,7 @@ def get_music_path() -> str:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
                 location = winreg.QueryValueEx(key, music_guid)[0]
             return location
-        except:
+        except Exception:
             return "~"
 
     else:
@@ -92,7 +102,7 @@ def get_music_path() -> str:
 
 def get_image(address: str) -> Optional[bytes]:
     """ Based on addres decides if the image is online or local. If address
-    has http prefix, image is downloaded from internet. If not then it is read 
+    has http prefix, image is downloaded from internet. If not then it is read
     from disk.
 
     Parameters
@@ -120,7 +130,7 @@ def get_image(address: str) -> Optional[bytes]:
             return None
 
 
-def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytes:
+def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
     """ Compress and/or change image resolution. If x and y dimension are
     both specified than image is resized to these dimension otherwise it is
     only compressed
@@ -142,13 +152,13 @@ def comp_res(image: bytearray, quality: int, x: int=0, y: int=0) -> bytes:
         bytes image compressed and resized than reloaded to memory
     """
 
-    FORMAT = PIL.Image.registered_extensions()[".jpg"]
+    FORMAT = Image.registered_extensions()[".jpg"]
 
     file_stream = io.BytesIO(image)
-    img = PIL.Image.open(file_stream)
+    img = Image.open(file_stream)
 
     if x and y:
-        img = img.resize((x, y), PIL.Image.LANCZOS)
+        img = img.resize((x, y), Image.LANCZOS)
 
     file_stream = io.BytesIO()
     img.save(file_stream, FORMAT, optimize=True, quality=quality,
@@ -212,7 +222,7 @@ def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
     -------
     tuple
         if the size can be obtained result is a tuple with picture size in Kb
-        and dimensions tuple as a second element   
+        and dimensions tuple as a second element
     """
 
     try:
@@ -221,7 +231,7 @@ def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
         if size:
             size = int(size)
 
-        p = PIL.ImageFile.Parser()
+        p = ImageFile.Parser()
         while True:
             data = fl.read(1024)
             if not data:
@@ -233,5 +243,5 @@ def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
         fl.close()
 
         return size, None
-    except:
+    except Exception:
         return None, None

@@ -4,7 +4,7 @@ import signal
 import sys
 try:
     import package_setup
-except:
+except ImportError:
     pass  # not needed for frozen app
 
 from wiki_music.constants.colors import GREEN, RESET
@@ -16,6 +16,7 @@ from wiki_music.utilities import SharedVars, input_parser, we_are_frozen
 def signal_handler(sig, frame):
     print("\nAborting by user request...")
     sys.exit(0)
+
 
 signal.signal(signal.SIGINT, signal_handler)
 
