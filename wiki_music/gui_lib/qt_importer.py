@@ -92,6 +92,7 @@ if API in PYQT5_API:
 
             del macos_version
     except ImportError as e:
+        print("pyqt5 exception", e)
         API = os.environ['QT_API'] = 'pyside2'
 
 if API in PYSIDE2_API:
@@ -116,7 +117,8 @@ if API in PYSIDE2_API:
                                         "system.")
 
             del macos_version
-    except ImportError:
+    except ImportError as e:
+        print("pyside2 exception", e)
         API = os.environ['QT_API'] = 'pyqt'
 
 if API in PYQT4_API:
@@ -133,7 +135,8 @@ if API in PYQT4_API:
             sip.setapi('QTextStream', 2)
             sip.setapi('QTime', 2)
             sip.setapi('QUrl', 2)
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError) as e:
+            print("sip exception", e)
             # PyQt < v4.6
             pass
         from PyQt4.Qt import PYQT_VERSION_STR as PYQT_VERSION  # analysis:ignore
@@ -143,7 +146,8 @@ if API in PYQT4_API:
         PYSIDE_VERSION = None
         PYQT5 = False
         PYQT4 = True
-    except ImportError:
+    except ImportError as e:
+        print("pyqt4 exception", e)
         API = os.environ['QT_API'] = 'pyside'
     else:
         is_old_pyqt = PYQT_VERSION.startswith(('4.4', '4.5', '4.6', '4.7'))
@@ -159,7 +163,8 @@ if API in PYSIDE_API:
         PYQT_VERSION = None
         PYQT5 = PYSIDE2 = False
         PYSIDE = True
-    except ImportError:
+    except ImportError as e:
+        print("pyside exception", e)
         raise PythonQtError('No Qt bindings could be found')
 
 # If a correct API name is passed to QT_API and it could not be found,
