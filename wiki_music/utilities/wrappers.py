@@ -7,7 +7,6 @@ from threading import current_thread
 from typing import Callable, NoReturn, Union, Any, List, TYPE_CHECKING
 
 from .sync import SharedVars
-from .utils import module_path
 from .exceptions import *
 from wiki_music.constants import PROFILE_DIR
 
@@ -117,7 +116,7 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
             except (NoTracklistException, NoReleaseDateException,
                     NoGenreException, NoCoverArtException,
                     NoNames2ExtractException, NoContentsException,
-                    NoPersonnelException) as e:
+                    NoPersonnelException, NoGoogleApiKeyException) as e:
                 logger.warning(e)
                 if show_GUI:
                     SharedVars.warning(e)

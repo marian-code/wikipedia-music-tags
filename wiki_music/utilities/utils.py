@@ -6,12 +6,16 @@ import re  # lazy loaded
 import sys
 import unicodedata
 from shutil import rmtree
-from typing import NoReturn, Tuple, Union, Any, List
+from typing import Any, List, NoReturn, Tuple, Union
 
 import yaml  # lazy loaded
 
-from .sync import SharedVars
 from wiki_music.constants import FILES_DIR
+
+from .exceptions import NoGoogleApiKeyException
+from .loggers import log_parser
+from .sync import SharedVars
+from .wrappers import warning
 
 __all__ = ["list_files", "to_bool", "normalize", "we_are_frozen",
            "module_path", "win_naming_convetion", "flatten_set",
@@ -187,6 +191,7 @@ def module_path() -> str:
         return os.path.join(os.path.dirname(__file__), "..")
 
 
+@warning(log_parser)
 def get_google_api_key() -> Union[str, NoReturn]:
     """ Reads google api key needed by lyricsfinder in external libraries from
     file.
@@ -211,7 +216,7 @@ def get_google_api_key() -> Union[str, NoReturn]:
         msg = (f"You must input Google api key. Refer to "
                f"https://github.com/marian-code/wikipedia-music-tags "
                f"for instructions. Expected key file at: {_file}")
-        raise FileNotFoundError(msg)
+        raise NoGoogleApiKeyException(msg)
 
 
 def win_naming_convetion(string: str, dir_name=False) -> str:
