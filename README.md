@@ -13,7 +13,7 @@ The docs can be found at [readthedocs](https://wikipedia-music-tags.readthedocs.
 
 [Installation intructions](https://wikipedia-music-tags.readthedocs.io/en/latest/instalation.html)
 
-[Installation intructions](https://wikipedia-music-tags.readthedocs.io/en/latest/contributing.html)
+[Gontributing guide](https://wikipedia-music-tags.readthedocs.io/en/latest/contributing.html)
 
 They are still under construction!
 
@@ -50,7 +50,7 @@ See also the list of [contributors](https://github.com/your/project/contributors
 
 ## License
 
-[marian-code](https://github.com/marian-code/https://github.com/marian-code/wikipedia-music-tags/LICENSE.txt)
+[MIT](https://github.com/marian-code/https://github.com/marian-code/wikipedia-music-tags/LICENSE.txt)
 
 ## Acknowledgments
 

@@ -1,10 +1,6 @@
 # To-Do
 
 ### Main problems ordered by targeted release
-- 0.2.0-alpha
-  - write docstrings
-  - write documentation
-  - implement resumable cover art search
 - 0.3.0-alpha
   - set paths for platform specific directories for logs and output
   - update README about instalation and docs
@@ -66,6 +62,7 @@
 - all docstrings are written
 - docs are finished
 - bumping version to 0.2.0-alpha
+- build is broken again at readthedocs despite PySide2 installing!!
 
 ### 10.10.2019
 - now we have cover art search that is resumable, the load more button

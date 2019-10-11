@@ -36,6 +36,5 @@ Changing User interface
 
 Base user interface layout should be changed only with the use of Qt designer and use of files:
 ``CoverArtEdit.ui``, ``CoverArtSearch.ui``, ``MainWindow.ui``.
-The coresponding python files:
 
 Changes to the code before git are in code changelog file.
