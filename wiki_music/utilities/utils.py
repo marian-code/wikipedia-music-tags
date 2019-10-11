@@ -321,9 +321,9 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
 def loading():
     """ CLI loading marker
 
-    Todo
-    ----
-    impement this
+    Warnings
+    --------
+    not implemented
     """
 
     # under construction

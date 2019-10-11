@@ -184,7 +184,7 @@ def time_methods(function: Callable) -> Callable:
 
     return wrapper
 
-
+# TODO why exceptions are thrown for static methods??
 def for_all_methods(decorator: Callable[[Any], Callable],
                     exclude: List[str] = []) -> Callable:
     """ Decorates class methods, except the ones in excluded list.
@@ -193,10 +193,6 @@ def for_all_methods(decorator: Callable[[Any], Callable],
     --------
     staticmetods of a class and inner classes must be excluded from decorating
     ofherwise exception is thrown.
-
-    Todo
-    ----
-    why exceptions are thrown??
 
     References
     ----------

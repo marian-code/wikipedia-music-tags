@@ -20,7 +20,12 @@ try:
                              QBuffer, QSize, QRect, Property, Slot, Signal,
                              QByteArray, QIODevice, QPoint, QEvent,
                              QModelIndex, QVariant)
-    from qtpy import uic
+    # TODO readthe docs workaround
+    try:
+        from qtpy import uic
+    except ImportError:
+        log_gui.critical("Couldn't import uic!!")
+        uic = None
 except ImportError as e:
     log_gui.critical("None of the Qt backends is available! Aborting")
     raise ImportError("None of the Qt backends is available! Aborting")

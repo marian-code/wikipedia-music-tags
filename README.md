@@ -13,7 +13,7 @@ The docs can be found at [readthedocs](https://wikipedia-music-tags.readthedocs.
 
 [Installation intructions](https://wikipedia-music-tags.readthedocs.io/en/latest/instalation.html)
 
-[Gontributing guide](https://wikipedia-music-tags.readthedocs.io/en/latest/contributing.html)
+Contributing guide](https://wikipedia-music-tags.readthedocs.io/en/latest/contributing.html)
 
 They are still under construction!
 
