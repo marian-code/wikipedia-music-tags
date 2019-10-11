@@ -1,15 +1,19 @@
+"""Module for handling m4a tags."""
+
 from collections import OrderedDict
 from typing import Dict, Union, cast
 
 from mutagen.mp4 import MP4, MP4Cover, MP4MetadataError
 
-from wiki_music.constants.tags import TAGS
+from wiki_music.utilities import log_tags
 
 from .tag_base import TagBase
 
+log_tags.debug("loading m4a module")
+
 
 class TagM4a(TagBase):
-    """ A low level implementation of tag handling for m4a files. """
+    """A low level implementation of tag handling for m4a files. """
     __doc__ += TagBase.__doc__  # type: ignore
 
     _map_keys = OrderedDict([
@@ -28,7 +32,7 @@ class TagM4a(TagBase):
     )
 
     def _open(self, filename: str):
-        """ Function reading m4a file to mutagen.mp4.MP4 class. """
+        """Function reading m4a file to mutagen.mp4.MP4 class. """
 
         try:
             self._song = MP4(filename=filename)

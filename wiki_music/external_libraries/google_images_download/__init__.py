@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+"""Module handling cover art downloades from goole image search."""
 from __future__ import absolute_import
 
 

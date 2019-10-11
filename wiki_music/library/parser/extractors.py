@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class DataExtractors:
     """ Parse various table formats from wikipedia.
-    
+
     Warnings
     --------
     This class is not ment to be instantiated, only inherited.
@@ -21,7 +21,7 @@ class DataExtractors:
 
     @classmethod
     def _from_table(cls, tables: List["BeautifulSoup"]
-                   ) -> List[List[List[str]]]:
+                    ) -> List[List[List[str]]]:
         """ Extract a classic wkikipedia html table composed of 'td' and 'th'
         html tags.
 
@@ -36,7 +36,6 @@ class DataExtractors:
             each emement in list is one parsed table, each table is a 2D array
             of strings representing rows and columns
         """
-
 
         data_collect = []
         for table in tables:
@@ -122,7 +121,7 @@ class DataExtractors:
             msg = ("No tracklist found!\n"
                    "It is probaly contained in some unknown format")
             SharedVars.warning(msg)
-            raise NoTracklistException(msg)            
+            raise NoTracklistException(msg)
         else:
 
             data: list = []

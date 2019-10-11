@@ -1,3 +1,4 @@
 include README.md
+include wiki_music/ui/*
 include wiki_music/data/*
 include wiki_music/files/*

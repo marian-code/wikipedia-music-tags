@@ -1,3 +1,5 @@
+"""Module for handling mp3 tags."""
+
 from ast import literal_eval
 from collections import OrderedDict
 from typing import Dict, Union
@@ -5,11 +7,15 @@ from typing import Dict, Union
 from mutagen.id3 import (APIC, COMM, ID3, TALB, TCOM, TCON, TDRC, TIT2, TPE1,
                          TPE2, TPOS, TRCK, USLT, ID3NoHeaderError, PictureType)
 
+from wiki_music.utilities import log_tags
+
 from .tag_base import TagBase
+
+log_tags.debug("loading mp3 module")
 
 
 class TagMp3(TagBase):
-    """ A low level implementation of tag handling for mp3 files. """
+    """A low level implementation of tag handling for mp3 files. """
     __doc__ += TagBase.__doc__  # type: ignore
 
     _map_keys = OrderedDict([
@@ -28,7 +34,7 @@ class TagMp3(TagBase):
     )
 
     def _open(self, filename: str):
-        """ Function reading mp3 file to mutagen.id3.ID3 class. """
+        """Function reading mp3 file to mutagen.id3.ID3 class. """
 
         try:
             self._song = ID3(filename=filename)
@@ -36,7 +42,7 @@ class TagMp3(TagBase):
             print("Cannot read Mp3 tags")
 
     def _find_variable_key(self, tag: str) -> str:
-        """ Sometimes the key in tags is appended with some string like
+        """Sometimes the key in tags is appended with some string like
         USTL::eng this functions finds the specific key if supliedd with the
         common prefix.
 
@@ -56,7 +62,7 @@ class TagMp3(TagBase):
 
     @staticmethod
     def _key2str(key):
-        """ get from string like <class 'mutagen.id3.TCOM'> the name TCOM.
+        """get from string like <class 'mutagen.id3.TCOM'> the name TCOM.
 
         Returns
         -------

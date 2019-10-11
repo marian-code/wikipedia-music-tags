@@ -22,6 +22,7 @@ Qt which can use both PyQt and PySide python backends.
    :caption: Contents:
 
    instalation
+   contributing
    usage
    api
    changelog

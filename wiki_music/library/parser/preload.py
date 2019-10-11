@@ -4,10 +4,11 @@ import collections  # lazy loaded
 import pickle  # lazy loaded
 import re  # lazy loaded
 import sys
+import queue
 import time  # lazy loaded
 from os import path
 from threading import Lock
-from typing import Optional, Type
+from typing import Optional, Type, Dict
 
 import bs4  # lazy loaded
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
@@ -69,9 +70,11 @@ class WikiCooker(ParserBase):
             self.page = None
             self.soup = None
 
+            # control download and cook status are indexed by na of album
+            self.wiki_downloaded: queue.Queue = queue.Queue(maxsize=1)
+            self.soup_ready: queue.Queue = queue.Queue(maxsize=1)
+
         # control
-        self.wiki_downloaded: bool = False
-        self.soup_ready: bool = False
         self.preload_running: bool = False
         self.getter_lock: Lock = Lock()
         self.error_msg: Optional[str] = None
@@ -106,7 +109,7 @@ class WikiCooker(ParserBase):
 
         @classmethod
         def start(cls):
-            """ Method which starts running the preload, needed variables are
+            """Method which starts running the preload, needed variables are
             read from outer class.
             
             Note
@@ -116,8 +119,15 @@ class WikiCooker(ParserBase):
 
             cls.stop()
 
-            cls.outer_instance.wiki_downloaded = False
-            cls.outer_instance.soup_ready = False
+            # first empty records of previous download
+            try:
+                cls.outer_instance.wiki_downloaded.get(block=False)
+            except queue.Empty:
+                pass
+            try:
+                cls.outer_instance.wiki_downloaded.get(block=False)
+            except queue.Empty:
+                pass
             cls.outer_instance.error_msg = None
 
             log_parser.debug(f"Starting wikipedia preload for: "
@@ -160,10 +170,11 @@ class WikiCooker(ParserBase):
         """
 
         if not self._url:
-            try:
-                self._url = str(self.page.url)  # type: ignore
-            except AttributeError:
+            if SharedVars.offline_debbug:
                 self._url = path.join(OUTPUT_FOLDER, self.album, "page.pkl")
+            else:
+                self._url = str(self.page.url)  # type: ignore
+
         return self._url
 
     # TODO doesn't work without GUI
@@ -174,7 +185,7 @@ class WikiCooker(ParserBase):
 
         See also
         --------
-        :meth:`wiki_music.gui_lib.main_window.Checkers.__exception_check__`
+        :meth:`wiki_music.gui_lib.main_window.Checkers._exception_check`
             this method handles displaying the message to user
         :class:`wiki_music.utilities.sync.SharedVars`
             serves to pass message from parser to GUI
@@ -280,8 +291,13 @@ class WikiCooker(ParserBase):
             while self.preload_running:
                 time.sleep(0.05)
 
-        if self.wiki_downloaded:
-            return self.error_msg
+        try:
+            downloaded = self.wiki_downloaded.get(block=False) == self.ALBUM
+        except queue.Empty:
+            downloaded = False
+        finally:
+            if downloaded:
+                return self.error_msg
 
         self.log.debug("getting wiki")
 
@@ -339,9 +355,7 @@ class WikiCooker(ParserBase):
                               "poor internet connetion.")
         else:
             self.error_msg = None
-            self.wiki_downloaded = True
-
-        
+            self.wiki_downloaded.put(self.ALBUM)
 
         return self.error_msg
 
@@ -362,7 +376,7 @@ class WikiCooker(ParserBase):
                 self.page = pickle.load(f)
             self.log.debug("done")
             self.error_msg = None
-            self.wiki_downloaded = True
+            self.wiki_downloaded.put(self.ALBUM)
         else:
             self.error_msg = "Cannot find cached offline version of page."
 
@@ -379,8 +393,13 @@ class WikiCooker(ParserBase):
             if some error occured return string with its description
         """
 
-        if self.soup_ready:
-            return self.error_msg
+        try:
+            cooked = self.soup_ready.get(block=False) == self.ALBUM
+        except queue.Empty:
+            cooked = False
+        finally:
+            if cooked:
+                return self.error_msg
 
         # make BeautifulSoup black magic
         self.soup = bs4.BeautifulSoup(self.page.html(), features="lxml")  # type: ignore
@@ -418,7 +437,7 @@ class WikiCooker(ParserBase):
 
         # check if the album belongs to band that was requested
         if self._check_band():
-            self.soup_ready = True
+            self.soup_ready.put(self.ALBUM)
             self.error_msg = None
         else:
             self.error_msg = "Album doesnt't belong to the requested band"

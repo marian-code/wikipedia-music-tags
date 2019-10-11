@@ -24,13 +24,18 @@ NIList = List[IList]  # nested list
 
 
 class ParserBase:
-    """ The base clas for all :mod:`wiki_music.parser` subclasses. Defines the
+    """The base clas for all :mod:`wiki_music.parser` subclasses. Defines the
     necessary attributes. The uppercased attributes correspond to tag names
     for easier access.
 
     Warnings
     --------
     This class is not ment to be instantiated, only inherited.
+
+    Note
+    ----
+    Uppercased propertie corespond with TAG names so we can easilly use getattr
+    and setattr methods
 
     Attributes
     ----------
@@ -125,7 +130,7 @@ class ParserBase:
         return len(self.numbers)
 
     def __bool__(self):
-        return self.__len__()
+        return bool(self.__len__())
 
     @property
     def ALBUM(self) -> str:
@@ -203,7 +208,7 @@ class ParserBase:
 
     @property
     def DISCNUMBER(self) -> IList:
-        """ List containing dicsnumber for every track.
+        """List containing dicsnumber for every track.
 
         :type: List[int]
         """
@@ -215,7 +220,7 @@ class ParserBase:
 
     @property
     def GENRE(self) -> str:
-        """ If :attr:`genres` is a list with one item, than it is that item,
+        """If :attr:`genres` is a list with one item, than it is that item,
         otherwise user input is required to select from genres list.
 
         :type: str
@@ -228,7 +233,7 @@ class ParserBase:
 
     @property
     def LYRICS(self) -> SList:
-        """ List of lyrics coresponding to each track.
+        """List of lyrics coresponding to each track.
 
         :type: List[str]
         """
@@ -284,7 +289,7 @@ class ParserBase:
 
     @TYPE.setter
     def TYPE(self, value: SList):
-        self.bracketed_types = value
+        self._bracketed_types = value
 
 
 # TODO needs QThreads

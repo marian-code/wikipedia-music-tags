@@ -8,7 +8,7 @@ from typing import Callable, NoReturn, Union, Any, List, TYPE_CHECKING
 
 from .sync import SharedVars
 from .exceptions import *
-from wiki_music.constants import PROFILE_DIR
+from wiki_music.constants import LOG_DIR
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -148,7 +148,7 @@ class Timer:
 
     def __init__(self, function_name: str) -> None:
         self.function_name = function_name
-        self.path = os.path.join(PROFILE_DIR, "timing_stats.txt")
+        self.path = os.path.join(LOG_DIR, "timing_stats.log")
         self.start = 0
         self.end = 0
 

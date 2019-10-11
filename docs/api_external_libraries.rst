@@ -66,6 +66,9 @@ wiki_music external_libraries.lyricsfinder.extractors
 wiki_music external_libraries.google_images_download
 ----------------------------------------------------
 
+.. automodule:: wiki_music.external_libraries.google_images_download
+   :members:
+
 .. automodule:: wiki_music.external_libraries.google_images_download.google_images_download_offline
    :members:
 

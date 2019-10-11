@@ -14,7 +14,7 @@ from wiki_music.constants import GREEN, NO_LYRIS, RESET
 from wiki_music.external_libraries import lyricsfinder  # lazy loaded
 from wiki_music.utilities import (ThreadPool, caseless_equal, exception,
                                   get_google_api_key, log_lyrics, normalize,
-                                  we_are_frozen)
+                                  we_are_frozen, SharedVars)
 
 if TYPE_CHECKING:
     from wiki_music.external_libraries.lyricsfinder import LyricsManager

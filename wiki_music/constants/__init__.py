@@ -5,3 +5,4 @@ from .colors import *
 from .parser_const import *
 from .paths import *
 from .tags import *
+from .gui_const import *

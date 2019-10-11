@@ -213,9 +213,10 @@ def get_google_api_key() -> Union[str, NoReturn]:
         f = open(_file, "r")
         return f.read().strip()
     except Exception:
-        msg = (f"You must input Google api key. Refer to "
+        msg = (f"You should input Google api key. Refer to "
                f"https://github.com/marian-code/wikipedia-music-tags "
-               f"for instructions. Expected key file at: {_file}")
+               f"for instructions. Expected key file at: {_file}. "
+               f"The lyrics finding may be less reliable")
         raise NoGoogleApiKeyException(msg)
 
 

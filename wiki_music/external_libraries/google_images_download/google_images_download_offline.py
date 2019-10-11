@@ -1,6 +1,7 @@
 import logging
 import os
-from typing import List, NoReturn, Tuple
+from typing import List, NoReturn, Tuple, Dict
+import queue
 
 from PIL import Image
 
@@ -11,31 +12,27 @@ log = logging.getLogger(__name__)
 
 log.info("Loaded Offline google images download")
 
+
 class googleimagesdownload:
     """ Offline version imitating google images download. Main puprose is
     offline testing.
 
     Attributes
     ----------
-    thumbs: List[bytearray]
-        list of dowloaded coverart thumbnails read in memory as bytearrays
-    fullsize_url: List[str]
-        list of urls pointing to fullsize pictures
-    fullsize_dim: List[Tuple[float, Tuple[int, int]]]
-        list of tuples containing size of image in Kb and dimensions
-    count: int
-        actual number of downloaded pictures
-    finished: bool
-        anounce finished downloading
+    stack: queue.Queue
+        a FIFO stack that contains all the downloaded images, the limit is set
+        to 5. Then the downloading is paused until items from the queue are
+        consumed.
+    max: int
+        maximum number of file that are loadable from directory
+    files: List[str]
+        list of image file paths
     """
 
     def __init__(self) -> None:
-        self.thumbs: List[bytearray] = []
-        self.fullsize_url: List[str] = []
-        self.fullsize_dim: List[Tuple[float, Tuple[int, int]]] = []
-        self.count: int = 0
-        self.finished: bool = False
+        self.stack = queue.Queue()
         self._exit: bool = False
+        self._files: List[str] = []
 
     def download(self, arguments: dict):
         """ Start reding images from files.
@@ -48,47 +45,45 @@ class googleimagesdownload:
         """
 
         dim: Tuple[int, int]
-        disk_size: float
+        size: float
+        thumb: bytes
+
+        successCount: int = 0
+        errorCount: int = 0
 
         print(f"\nItem no.: 1 --> Item name = {arguments['keywords']}")
         print("Evaluating...")
 
-        files: List[str] = list_files(OFFLINE_DEBUG_IMAGES, file_type="image",
-                                      recurse=True)
-        errorCount: int = 0
-
-        for f in files:
-
-            dim = Image.open(f).size
-            disk_size = os.path.getsize(f)
+        for f in self.files:
 
             try:
+                dim = Image.open(f).size
+                size = os.path.getsize(f)
+
                 with open(f, "rb") as infile:
-                    self.thumbs.append(bytearray(infile.read()))
-                self.fullsize_dim.append((disk_size, dim))
-                self.fullsize_url.append(f)
+                    thumb = infile.read()
             except Exception as e:
                 print(e)
                 errorCount += 1
             else:
-                self.count += 1
-                print(f"Completed Image Thumbnail ====> {self.count}. {f}")
-
-            if self._exit:
-                print("Album art search exiting ...")
+                self.stack.put({"thumb": thumb, "dim": (size, dim), "url": f})
+                successCount += 1
+                print(f"Completed Image Thumbnail ====> {successCount}. {f}")
+            finally:
+                if self._exit:
+                    print("Album art search exiting ...")
+                    return
 
         print(f"\nErrors: {errorCount}\n")
 
-        self.finished = True
-
     def close(self):
         """ Stop downloading images. """
-
         self._exit = True
 
-    def get_max(self) -> int:
+    @property
+    def max(self) -> int:
         """ Returns maximum number of loadable images. Needed to set progresbar
-        in GUI
+        in GUI. The value is cached for later use.
 
         See also
         --------
@@ -100,5 +95,28 @@ class googleimagesdownload:
         int
             number of image files
         """
-        return len(list_files(OFFLINE_DEBUG_IMAGES, file_type="image",
-                              recurse=True))
+
+        return len(self.files)
+
+    @property
+    def files(self) -> List[str]:
+        """ List of image files to load in direstory.
+
+        See also
+        --------
+        :func:`wiki_music.utilities.utils.list_files`
+            to see list of suported files
+        :const:`wiki_music.constants.paths.OFFLINE_DEBUG_IMAGES`
+            directory that is searched for images
+
+        Returns
+        -------
+        List[str]
+            list of paths to image files
+        """
+
+        if not self._files:
+            self._files = list_files(OFFLINE_DEBUG_IMAGES, file_type="image",
+                                     recurse=True)
+
+        return self._files

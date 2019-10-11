@@ -4,8 +4,12 @@
 
 ###### Searching and Downloading Google Images to the local disk ######
 
-# Import Libraries
+# libraries for wiki_music
 from wiki_music.utilities.gui_utils import get_sizes
+import logging
+import queue
+
+# Import Libraries
 import sys
 import time  # Importing the time library to check the time of code execution
 import os
@@ -16,8 +20,6 @@ import json
 import re
 import codecs
 import socket
-import logging
-from threading import Lock
 version = (3, 0)
 cur_version = sys.version_info
 if cur_version >= version:  # If the Current Version of Python is 3.0 or above
@@ -129,16 +131,15 @@ def user_input():
 
 class googleimagesdownload:
 
+    # ! added for wiki_music ##################################################
     def __init__(self):
-        self.thumbs = []
-        self.fullsize_url = []
-        self.fullsize_dim = []
-        self.count = 0
-        self.finished = False
+        self.stack = queue.Queue()
         self._exit = False
+        self.max = 100
     
     def close(self):
         self._exit = True
+    # ! added for wiki_music ##################################################
 
     # Downloading entire Web Document (Raw Page Content)
     def download_page(self,url):
@@ -520,7 +521,8 @@ class googleimagesdownload:
         if no_download_thumbs:
             return "success","Printed url without downloading"
         """
-        self.thumbs.append(None)
+        # ! altered for wiki_music ############################################
+        wiki_music_thumb = None
         try:
             req = Request(image_url, headers={
                 "User-Agent": "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"})
@@ -539,7 +541,8 @@ class googleimagesdownload:
 
                 try:
                     if no_download_thumbs:
-                        self.thumbs[-1] = data
+                        # ! altered for wiki_music ############################################
+                        wiki_music_thumb = data
                     else:
                         output_file = open(path, 'wb')
                         output_file.write(data)
@@ -577,7 +580,8 @@ class googleimagesdownload:
         except IOError as e:  # If there is any IOError
             download_status = 'fail'
             download_message = "IOError on an image...trying next one..." + " Error: " + str(e)
-        return download_status, download_message
+        # ! altered for wiki_music ############################################
+        return download_status, download_message, wiki_music_thumb
 
 
     # Download Images
@@ -603,16 +607,15 @@ class googleimagesdownload:
 
         return_image_name = prefix + str(count) + ". " + image_name
 
-        # if print_urls or no_download:
-        #     print("Image URL: " + image_url)
+        # ! added for wiki_music ##############################################
         if no_download:
-            s = get_sizes(image_url)
-            if s[1] is None:
-                return "fail", "Unknown image size", return_image_name, None
+            size = get_sizes(image_url)
+            if not size[1]:
+                return "fail", "Unknown image size", return_image_name, None, {"dim": (None, (None, None)), "url": ""}
             else:
-                self.fullsize_dim.append(s) 
-                self.fullsize_url.append(image_url)
-                return "success","Printed url without downloading",return_image_name,None
+                img = {"dim": size, "url": image_url}
+                return "success", "Printed url without downloading", return_image_name, None, img
+        # ! added for wiki_music ##############################################
         try:
             req = Request(image_url, headers={
                 "User-Agent": "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"})
@@ -693,7 +696,8 @@ class googleimagesdownload:
             return_image_name = ''
             absolute_path = ''
 
-        return download_status,download_message,return_image_name,absolute_path
+        # ! altered for wiki_music ############################################
+        return download_status,download_message,return_image_name,absolute_path, {"dim": (None, (None, None)), "url": ""}
 
 
     # Finding 'Next Image' from the given raw page
@@ -748,22 +752,28 @@ class googleimagesdownload:
                     print("\nImage Metadata: " + str(object))
 
                 #download the images
-                download_status,download_message,return_image_name,absolute_path = self.download_image(object['image_link'],object['image_format'],main_directory,dir_name,count,arguments['print_urls'],arguments['socket_timeout'],arguments['prefix'],arguments['print_size'],arguments['no_numbering'],arguments['no_download'])
+                # ! altered for wiki_music ####################################
+                download_status,download_message,return_image_name,absolute_path, wiki_music_image = self.download_image(object['image_link'],object['image_format'],main_directory,dir_name,count,arguments['print_urls'],arguments['socket_timeout'],arguments['prefix'],arguments['print_size'],arguments['no_numbering'],arguments['no_download'])
                 #print(download_message)
                 if download_status == "success":
 
                     # download image_thumbnails
                     if arguments['thumbnail']:
-                        download_status, download_message_thumbnail = self.download_image_thumbnail(object['image_thumbnail_url'],main_directory,dir_name,return_image_name,arguments['print_urls'],arguments['socket_timeout'],arguments['print_size'],arguments['no_download_thumbs'])
+                        # ! altered for wiki_music ############################
+                        download_status, download_message_thumbnail, wiki_music_thumb = self.download_image_thumbnail(object['image_thumbnail_url'],main_directory,dir_name,return_image_name,arguments['print_urls'],arguments['socket_timeout'],arguments['print_size'],arguments['no_download_thumbs'])
                         print(download_message_thumbnail)
 
                     count += 1
-                    self.count += 1
                     object['image_filename'] = return_image_name
                     items.append(object)  # Append all the links in the list named 'Links'
                     abs_path.append(absolute_path)
                 else:
                     errorCount += 1
+
+                # ! added for wiki_music ######################################
+                wiki_music_image["thumb"] = wiki_music_thumb
+                self.stack.put(wiki_music_image)
+                # ! added for wiki_music ######################################
 
                 #delay param
                 if arguments['delay']:
@@ -772,9 +782,12 @@ class googleimagesdownload:
                 page = page[end_content:]
             i += 1
 
-            if self._exit is True:
+            # ! added for wiki_music ##########################################
+            if self._exit:
                 print("Album art search exiting ...")
                 return items, errorCount, abs_path
+
+            # ! added for wiki_music ##########################################
         if count < limit:
             print("\n\nUnfortunately all " + str(
                 limit) + " could not be downloaded because some images were not downloadable. " + str(
@@ -827,6 +840,8 @@ class googleimagesdownload:
         # Setting limit on number of images to be downloaded
         if arguments['limit']:
             limit = int(arguments['limit'])
+            # ! added for wiki_music ##########################################
+            self.max = limit
         else:
             limit = 100
 
@@ -933,7 +948,6 @@ class googleimagesdownload:
         if arguments['print_paths']:
             print(paths)
 
-        self.finished = True
         return paths
 
 #------------- Main Program -------------#

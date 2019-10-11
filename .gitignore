@@ -8,6 +8,7 @@ __pycache__/
 # testing 
 tests/test_music/
 tests/function_tests/
+tests/offline_debug/
 
 # install
 wiki_music.egg-info/
@@ -21,8 +22,6 @@ setup/wiki_music.spec
 setup/unnecessary_dependencies.txt
 
 # dir for file output, profiling, logs
-wiki_music/output/
-wiki_music/profiling/
 wiki_music/logs/
 
 # unique user files

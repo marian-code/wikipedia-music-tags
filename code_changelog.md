@@ -1,19 +1,40 @@
 # To-Do
 
-### Main problems
-- write automated tests
-- fix gui scaling and elements moving around
-- write docstrings
-- write documentation
-- publish to PyPi
-- create a github release
-- use underscores to mark private things
-- convers constants to re pattersn for better matching and use more re for better
-  extraction
-- fix problem with no Qt bakend found in the installed package
+### Main problems ordered by targeted release
+- 0.2.0-alpha
+  - write docstrings
+  - write documentation
+  - implement resumable cover art search
+- 0.3.0-alpha
+  - set paths for platform specific directories for logs and output
+  - update README about instalation and docs
+  - detect if we are in pip installed or frozen state
+  - download nltk data automatically, or put them in package
+  - automate google api key getting for users
+  - publish to PyPi
+- 0.4.0-alpha
+  - use more debugging prints and set default debugger level to INFO,
+    DEBUG should be activated by command line argument
+  - set actions for help menu in GUI, point to docs and git
+  - test frozen gui app
+  - create a github release
+- 0.5.0-alpha
+  - fix as many bugs as possible
+  - preload needs a complete rewrite the logic is horribly complex, too many
+    classes manipulate preload related variables
+- 0.x.0-beta
+  - use underscores to mark private things
+  - fix gui scaling and elements moving around
+  - convert constants to re patterns for better matching and use more re for better extraction
+  - try to setup some CI system
+- 1.0.0
+  - write automated tests
+  - use https://coveralls.io for code test coverage stats
+- x.0.0
+  - impement image search controls
+  - support more music formats
 
 ### Freezing problems
-- publish frozen apps
 - try compression options - upx
 
 ### Ideas
@@ -25,6 +46,11 @@
 - include different backends than wikipedia
 - represent each song with its own class
 - we could support multiple preload instances running at once
+- research PIL interface to PyQt, and what about Pyside?
+- cover art search could anounce new downloaded images by signals if we were using QThreads
+- use custom widgets to simplify GUI https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/ e.g. tableWiew
+- implement main GUI progressbar
+
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -34,10 +60,31 @@
 
 # Change Log
 
-### 9.10.2019
+### 11.10.2019 - 0.2.0-alpha
+- do not generate python files from ui files instead use uic to load them directly
+- optimizations to parser and GUI comunication
+- all docstrings are written
+- docs are finished
+- bumping version to 0.2.0-alpha
+
+### 10.10.2019
+- now we have cover art search that is resumable, the load more button
+  is working, use of queue from standard library for simplification of
+  comunication with the background downloading thread. Queue is also thread
+  safe
+- most of the gui_lib is now documented only data_model and main_window remain
+- remamed some methods from: \_\_method\_\_ to _method
+
+### 9.10.2019 - 0.1.0-alpha
 - added license, mainfest and setup.py file
 - publish to read the docs, build is passing now after somme debugging
 - written setup.py file, instalation is working
+- fixer problem with no Qt backend found in the installed package, although
+  for readthe docs we had to implement a workarounf by installing PySide2
+  it was reporting error No module named 'PyQt5.sip' although it can be
+  clearlly seen it was being installed
+- vesion was changed ot 0.1.0-alpha, this is a better description
+- started writing gui dostrings
 
 ### 8.10.2019
 - finished parser docsrings, now only gui remains

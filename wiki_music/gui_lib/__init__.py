@@ -1,3 +1,7 @@
+""" wiki_music submodule which provides all the GUI functionallity built with
+support of all major python Qt bindings.
+"""
+
 from .custom_classes import (
     CustomQStandardItem, CustomQStandardItemModel, ImageTable, ImageWidget,
     NumberSortModel, RememberDir, ResizablePixmap, ResizableRubberBand,
