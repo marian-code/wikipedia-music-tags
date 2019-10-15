@@ -1,6 +1,0 @@
-# this file is intended to be used only by readthedocs builder. For some
-# strange reason it even though it installs PyQt5_sip it cannot import it
-# and thus building gui_lib documentation fails we try to work aroud this
-# installing alterantives supported by QtPy
--r requirements.txt
-PySide2

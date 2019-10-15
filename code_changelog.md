@@ -49,7 +49,7 @@
 
 ### 14.10.2019 - 0.3a4
 - completelly reworked logging
-- finally readthedocs build is passing, had to install with pip
+- finally readthedocs build is passing at long last, had to install with pip
 - publish to PyPi
 
 ### 14.10.2019 - 0.3a2

@@ -60,7 +60,7 @@ setup(
 )
 
 # this stops the aditional data installation for readthedocs build
-if os.environ["READTHEDOCS"]:
+if os.environ.get("READTHEDOCS", False):
     sys.exit()
 
 # optional installation of NLTK data
