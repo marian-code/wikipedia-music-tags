@@ -6,28 +6,27 @@ Lyrical Nonsense, Musixmatch, darklyrics
 """
 
 import logging
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
 
 from wiki_music.constants import GREEN, NO_LYRIS, RESET
 from wiki_music.external_libraries import lyricsfinder  # lazy loaded
-from wiki_music.utilities import (ThreadPool, caseless_equal, exception,
-                                  get_google_api_key, log_lyrics, normalize,
-                                  we_are_frozen, SharedVars)
+from wiki_music.utilities import (SharedVars, ThreadPool, caseless_equal,
+                                  exception, normalize, read_google_api_key,
+                                  we_are_frozen)
 
 if TYPE_CHECKING:
     from wiki_music.external_libraries.lyricsfinder import LyricsManager
 
-GOOGLE_API_KEY = get_google_api_key()
-
-log_lyrics.debug("lyrics imports done")
+log = logging.getLogger(__name__)
+log.debug("lyrics imports done")
 
 __all__ = ["save_lyrics"]
 
 
-def save_lyrics(tracks: List[str], types: List[str], band: str,
-                album: str) -> List[str]:
+def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
+                GUI: bool) -> List[str]:
     """ This function does some preprocessing before it starts the lyricsfinder
     module and downloads the lyrics. In preproces, tracks which will have same
     lyrics are identified so the same lyrics are not downloaded twice. The
@@ -60,7 +59,9 @@ def save_lyrics(tracks: List[str], types: List[str], band: str,
         list of track lyrics in same order as tracks list was passed in
     """
 
-    log_lyrics.info("starting save lyrics")
+    GOOGLE_API_KEY = read_google_api_key(GUI)
+
+    log.info("starting save lyrics")
 
     lyrics: List[str]
     tracks_dict: Dict[str, Dict[str, Union[str, list]]]
@@ -75,7 +76,7 @@ def save_lyrics(tracks: List[str], types: List[str], band: str,
         else:
             lyrics.append("")
 
-    log_lyrics.info("Initialize duplicates")
+    log.info("Initialize duplicates")
 
     tracks_dict = dict()
 
@@ -89,7 +90,7 @@ def save_lyrics(tracks: List[str], types: List[str], band: str,
             else:
                 tracks_dict[tr] = {"track": [i]}
 
-    log_lyrics.info("Download lyrics")
+    log.info("Download lyrics")
 
     # manager must be initialized in main thread
     manager = lyricsfinder.LyricsManager()
@@ -101,21 +102,21 @@ def save_lyrics(tracks: List[str], types: List[str], band: str,
 
     # run search
     raw_lyrics = ThreadPool(target=_get_lyrics,
-                            args=[(manager, band, album, t)
-                                   for t in tracks_dict.keys()]).run()
+                            args=[(manager, band, album, t, GOOGLE_API_KEY)
+                                  for t in tracks_dict.keys()]).run()
 
-    log_lyrics.info("Assign lyrics to tracks_dict")
+    log.info("Assign lyrics to tracks_dict")
 
     # report results
     for i, l in enumerate(raw_lyrics):
         if l["lyrics"]:
             print(GREEN + "Saved lyrics for:" + RESET,
-                  f"{l['artist']} - {l['title']} " +
-                  GREEN + f"({l['origin']['source_name']})")
+                  f"{l['artist']} - {l['title']} " + GREEN +
+                  f"({l['origin']['source_name']})")
             tracks_dict[l["title"]]["lyrics"] = l["lyrics"]
         else:
-            print(GREEN + "Couldn't find lyrics for:" +
-                  RESET, f"{l['artist']} - {l['title']}")
+            print(GREEN + "Couldn't find lyrics for:" + RESET,
+                  f"{l['artist']} - {l['title']}")
             tracks_dict[l["title"]]["lyrics"] = ""
 
     for track in tracks_dict.values():
@@ -125,9 +126,10 @@ def save_lyrics(tracks: List[str], types: List[str], band: str,
     return lyrics
 
 
-@exception(log_lyrics)
-def _get_lyrics(manager: 'LyricsManager', artist: str, album: str,
-                song: str) -> Dict[str, Optional[Union[str, Dict[str, str]]]]:
+@exception(log)
+def _get_lyrics(manager: 'LyricsManager', artist: str, album: str, song: str,
+                GOOGLE_API_KEY: str
+                ) -> Dict[str, Optional[Union[str, Dict[str, str]]]]:
     """ Function which calls lyricsfinder.LyricsManager.search_lyrics method
     to find and download lyrics for specified song.
 
@@ -153,16 +155,20 @@ def _get_lyrics(manager: 'LyricsManager', artist: str, album: str,
         dictionary with lyrics and information where it was downloaded from
     """
 
-    lyrics = next(manager.search_lyrics(song, album, artist,
-                  google_api_key=GOOGLE_API_KEY), None)
+    lyrics = next(
+        manager.search_lyrics(song,
+                              album,
+                              artist,
+                              google_api_key=GOOGLE_API_KEY), None)
 
     if not lyrics:
-        log_lyrics.info(f"Couldn't find lyrics for: {artist} - {song}")
+        log.info(f"Couldn't find lyrics for: {artist} - {song}")
         return {"lyrics": None, "artist": artist, "title": song}
     else:
-        log_lyrics.info(f"Saved lyrics for: {artist} - {song}")
+        log.info(f"Saved lyrics for: {artist} - {song}")
         l = lyrics.to_dict()
         l["title"] = song
-        l["lyrics"] = normalize(l["lyrics"].replace("\r", "").replace("\n", "\r\n"))
+        l["lyrics"] = normalize(l["lyrics"].replace("\r",
+                                                    "").replace("\n", "\r\n"))
 
         return l

@@ -1,18 +1,23 @@
-""" Utility functions used by GUI classes. """
+"""Utility functions used by GUI classes."""
 
 import io  # lazy loaded
+import logging
 import os
 import sys
 import urllib  # lazy loaded
 import winreg  # lazy loaded
 from typing import Optional, Tuple
 
-from PIL import Image, ImageFile  # lazy loaded
 import requests  # lazy loaded
+from PIL import Image, ImageFile  # lazy loaded
+
+from wiki_music.constants.paths import FILES_DIR
+
+logging.getLogger(__name__)
+
 # TODO meditate on including clipboard interaction
 # import win32clipboard  # lazy loaded
 
-from wiki_music.constants import FILES_DIR
 
 __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
            "comp_res", "get_image_size", "get_icon"]  # , "send_to_clipboard"]
@@ -161,7 +166,10 @@ def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
         img = img.resize((x, y), Image.LANCZOS)
 
     file_stream = io.BytesIO()
-    img.save(file_stream, FORMAT, optimize=True, quality=quality,
+    img.save(file_stream,
+             FORMAT,
+             optimize=True,
+             quality=quality,
              progressive=True)
 
     return file_stream.getvalue()

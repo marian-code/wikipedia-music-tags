@@ -2,3 +2,5 @@ include README.md
 include wiki_music/ui/*
 include wiki_music/data/*
 include wiki_music/files/*
+global-exclude wiki_music/files/google_api_key.txt
+global-exclude wiki_music/files/MP3_TAG_PATH.txt

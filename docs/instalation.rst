@@ -1,68 +1,16 @@
 Installation instructions
 =========================
 
-Common instructions
--------------------
-
 .. warning:: 
     Documentation is stil under construction some things might not be up to
     date.
 
-.. note:: 
-    If you are a user and don't want to bother yourself you can skip to
-    `For Users`_. The application will be 100% functional although the
-    extraction won't be as effective. All these problems will disappear in the
-    next version once the package is pip installable.
-
-If you want to utilize full power of lyrics search you will have to get a
-`Google Developer API Key <https://console.developers.google.com/projectselector/apis/library/customsearch.googleapis.com/>`_
-**(Strongly Recommended)** with the 'Custom Search' API enabled. The link
-should take one there once logged in. This is a requirement of
-`LyricsFinder <https://github.com/GieselaDev/LyricsFinder>`_ module.
-When you have the key create a file named **google_api_key.txt** under
-**files** directory in package root folder and copy the key there.
-
-For improved artist detection it is also recommended to download appropriate
-nltk data. Before this step you should have nltk library installed.
-So you can install the project following **user** or **developer** instructions
-and then proceed. Open console and start python interpreter by typing:
-
-.. code-block:: bash
-
-    python
-
-or (if you have anaconda instalation for example)
-
-.. code-block:: bash
-    
-    ipython
-
-then
-
-.. code-block:: python
-
-    import nltk
-    nltk.download()
-
-After this a window will open. In the collections tab download **popular**.
-Default location under Windows is: ``C:\nltk_data`` This is best leaved as is.
-
-
 For Users
 ---------
 
-We aim to have pip installable module in 0.4.0-alpha that is only one release
-away. For now you must install manually using setup.py. Beware! there are still some
-problems, mainly log dirrectory management which will require app to run
-in elevated privilages mode because it writes logs in its install directory.
-So for now if you want to install:
-
 .. code-block:: bash
 
-    git clone git@github.com:marian-code/wikipedia-music-tags.git
-    cd wikipedia-music-tags
-    pip install -r requirements.txt
-    python setup.py install
+    pip install wiki_music
 
 Instalation creates two entry points which can be run from command line, one
 for GUI and one for CLI version.
@@ -105,6 +53,7 @@ All modules are found in PyPI so installing should be as easy as:
     git clone git@github.com:marian-code/wikipedia-music-tags.git
     cd wikipedia-music-tags
     pip install -r requirements.txt
+    python setup.py develop
 
 The app CLI and GUI version can be run by:
 
@@ -191,7 +140,7 @@ Without vanilla numpy ~150MB.
 
 This will generate list three directories under setup/ folder: gdist/ cdist/
 and build/. Build contains just pyinstaller help files and **(g/c)dist/wiki_music**
-contain packaged **G**UI and **C**LI console apps. 
+contain packaged GUI and CLI console apps. 
 
 Creating virtual environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

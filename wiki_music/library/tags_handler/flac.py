@@ -1,16 +1,16 @@
 """Module for handling flac tags."""
 
+import logging
 from collections import OrderedDict
 from typing import Dict, Union
 
 from mutagen.flac import FLAC, FLACNoHeaderError, Picture
 from mutagen.id3 import PictureType
 
-from wiki_music.utilities import log_tags
-
 from .tag_base import TagBase
 
-log_tags.debug("loading flac module")
+log = logging.getLogger(__name__)
+log.debug("loading flac module")
 
 
 class TagFlac(TagBase):

@@ -1,32 +1,31 @@
-""" wiki_music CLI entry point. """
+"""wiki_music CLI entry point."""
 
+import logging
 import signal
 import sys
-try:
-    import package_setup
-except ImportError:
-    pass  # not needed for frozen app
 
 from wiki_music.constants.colors import GREEN, RESET
 from wiki_music.library import WikipediaRunner
-from wiki_music.utilities import SharedVars, input_parser, we_are_frozen
+from wiki_music.utilities import SharedVars, input_parser, set_log_handles
 
 
 # add signal handler to exit gracefully upon Ctrl+C
 def signal_handler(sig, frame):
     print("\nAborting by user request...")
-    sys.exit(0)
-
-
-signal.signal(signal.SIGINT, signal_handler)
+    sys.exit()
 
 
 def main():
 
-    parser = WikipediaRunner(GUI=False)
+    signal.signal(signal.SIGINT, signal_handler)
 
     (SharedVars.write_json, SharedVars.offline_debbug, only_lyrics,
-     album, band, work_dir, with_log) = input_parser()
+     album, band, work_dir, with_log, debug) = input_parser()
+
+    if debug:
+        set_log_handles(logging.DEBUG)
+    else:
+        set_log_handles(logging.WARNING)
 
     if not album:
         print(GREEN + "Enter album name: " + RESET, end="")
@@ -35,6 +34,8 @@ def main():
         print(GREEN + "Enter band name: " + RESET, end="")
         band = str(input())
     print(RESET)
+
+    parser = WikipediaRunner(GUI=False)
 
     parser.album = album
     parser.band = band

@@ -1,9 +1,11 @@
-""" Low level tags handling implementation based on mutagen library. """
+"""Low level tags handling implementation based on mutagen library."""
 
-from lazy_import import lazy_callable
+import logging
 from typing import TYPE_CHECKING, Type
 
-from wiki_music.utilities import SharedVars, log_tags, exception
+from lazy_import import lazy_callable
+
+from wiki_music.utilities import SharedVars, exception
 
 TagMp3 = lazy_callable("wiki_music.library.tags_handler.mp3.TagMp3")
 TagFlac = lazy_callable("wiki_music.library.tags_handler.flac.TagFlac")
@@ -12,10 +14,12 @@ TagM4a = lazy_callable("wiki_music.library.tags_handler.m4a.TagM4a")
 if TYPE_CHECKING:
     from wiki_music.library.tags_handler.tag_base import TagBase
 
+log = logging.getLogger(__name__)
 
-@exception(log_tags)
+
+@exception(log)
 def File(filename: str) -> Type["TagBase"]:
-    """ Class factory function which returns coresponding class based on file
+    """Class factory function which returns coresponding class based on file
     type.
 
     Note

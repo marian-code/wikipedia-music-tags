@@ -1,37 +1,38 @@
-""" This module stores class hat takes care of downolading wikipedia page. """
+"""Module storing class that takes care of downolading wikipedia page."""
 
 import collections  # lazy loaded
+import logging
 import pickle  # lazy loaded
+import queue
 import re  # lazy loaded
 import sys
-import queue
 import time  # lazy loaded
 from os import path
 from threading import Lock
-from typing import Optional, Type, Dict
+from typing import Dict, Optional, Type
 
 import bs4  # lazy loaded
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
-import wikipedia as wiki  # lazy loaded
 
+import wikipedia as wiki  # lazy loaded
 from wiki_music.constants import OUTPUT_FOLDER
 from wiki_music.utilities import (
-    SharedVars, ThreadWithTrace, for_all_methods, log_parser,
-    normalize_caseless, time_methods)
+    SharedVars, ThreadWithTrace, for_all_methods, normalize_caseless,
+    time_methods)
 
 from .base import ParserBase
 
+log = logging.getLogger(__name__)
 nc = normalize_caseless
-
-log_parser.debug("cooker imports done")
 
 
 @for_all_methods(time_methods, exclude=["Preload"])
 class WikiCooker(ParserBase):
-    """ Class for downloading wikipedia page which is then converted to
-    WikipediaPage object. Subsequently important parts of the page are
-    extracted to class attributes. Class has the ability to run preload of the
-    page in background tread as the user types input values in GUI.
+    """Downloades wikipedia page and convertes it to WikipediaPage object.
+
+    Subsequently important parts of the page are extracted to class attributes.
+    Class has the ability to run preload of the page in background tread as the
+    user types input values in GUI.
 
     Warnings
     --------
@@ -57,13 +58,12 @@ class WikiCooker(ParserBase):
         BeautibulSoup object representing the whole page
     sections: Dict[str, bs4.BeautifulSoup]
         the :attr:`soup` split to page sections indexed by their titles
-    """   
-
+    """
     def __init__(self, protected_vars: bool) -> None:
 
         super().__init__(protected_vars=protected_vars)
 
-        log_parser.debug("cooker imports")
+        self.log.debug("cooker imports")
 
         if protected_vars:
             self.sections = {}
@@ -84,7 +84,7 @@ class WikiCooker(ParserBase):
         # pass reference of current class instance to subclass
         self.Preload.outer_instance = self
 
-        log_parser.debug("cooker imports done")
+        self.log.debug("cooker imports done")
 
     # TODO maybe we can move needed methods from outer class to preload so we
     # can have more instances of preload running at once, the results of each
@@ -92,8 +92,9 @@ class WikiCooker(ParserBase):
     # and the Preload would not need to have access to outer namespace which
     # is ugly and dangerous ffrom maintainability perspective
     class Preload:
-        """ Class for contolling the preload of wikipedia page. It is totally
-        self-contained exposes only start and stop methods.
+        """Contolling the preload of wikipedia page.
+
+        It is totally self-contained exposes only start and stop methods.
 
         Attributes
         ----------
@@ -109,9 +110,8 @@ class WikiCooker(ParserBase):
 
         @classmethod
         def start(cls):
-            """Method which starts running the preload, needed variables are
-            read from outer class.
-            
+            """Starts running the preload, variables are read from outer class.
+
             Note
             ----
             Currently running preload is stopped before new one is started
@@ -130,24 +130,22 @@ class WikiCooker(ParserBase):
                 pass
             cls.outer_instance.error_msg = None
 
-            log_parser.debug(f"Starting wikipedia preload for: "
-                             f"{cls.outer_instance.album} by "
-                             f"{cls.outer_instance.band}")
+            log.debug(f"Starting wikipedia preload for: "
+                      f"{cls.outer_instance.album} by "
+                      f"{cls.outer_instance.band}")
 
             cls._preload_thread = ThreadWithTrace(
-                target=cls.outer_instance._preload_run,
-                name="WikiPreload")
+                target=cls.outer_instance._preload_run, name="WikiPreload")
             cls._preload_thread.start()
 
         @classmethod
         def stop(cls):
-            """ Method that stops currently running preload. """
-
+            """Method that stops currently running preload."""
             if cls.outer_instance.preload_running:
 
-                log_parser.debug(f"Stoping wikipedia preload for: "
-                                 f"{cls.outer_instance.album} by "
-                                 f"{cls.outer_instance.band}")
+                log.debug(f"Stoping wikipedia preload for: "
+                          f"{cls.outer_instance.album} by "
+                          f"{cls.outer_instance.band}")
                 cls._preload_thread.kill()
                 cls._preload_thread.join()
 
@@ -155,7 +153,8 @@ class WikiCooker(ParserBase):
 
     @property
     def url(self) -> str:
-        """ Holds url of the wikipedia page from which the data was downloaded.
+        """Holds url of the wikipedia page from which the data was downloaded.
+
         When offline debugging is enabled, this property holds path to the
         pickle page file.
 
@@ -168,7 +167,6 @@ class WikiCooker(ParserBase):
         :meth:`_from_disk`
             method for loading the pickle page from disk
         """
-
         if not self._url:
             if SharedVars.offline_debbug:
                 self._url = path.join(OUTPUT_FOLDER, self.album, "page.pkl")
@@ -179,9 +177,9 @@ class WikiCooker(ParserBase):
 
     # TODO doesn't work without GUI
     def terminate(self, message: str):
-        """ Method that send message to GUI which than asks user if he wishes
-        to terminate the app. If the answer if yes than parser is destroyed
-        and GUI terminated.
+        """Send message to GUI to ask user if he wishes to terminate the app.
+        
+        If the answer if yes than parser is destroyed and GUI terminated.
 
         See also
         --------
@@ -195,7 +193,6 @@ class WikiCooker(ParserBase):
         message: str
             message to show user when asking if app should terminate
         """
-
         SharedVars.ask_exit = message
         SharedVars.wait_exit = True
 
@@ -211,7 +208,7 @@ class WikiCooker(ParserBase):
     # TODO if the propper page cannot be found we could show a dialog with a
     # list of possible matches for user to choose from
     def _check_band(self) -> bool:
-        """ Check if the artist hat was input in search is the same as the one
+        """Check if the artist that was input in search is the same as the one
         found on wikipedia page. If not issues warning about mismatch and asks
         user if he wants to continue.
 
@@ -220,11 +217,11 @@ class WikiCooker(ParserBase):
         :meth:`terminate`
             method that takes care of ending the app execution
         """
-
-        album_artist = self.sections["infobox"].find(href="/wiki/Album")  # type: ignore
+        album_artist = self.sections["infobox"].find(
+            href="/wiki/Album")  # type: ignore
         if album_artist:
             album_artist = album_artist.parent.get_text()
-            
+
             if fuzz.token_set_ratio(nc(self.band), nc(album_artist)) > 90:
                 return True
             else:
@@ -232,7 +229,7 @@ class WikiCooker(ParserBase):
                 m = (f"The Wikipedia entry for album: {self.album} belongs to "
                      f"band: {b}\nThis probably means that entry for: "
                      f"{self.album} by {self.band} does not exist.")
-                log_parser.exception(m)
+                self.log.exception(m)
                 self.terminate(m)
 
                 return False
@@ -259,11 +256,11 @@ class WikiCooker(ParserBase):
             self.cook_soup()
 
             if not self.error_msg:
-                log_parser.info(f"Preload finished successfully, "
+                self.log.info(f"Preload finished successfully, "
                                 f"found: {self.url}")
 
         if self.error_msg:
-            log_parser.info(f"Preload unsucessfull: {self.error_msg}")
+            self.log.info(f"Preload unsucessfull: {self.error_msg}")
 
         self.preload_running = False
 
@@ -318,9 +315,10 @@ class WikiCooker(ParserBase):
 
         self.log.debug("from web")
 
-        searches = [f"{self.album} ({self.band} album)",
-                    f"{self.album} (album)",
-                    self.album]
+        searches = [
+            f"{self.album} ({self.band} album)", f"{self.album} (album)",
+            self.album
+        ]
 
         try:
             for query in searches:
@@ -360,7 +358,7 @@ class WikiCooker(ParserBase):
         return self.error_msg
 
     def _from_disk(self) -> Optional[str]:
-        """ Loads wikipedia page from pickle file on disk.
+        """Loads wikipedia page from pickle file on disk.
 
         Returns
         -------
@@ -402,7 +400,8 @@ class WikiCooker(ParserBase):
                 return self.error_msg
 
         # make BeautifulSoup black magic
-        self.soup = bs4.BeautifulSoup(self.page.html(), features="lxml")  # type: ignore
+        self.soup = bs4.BeautifulSoup(self.page.html(),
+                                      features="lxml")  # type: ignore
 
         # split page to parts
         self.sections = collections.OrderedDict()
@@ -423,8 +422,8 @@ class WikiCooker(ParserBase):
             # section title in document with a name
             value = []
             for s in h2.find_next_siblings():
-                if s.name == "h2" and h2.find("span", class_="mw-headline",
-                                              id=True):
+                if s.name == "h2" and h2.find(
+                        "span", class_="mw-headline", id=True):
                     break
                 else:
                     value.append(s)

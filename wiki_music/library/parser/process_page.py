@@ -3,6 +3,7 @@ Class :class:`WikipediaParser` has complete functionallity but its methods need
 to be called in the correst order to give sensible results.
 """
 
+import logging
 import re  # lazy loaded
 from os import path
 from threading import Thread
@@ -14,10 +15,9 @@ import fuzzywuzzy.process as process  # lazy loaded
 
 from wiki_music.constants import FILES_DIR
 from wiki_music.constants.parser_const import *
-from wiki_music.utilities import (NLTK, SharedVars,
-                                  caseless_contains, complete_N_dim,
-                                  delete_N_dim, flatten_set, for_all_methods,
-                                  get_image, log_parser, normalize,
+from wiki_music.utilities import (NLTK, SharedVars, caseless_contains,
+                                  complete_N_dim, delete_N_dim, flatten_set,
+                                  for_all_methods, get_image, normalize,
                                   normalize_caseless, replace_N_dim,
                                   time_methods, warning)
 from wiki_music.utilities.exceptions import *
@@ -28,10 +28,11 @@ from .in_out import ParserInOut
 from .preload import WikiCooker
 
 nc = normalize_caseless
+log = logging.getLogger(__name__)
 
-NLTK.run_import()  # imports nltk in separate thread
+NLTK.run_import(log)  # imports nltk in separate thread
 
-log_parser.debug("parser imports done")
+log.debug("parser imports done")
 
 __all__ = ["WikipediaParser"]
 
@@ -61,14 +62,14 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     def __init__(self, protected_vars: bool = True) -> None:
 
-        log_parser.debug("init parser")
+        log.debug("init parser")
 
         WikiCooker.__init__(self, protected_vars=protected_vars)
         ParserInOut.__init__(self, protected_vars=protected_vars)
 
-        log_parser.debug("init parser done")
+        log.debug("init parser done")
 
-    @warning(log_parser)
+    @warning(log)
     def get_release_date(self):
         """ Gets album release date from information box in the
         top right corner of wikipedia page. Populates:attr:`wiki_music.DATE`
@@ -89,7 +90,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             self.release_date = ""
             raise NoReleaseDateException
 
-    @warning(log_parser)
+    @warning(log)
     def get_genres(self):
         """ Gets list of album genres from information box in the
         top right corner of wikipedia page. If found genre if only one then
@@ -114,7 +115,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         if len(self.genres) == 1:
             self.selected_genre = self.genres[0]
 
-    @warning(log_parser)
+    @warning(log)
     def get_cover_art(self):
         """ Gets album cover art information box in the top right corner
         of wikipedia page. Runs in a separate thread because the cover art
@@ -253,7 +254,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                             if n not in comp:
                                 self.composers[i].append(n)
 
-    @warning(log_parser)
+    @warning(log)
     def get_contents(self):
         """ Extract page contets from keys in :attr:`sections` dictionary.
         
@@ -270,7 +271,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         if len(self.contents) == 0:
             raise NoContentsException
 
-    @warning(log_parser)
+    @warning(log)
     def get_personnel(self):
         """ Extract personnel from wikipedia page sections defined by:
         :const:`wiki_music.constants.parser_const.PERSONNEL_SECTIONS` then
@@ -343,7 +344,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         self.personnel = personnel
         self.appearences = appearences
 
-    @warning(log_parser)
+    @warning(log)
     def _get_tracks(self):
         """ Method that attempts to extract tracklist from table or list
         format on the wikipedia page.
@@ -377,7 +378,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                     else:
                         tables.extend(s.find_all(["ul", "ol"]))
             except AttributeError as e:
-                log_parser.warning(e)
                 msg = (f"No tracklist found!\nURL: {self.url}\nprobably "
                        f"doesn´t belong to album: {self.album} by {self.band}")
                 SharedVars.warning(msg)
@@ -589,7 +589,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         self.artists = [""] * len(self.composers)
 
-    @warning(log_parser, show_GUI=False)
+    @warning(log, show_GUI=False)
     def extract_names(self):
         """ Used nltk to estract person names from supplied sections of the
         wikipedia page.

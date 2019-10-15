@@ -1,55 +1,14 @@
-""" Logger initialization for package. """
+"""Logger initialization for package."""
 
 import logging
-from os import path, makedirs
+from os import makedirs, path
+from typing import Set
 
 from wiki_music.constants.paths import LOG_DIR
 
+logging.getLogger(__name__)
 
-def log_name(name: str) -> str:
-    """ Compiles standard logger name consisting of wiki_music_{name}.log
-
-    Parameters
-    ----------
-    name: str
-        unique logger name
-
-    Returns
-    -------
-    str
-        compiled logger name
-    """
-
-    return path.join(LOG_DIR, f"wiki_music_{name}.log")
-
-
-def get_logger(name: str, logfile: str, mode: str = "w") -> logging.Logger:
-    """ Initializes logger with predefined formating and both file and
-    stdout handles.
-
-    Parameters
-    ----------
-    name: str
-        logger name
-    logfile: str
-        path where logger filehandle will redirect output
-    mode: str
-        write mode of filehandle - append/overwrite
-
-    Returns
-    -------
-    logging.Logger
-        instance of a new logger
-    """
-
-    log = logging.getLogger(name)
-    log.setLevel(logging.DEBUG)
-    fh = logging.FileHandler(logfile, mode=mode)
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(FORMATTER)
-    log.addHandler(fh)
-
-    return log
+__all__ = ["set_log_handles"]
 
 # logger formater
 FORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
@@ -63,17 +22,55 @@ FORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
 # create dir to store logs
 makedirs(LOG_DIR, exist_ok=True)
 
-# loggging for app
-log_app = get_logger('wiki_music_app', log_name("app"))
 
-# logging for gui
-log_gui = get_logger('wiki_music_GUI', log_name("GUI"))
+def _compile_log_path(name: str) -> str:
+    """Compiles standard logger path consisting of wiki_music_{name}.log
 
-# logging for ID3_tags, previously in mode='a'
-log_tags = get_logger("wiki_music_tags", log_name("ID3_tags"))
+    Parameters
+    ----------
+    name: str
+        unique logger name
 
-# logging for parser, previously in mode='a'
-log_parser = get_logger("wiki_music_parser", log_name("parser"))
+    Returns
+    -------
+    str
+        compiled logger path name
+    """
 
-# logging for lyrics
-log_lyrics = get_logger("wiki_music_lyrics", log_name("lyrics"))
+    return path.join(LOG_DIR, f"wiki_music_{name}.log")
+
+
+def set_log_handles(level: int):
+    """Set desired level for package loggers and add file handlers.
+
+    Parameters
+    ----------
+    level: int
+        logging level
+    """
+
+    already_set: Set[str] = set()
+    for name in logging.root.manager.loggerDict:
+        if "wiki_music" in name:
+            # assumed format is wiki_music.<submodule>.<subsubmodule>.<...>
+            try:
+                log_name = name.split(".")[1]
+            except IndexError:
+                pass
+            else:
+                if log_name in already_set:
+                    continue
+
+                log_path = _compile_log_path(log_name)
+
+                fh = logging.FileHandler(log_path, mode="w")
+                fh.setLevel(level)
+                fh.setFormatter(FORMATTER)
+
+                log = logging.getLogger(name)
+                log.setLevel(level)
+                log.addHandler(fh)
+
+                already_set.add(log_name)
+
+    return log

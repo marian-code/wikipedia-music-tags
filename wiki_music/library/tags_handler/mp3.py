@@ -1,5 +1,6 @@
 """Module for handling mp3 tags."""
 
+import logging
 from ast import literal_eval
 from collections import OrderedDict
 from typing import Dict, Union
@@ -7,11 +8,10 @@ from typing import Dict, Union
 from mutagen.id3 import (APIC, COMM, ID3, TALB, TCOM, TCON, TDRC, TIT2, TPE1,
                          TPE2, TPOS, TRCK, USLT, ID3NoHeaderError, PictureType)
 
-from wiki_music.utilities import log_tags
-
 from .tag_base import TagBase
 
-log_tags.debug("loading mp3 module")
+log = logging.getLogger(__name__)
+log.debug("loading mp3 module")
 
 
 class TagMp3(TagBase):

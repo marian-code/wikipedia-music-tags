@@ -1,23 +1,20 @@
 import os
 import pickle  # lazy loaded
 from abc import abstractmethod
-from typing import List, Dict, Union
+from typing import Dict, List, Union
 
 from wiki_music.constants import (EXTENDED_TAGS, GREEN, LBLUE, LGREEN,
                                   OUTPUT_FOLDER, RESET, YELLOW)
-from wiki_music.utilities import (SharedVars, ThreadPool, bracket,
-                                  count_spaces, list_files, log_parser,
-                                  normalize_caseless, win_naming_convetion,
-                                  write_roman, yaml_dump)
+from wiki_music.utilities import (
+    SharedVars, ThreadPool, bracket, count_spaces, list_files,
+    normalize_caseless, win_naming_convetion, write_roman, yaml_dump)
 
-from ..ID3_tags import read_tags, write_tags
 from ..lyrics import save_lyrics
+from ..tags_io import read_tags, write_tags
 from .base import ParserBase
 
 wnc = win_naming_convetion
 nc = normalize_caseless
-
-log_parser.debug("in_out imports done")
 
 __all__ = ["ParserInOut"]
 
@@ -27,7 +24,6 @@ class ParserInOut(ParserBase):
     :class:`wiki_music.library.parser.process_page.WikipediaParser`. Takes care
     of outputing and loading information.
     """
-
     def __init__(self, protected_vars):
 
         super().__init__(protected_vars=protected_vars)
@@ -79,7 +75,7 @@ class ParserInOut(ParserBase):
 
     @property
     def debug_folder(self) -> str:
-        """ Path to debugging folder.
+        """Path to debugging folder.
 
         :type: str
         """
@@ -87,11 +83,12 @@ class ParserInOut(ParserBase):
         if not self._debug_folder:
             _win_name = win_naming_convetion(self.album, dir_name=True)
             self._debug_folder = os.path.join(OUTPUT_FOLDER, _win_name)
+            os.makedirs(self._debug_folder, exist_ok=True)
 
         return self._debug_folder
 
     def list_files(self):
-        """ Lists files in current working directory.
+        """Lists files in current working directory.
 
         See also
         --------
@@ -102,7 +99,7 @@ class ParserInOut(ParserBase):
         self.files = list_files(self.work_dir)
 
     def reassign_files(self):
-        """ Searched the current working directory and tries to assign files to
+        """Searched the current working directory and tries to assign files to
         the tracks.
         """
 
@@ -122,7 +119,8 @@ class ParserInOut(ParserBase):
 
             for path in disk_files:
                 f = os.path.split(path)[1]
-                if (nc(wnc(tr)) in nc(f) and nc(self.types[i]) in nc(f)):  # noqa E129
+                if (nc(wnc(tr)) in nc(f)
+                        and nc(self.types[i]) in nc(f)):  # noqa E129
 
                     print(LBLUE + tr + RESET,
                           "-" * (1 + max_length - len(tr)) + ">", path)
@@ -174,7 +172,8 @@ class ParserInOut(ParserBase):
 
         # save found personel to file
         with open(os.path.join(self.debug_folder, "personnel.txt"),
-                  "w", encoding="utf8") as f:
+                  "w",
+                  encoding="utf8") as f:
 
             f.write(self.personnel_2_str())
 
@@ -192,7 +191,6 @@ class ParserInOut(ParserBase):
         str
             nicely formated string representation of tracklist
         """
-
         def _set_color():
             if to_file:
                 return [""] * 3
@@ -200,7 +198,8 @@ class ParserInOut(ParserBase):
                 return GREEN, LGREEN, RESET
 
         # compute number of spaces, wrong mypy detection
-        spaces, length = count_spaces(self.tracks, self.bracketed_types)  # type: ignore
+        spaces, length = count_spaces(self.tracks,
+                                      self.bracketed_types)  # type: ignore
 
         G, LG, R = _set_color()
 
@@ -222,8 +221,8 @@ class ParserInOut(ParserBase):
                       f"{self.bracketed_types[i]}{spaces[i]} "
                       f"{', '.join(self.artists[i] + self.composers[i])}\n")
 
-                for k, (sbtr, sbtp) in enumerate(zip(self.subtracks[i],
-                                                     self.sub_types[i])):
+                for k, (sbtr, sbtp) in enumerate(
+                        zip(self.subtracks[i], self.sub_types[i])):
                     s += (f"  {write_roman(k + 1)}. {sbtr} {sbtp}\n")
 
             tracklists.append(s)
@@ -262,8 +261,8 @@ class ParserInOut(ParserBase):
                 for k, a in enumerate(sorted(app)):
                     for j, _ in enumerate(self.disk_sep[:-1]):
 
-                        if (a >= self.disk_sep[j] and
-                            a < self.disk_sep[j + 1]):  # noqa E129
+                        if (a >= self.disk_sep[j]
+                                and a < self.disk_sep[j + 1]):  # noqa E129
 
                             if j != temp:
                                 s += f"{self.disks[j]}: {self.numbers[a]}"
@@ -284,7 +283,7 @@ class ParserInOut(ParserBase):
         return s
 
     def data_to_dict(self
-                    ) -> List[Dict[str, Union[str, int, bytearray, list]]]:
+                     ) -> List[Dict[str, Union[str, int, bytearray, list]]]:
         """ Converts parser data to list of dictionaries. If yaml_dump is
         enabled list is written to 
         
@@ -330,7 +329,7 @@ class ParserInOut(ParserBase):
 
         See also
         --------
-        :func:`wiki_music.library.ID3_tags.write_tags`
+        :func:`wiki_music.library.tags_io.write_tags`
             function that handles tag writing
         :meth:`data_to_dict`
             this method prepares tags data in suitable format for writing
@@ -352,7 +351,7 @@ class ParserInOut(ParserBase):
             return True
 
     def save_lyrics(self):
-        """ Function that calls lyricsfinder to search for and save lyrics for
+        """Function that calls lyricsfinder to search for and save lyrics for
         all tracks.
 
         See also
@@ -367,8 +366,8 @@ class ParserInOut(ParserBase):
         """
 
         if SharedVars.write_lyrics:
-            self.lyrics = save_lyrics(self.tracks, self.types,
-                                      self.band, self.album)
+            self.lyrics = save_lyrics(self.tracks, self.types, self.band,
+                                      self.album, self.GUI)
         else:
             self.lyrics = [""] * len(self)
 
@@ -379,7 +378,7 @@ class ParserInOut(ParserBase):
         --------
         :meth:`list_files`
             method that takes care of file searching
-        :func:`wiki_music.library.ID3_tags.read_tags`
+        :func:`wiki_music.library.tags_io.read_tags`
             function that thandles tag reading
         """
 

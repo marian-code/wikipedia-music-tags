@@ -1,24 +1,17 @@
 # To-Do
 
 ### Main problems ordered by targeted release
-- 0.3.0-alpha
-  - set paths for platform specific directories for logs and output
-  - update README about instalation and docs
-  - detect if we are in pip installed or frozen state
-  - download nltk data automatically, or put them in package
-  - automate google api key getting for users
-  - publish to PyPi
-- 0.4.0-alpha
+- 0.4a0
+  - make docs 'about' page and open right url from GUI
   - use more debugging prints and set default debugger level to INFO,
     DEBUG should be activated by command line argument
-  - set actions for help menu in GUI, point to docs and git
   - test frozen gui app
   - create a github release
-- 0.5.0-alpha
+- 0.5a0
   - fix as many bugs as possible
   - preload needs a complete rewrite the logic is horribly complex, too many
     classes manipulate preload related variables
-- 0.x.0-beta
+- 0.xb0
   - use underscores to mark private things
   - fix gui scaling and elements moving around
   - convert constants to re patterns for better matching and use more re for better extraction
@@ -47,7 +40,6 @@
 - use custom widgets to simplify GUI https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/ e.g. tableWiew
 - implement main GUI progressbar
 
-
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
 - load composer fails for https://en.wikipedia.org/wiki/Pursuit_of_the_Sun_%26_Allure_of_the_Earth
@@ -56,7 +48,33 @@
 
 # Change Log
 
-### 11.10.2019 - 0.2.0-alpha
+### 14.10.2019 - 0.3a3
+- completelly reworked logging
+- publish to PyPi
+
+### 14.10.2019 - 0.3a2
+- update readme and docs before PyPi publish.
+- corrected version name
+- fixed manifest including google API key
+- published to test PyPi, all seems in order
+- fixed wrong spelling of appdirs dependenxy in reuirements
+- relax Pillow to requirement to >=6.1.0
+
+### 12.10.2019
+- we have automatic nktk data download in setup.py
+- we have semi-auto google API key getting, user still has to do all the steps
+  in browser
+- got rid of package_setup script, replace it with setup.py develop
+  installation
+- we can now detect platform specific data directories with appdir and place
+  data there
+- implemented warnings for Mp3tag for non-win platformas and non default path
+- if Mpštag is not found dialog is displayed for user to point to executable
+- ignore some pydocstyle errors because we use numpy docstrings
+- debugging mode in gui and debug logs are shown only if --debug command line
+  swith is set
+
+### 11.10.2019 - 0.2a0
 - do not generate python files from ui files instead use uic to load them directly
 - optimizations to parser and GUI comunication
 - all docstrings are written
@@ -72,7 +90,7 @@
 - most of the gui_lib is now documented only data_model and main_window remain
 - remamed some methods from: \_\_method\_\_ to _method
 
-### 9.10.2019 - 0.1.0-alpha
+### 9.10.2019 - 0.1a0
 - added license, mainfest and setup.py file
 - publish to read the docs, build is passing now after somme debugging
 - written setup.py file, instalation is working
@@ -449,11 +467,11 @@
 - now we are able to read tracklists which are not formated in table
 - bracket behind track is now checked for special characters like , / \ etc. which indicates that more artists are present. The string is than split on these delimiters and all are checked against aditional personnel
 - parser now has its own logger and catches exceptions on lower level which does not halt the main thread
-- minor tweak to ID3_tags.py .mp3 files apparently also have lyrics under LYRICS tag same as .m4a
+- minor tweak to tags_io.py .mp3 files apparently also have lyrics under LYRICS tag same as .m4a
 
 ### 24.8.2018
 - some further code reorganize
-- added logger to ID3_tags
+- added logger to tags_io
 - hopefully all possible exceptions are now caught and subsequently sent to corespondind logger, displayed in GUI and printed to console
 - added log_print function to application.py which takes care of logging, printing and sending messages to gui
 - some gui polishing, either tkinter is worth shit or I am. Working with it is really painful
@@ -547,7 +565,7 @@
 
 ### 18.2.2018
 - added ability to search darklyrics to lyricsfinder module + minor changes
-- more work done in lyrics.py a ID3_tags.py
+- more work done in lyrics.py a tags_io.py
 
 ### 2.2.2018
 - fixed bug in ordering artists when list length was = 0

@@ -65,22 +65,29 @@ class UrlData:
 
 def search(query: str, api_key: str) -> List:
     """Return search results."""
+
+    # ! to edit head to: https://cse.google.com/cse/all
+
     params = {
         "key": api_key,
         #"cx": "'000281471148392423350:ymsqkb0dqs8"
-        "cx": "000281471148392423350:64fnnp-ny2w", # original + darklyrics
+        "cx": "000281471148392423350:64fnnp-ny2w",  # original + darklyrics
         #"cx": "002017775112634544492:7y5bpl2sn78", # original without darklyrics
         "q": query
     }
-    resp = requests.get("https://www.googleapis.com/customsearch/v1", params=params)
+    resp = requests.get("https://www.googleapis.com/customsearch/v1",
+                        params=params)
     data = resp.json()
     items = data.get("items", [])
     return items
 
+
 def generate_url(artist: str, album: str, song: str) -> List[dict]:
 
     # the list of words that are not capitalized, may not be exhaustive!!
-    DONT_CAPITALIZE: Tuple[str, ...] = ("on", "at", "by", "or", "a", "an", "of", "and", "but")
+    DONT_CAPITALIZE: Tuple[str, ...] = ("on", "at", "by", "or", "a", "an",
+                                        "of", "and", "but")
+
     # no = ["under","between", "over", "after","without","until",
     #       "because","every","this","those", "many", ]
     # maybe = ["and","but",]
@@ -95,25 +102,38 @@ def generate_url(artist: str, album: str, song: str) -> List[dict]:
     song = re.sub(r"\(|\)|\'", "", song).strip().lower()
 
     # darklyrics
-    urls.append({"link": f"http://www.darklyrics.com/lyrics/{r(artist, '')}/" +
-                         f"{r(album, '')}.html"})
+    urls.append({
+        "link":
+        f"http://www.darklyrics.com/lyrics/{r(artist, '')}/" +
+        f"{r(album, '')}.html"
+    })
     # AZLyrics
-    urls.append({"link": f"https://www.azlyrics.com/lyrics/{r(artist, '')}/" +
-                         f"{r(song, '')}.html"})
+    urls.append({
+        "link":
+        f"https://www.azlyrics.com/lyrics/{r(artist, '')}/" +
+        f"{r(song, '')}.html"
+    })
     # Genius
     link = (f"https://genius.com/{r(artist.capitalize(), '-')}"
             f"-{r(song, '-')}-lyrics").replace("&", "and")
     urls.append({"link": link})  # sometimes annotated version is present
     urls.append({"link": f"{link}-annotated"})
     # Lyricsmode
-    urls.append({"link": f"http://www.lyricsmode.com/lyrics/{artist[0]}/" +
-                         f"{r(artist, '_')}/{r(song, '_')}.html"})    
+    urls.append({
+        "link":
+        f"http://www.lyricsmode.com/lyrics/{artist[0]}/" +
+        f"{r(artist, '_')}/{r(song, '_')}.html"
+    })
     # Musixmatch
-    song = "-".join([s.capitalize() for s in song.split()
-                     if s not in DONT_CAPITALIZE]).capitalize()
-    urls.append({"link": f"https://www.musixmatch.com/lyrics/" +
-                         f"{r(artist.upper(), '-')}/{song}"})
-    # Lyrical Nonsense, Anime Lyrics - useless, some Japanese lyrics    
+    song = "-".join([
+        s.capitalize() for s in song.split() if s not in DONT_CAPITALIZE
+    ]).capitalize()
+    urls.append({
+        "link":
+        f"https://www.musixmatch.com/lyrics/" +
+        f"{r(artist.upper(), '-')}/{song}"
+    })
+    # Lyrical Nonsense, Anime Lyrics - useless, some Japanese lyrics
 
     return urls
 

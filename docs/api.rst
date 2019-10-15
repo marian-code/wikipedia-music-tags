@@ -38,8 +38,3 @@ wiki_music cli
 --------------
 .. automodule:: wiki_music.app_cli
    :members:
-
-wiki_music package_setup
-------------------------
-.. automodule:: wiki_music.package_setup
-   :members:

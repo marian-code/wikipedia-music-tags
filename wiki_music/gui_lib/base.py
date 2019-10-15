@@ -1,6 +1,7 @@
 """ The base module for Qt frontend. """
 
 import ctypes
+import logging
 from abc import abstractmethod
 
 from wiki_music.constants import MAIN_WINDOW_UI
@@ -8,14 +9,15 @@ from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QIcon,
                                             QMainWindow, QMessageBox,
                                             QStandardItemModel,
                                             QSystemTrayIcon, uic)
-from wiki_music.utilities import MultiLog, abstract_warning, get_icon, log_gui
+from wiki_music.utilities import MultiLog, abstract_warning, get_icon
 
-log_gui.debug("base imports done")
+log = logging.getLogger(__name__)
+log.debug("base imports done")
 
 
 # inherit base from QMainWindow and lyaout from Ui_MainWindow
 class BaseGui(QMainWindow):
-    """ Base class for all GUI classes, initializes UI from Qt Designer
+    """Base class for all GUI classes, initializes UI from Qt Designer
     generated files. then sets up needed variables. Connects buttons and input
     fields signals to methods. All GUI classes should subclass this class.
 
@@ -33,7 +35,7 @@ class BaseGui(QMainWindow):
 
     def __init__(self) -> None:
 
-        log_gui.debug("init base")
+        log.debug("init base")
 
         # call QMainWindow __init__ method
         super().__init__()
@@ -45,9 +47,9 @@ class BaseGui(QMainWindow):
 
         # misc
         self.work_dir: str = ""
-        self.log: MultiLog = MultiLog(log_gui)
+        self.log: MultiLog = MultiLog(log)
 
-        log_gui.debug("init base done")
+        log.debug("init base done")
 
     def __initUI__(self):
         """ Has three responsibilities: load and set window and tray icon and
@@ -67,7 +69,7 @@ class BaseGui(QMainWindow):
         about functionality not being implemented yet.
         """
 
-        log_gui.warning("Not implemented yet")
+        log.warning("Not implemented yet")
         QMessageBox(QMessageBox.Warning,
                     "Info", "Not implemented yet!").exec_()
 

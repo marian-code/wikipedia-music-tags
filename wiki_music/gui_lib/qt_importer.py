@@ -6,7 +6,10 @@ With the help of QtPy all major Qt bindings are supported: PyQt5, PyQt4,
 Pyside2 and PySide.
 """
 
-from wiki_music.utilities.loggers import log_gui
+import logging
+
+log = logging.getLogger(__name__)
+
 try:
     from qtpy.QtWidgets import (QMainWindow, QFileDialog, QApplication,
                                 QTableWidgetItem, QMessageBox, QHBoxLayout,
@@ -20,14 +23,9 @@ try:
                              QBuffer, QSize, QRect, Property, Slot, Signal,
                              QByteArray, QIODevice, QPoint, QEvent,
                              QModelIndex, QVariant)
-    # TODO readthe docs workaround
-    try:
-        from qtpy import uic
-    except ImportError:
-        log_gui.critical("Couldn't import uic!!")
-        uic = None
+    from qtpy import uic
 except ImportError as e:
-    log_gui.critical("None of the Qt backends is available! Aborting")
+    log.critical("None of the Qt backends is available! Aborting")
     raise ImportError("None of the Qt backends is available! Aborting")
 else:
-    log_gui.debug("Qt imports done")
+    log.debug("Qt imports done")

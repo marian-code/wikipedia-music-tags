@@ -1,9 +1,11 @@
+"""Holds various html formats information extractors."""
+
 import re  # lazy loaded
 from typing import List, Tuple, TYPE_CHECKING
 
 from wiki_music.constants import TO_DELETE, ORDER_NUMBER, TIME
 from wiki_music.utilities import (
-    NoTracklistException, SharedVars, log_parser, normalize_caseless)
+    NoTracklistException, SharedVars, normalize_caseless)
 
 __all__ = ["DataExtractors"]
 
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class DataExtractors:
-    """ Parse various table formats from wikipedia.
+    """Parse various table formats from wikipedia.
 
     Warnings
     --------
@@ -22,7 +24,7 @@ class DataExtractors:
     @classmethod
     def _from_table(cls, tables: List["BeautifulSoup"]
                     ) -> List[List[List[str]]]:
-        """ Extract a classic wkikipedia html table composed of 'td' and 'th'
+        """Extract a classic wkikipedia html table composed of 'td' and 'th'
         html tags.
 
         Parameters
@@ -86,6 +88,21 @@ class DataExtractors:
 
     @classmethod
     def _html2python_list(cls, table: "BeautifulSoup") -> List[str]:
+        """Converst html list to python list.
+
+        Html list can be ordered <ol> or unordered <ul> its elements should be
+        separated by <li> tags.
+
+        Parameters
+        ----------
+        table: BeautifulSoup
+            html object parsed by bs4
+
+        Returns
+        -------
+        list
+            each element represents on row in html list
+        """
 
         try:
             rows = [ch.get_text() for ch in table.find_all("li")
@@ -97,7 +114,7 @@ class DataExtractors:
 
     @classmethod
     def _from_list(cls, table: "BeautifulSoup") -> List[List[str]]:
-        """ Extract trackist formated as a html list with use of 'ol' and 'ul'
+        """Extract trackist formated as a html list with use of 'ol' and 'ul'
         tags.
 
         See also
@@ -153,7 +170,7 @@ class DataExtractors:
 
     @classmethod
     def _get_track(cls, cell: str) -> Tuple[str, List[str]]:
-        """ Extract track and subtracks names from table cell.
+        """Extract track and subtracks names from table cell.
 
         Parameters
         ----------
@@ -186,7 +203,7 @@ class DataExtractors:
 
     @classmethod
     def _get_artist(cls, cell: str) -> List[str]:
-        """ Splits list of artists in tracklist table cell separated by , or &
+        """Splits list of artists in tracklist table cell separated by , or &
 
         Parameters
         ----------
@@ -203,7 +220,7 @@ class DataExtractors:
 
     @classmethod
     def _cut_out(cls, string: str, start: int, end: int) -> str:
-        """ Given a string cuts out part specified by pointers.
+        """Given a string cuts out part specified by pointers.
 
         Parameters
         ----------

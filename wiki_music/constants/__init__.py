@@ -2,7 +2,7 @@
 """
 
 from .colors import *
+from .gui_const import *
 from .parser_const import *
 from .paths import *
 from .tags import *
-from .gui_const import *

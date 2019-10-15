@@ -1,6 +1,5 @@
 hiddenimports =[
     "wiki_music.version",
-    "wiki_music.package_setup",
     # all the following are lazy loaded so pyinstaller cannot find them
     "wiki_music.library.tags_handler.tag_base",
     "wiki_music.library.tags_handler.mp3",

@@ -1,19 +1,25 @@
-""" Utility functions and classes used by GUI. """
+"""Utility functions and classes used by parser."""
 
 import collections  # lazy loaded
+import logging
 import os
 import sys
 import time  # lazy loaded
 from threading import Lock, Thread
-from typing import Any, Callable, Generator, List, Optional, Tuple, Union, Dict
+from typing import (TYPE_CHECKING, Any, Callable, Dict, Generator, List,
+                    Optional, Tuple, Union)
 
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
 import yaml  # lazy loaded
 
 from wiki_music.constants.colors import GREEN, RESET
 
-from .loggers import log_parser
 from .utils import normalize
+
+logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from logging import Logger
 
 __all__ = ["ThreadWithTrace", "NLTK", "bracket", "write_roman",
            "normalize", "normalize_caseless", "caseless_equal",
@@ -23,7 +29,7 @@ __all__ = ["ThreadWithTrace", "NLTK", "bracket", "write_roman",
 
 
 class ThreadWithTrace(Thread):
-    """ Subclass of threading.thread, sets trace to thread by means of which
+    """Subclass of threading.thread, sets trace to thread by means of which
     it can be later killed from outside
 
     Parameters
@@ -69,7 +75,7 @@ class ThreadWithTrace(Thread):
 
 
 class _NltkMeta(type):
-    """ Metaclass which defines thread safe nltk property. Only for use in
+    """Metaclass which defines thread safe nltk property. Only for use in
     NLTK class.
 
     See Also
@@ -79,19 +85,16 @@ class _NltkMeta(type):
 
     @property
     def nltk(cls):
-        """ Thread safe property which holds reference to nltk lib.
-        
-        Returns
-        -------
-        nltk
-            reference to nltk lib
+        """Thread safe property which holds reference to nltk lib.
+
+        :type: nltk
         """
         with cls._lock:
             return cls._nltk
 
 
 class NLTK(metaclass=_NltkMeta):
-    """ A thread safe nltk importer. Will make other threads wait if they want
+    """A thread safe nltk importer. Will make other threads wait if they want
         to access nltk until it is imported.
     """
 
@@ -99,26 +102,35 @@ class NLTK(metaclass=_NltkMeta):
     # nltk class attribute is provided by metaclass
     _nltk = None
     _lock: Lock = Lock()
-
+    
     @classmethod
-    def run_import(cls):
+    def run_import(cls, logger: "Logger"):
+        """Import nltk in separate thread and assign it to class attribute.
+        
+        Parameters
+        ----------
+        logger: logging.Logger
+            instance of a logger to log import messages
+        """
 
         def imp():
             with cls._lock:
-                log_parser.debug("import nltk")
+                logger.debug("import nltk")
                 try:
                     import nltk
                     cls._nltk = nltk
-                except Exception as e:
-                    log_parser.debug(f"failed to import nltk: {e}")
+                except ImportError as e:
+                    logger.debug(f"failed to import nltk: {e}")
                 else:
-                    log_parser.debug("import nltk done")
+                    logger.debug("import nltk done")
 
         if not cls._import_running:
 
             cls._import_running = True
             # load NLTK in separate thread
             Thread(target=imp, name="ImportNLTK").start()
+        else:
+            log.debug("nltk import already running")
 
 
 class ThreadWithReturn(Thread):

@@ -1,7 +1,10 @@
 """ Module for variable synchronization between application and GUI """
 
+import logging
 from threading import Barrier, Lock
-from typing import Union, ClassVar
+from typing import ClassVar, Union
+
+logging.getLogger(__name__)
 
 __all__ = ["SharedVars"]
 
@@ -68,6 +71,7 @@ class SharedVars:
     offline_debbug: ClsBool = False
     write_lyrics: ClsBool = False
     assign_artists: ClsBool = False
+    get_api_key: ClassVar[Union[str, bool]] = True
 
     # exceptions
     has_warning: ClsStr = ""

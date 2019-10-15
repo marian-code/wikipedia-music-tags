@@ -1,21 +1,26 @@
 """wiki_music GUI entry point."""
 
+import logging
 import sys
 from threading import current_thread
 
-try:
-    import package_setup
-except ImportError:
-    pass  # not needed for the frozen app
-
 from wiki_music.gui_lib.main_window import Window
 from wiki_music.gui_lib.qt_importer import QApplication
+from wiki_music.utilities import input_parser, set_log_handles
 
 
 def main():
+
+    debug = input_parser()[-1]
+
+    if debug:
+        set_log_handles(logging.DEBUG)
+    else:
+        set_log_handles(logging.INFO)
+
     current_thread().name = "GuiThread"
     app = QApplication(sys.argv)
-    ui = Window()
+    ui = Window(debug=debug)
     ui.show()
     sys.exit(app.exec_())
 

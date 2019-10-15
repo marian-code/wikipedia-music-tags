@@ -1,14 +1,18 @@
 """ Fancy wrapper function used in whole package. """
 
+import logging
 import os
 import time  # lazy loaded
 from functools import wraps
 from threading import current_thread
-from typing import Callable, NoReturn, Union, Any, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, List, NoReturn, Union
 
-from .sync import SharedVars
-from .exceptions import *
 from wiki_music.constants import LOG_DIR
+
+from .exceptions import *
+from .sync import SharedVars
+
+logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -116,7 +120,7 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
             except (NoTracklistException, NoReleaseDateException,
                     NoGenreException, NoCoverArtException,
                     NoNames2ExtractException, NoContentsException,
-                    NoPersonnelException, NoGoogleApiKeyException) as e:
+                    NoPersonnelException, Mp3tagNotFoundException) as e:
                 logger.warning(e)
                 if show_GUI:
                     SharedVars.warning(e)

@@ -1,8 +1,12 @@
 """wiki_music root file: __init__ sets which modules are lazy imported on
 on package level and pulls in constants: __version__ and GUI_RUNNING."""
 
+import logging
 from sys import argv
+
 from lazy_import import lazy_module
+
+logging.getLogger(__name__)
 
 try:
     from version import __version__

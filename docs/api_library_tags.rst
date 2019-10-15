@@ -1,4 +1,4 @@
-API reference for wiki_music library.tags_handler and ID3_tags modules
+API reference for wiki_music library.tags_handler and tags_io modules
 ======================================================================
 
 
@@ -6,9 +6,9 @@ This file describes wiki_music API reference. Beware, some things might not be
 up to date and all is subject to change since we are still in early development
 phase.
 
-wiki_music library.ID3_tags
+wiki_music library.tags_io
 ---------------------------
-.. automodule:: wiki_music.library.ID3_tags
+.. automodule:: wiki_music.library.tags_io
    :members:
 
 wiki_music library.tags_handler

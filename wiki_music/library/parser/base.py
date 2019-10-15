@@ -2,11 +2,14 @@
 class that sets all the default attributes.
 """
 
-from typing import List, TYPE_CHECKING, Optional, Dict
+import logging
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from wiki_music.utilities import MultiLog, log_parser
+from wiki_music.utilities import MultiLog
 
 __all__ = ["ParserBase"]
+
+log = logging.getLogger(__name__)
 
 # only for static typechecker, is False at runtime
 if TYPE_CHECKING:
@@ -15,7 +18,6 @@ if TYPE_CHECKING:
 
     Bs4Soup = Optional["BeautifulSoup"]
     WikiPage = Optional["WikipediaPage"]
-
 
 SList = List[str]  # list of strings
 IList = List[int]  # list of ints
@@ -84,7 +86,7 @@ class ParserBase:
 
     def __init__(self, protected_vars: bool) -> None:
 
-        log_parser.debug("parser base")
+        log.debug("parser base")
 
         # lists 1D
         self.contents: SList = []
@@ -122,10 +124,11 @@ class ParserBase:
             self.album: str = ""
             self.band: str = ""
             self.work_dir: str = ""
-            self.log: MultiLog = MultiLog(log_parser)
+            self.log: MultiLog = MultiLog(log)
+            self.GUI = False
 
-        log_parser.debug("parser base done")        
-    
+        self.log.debug("parser base done")
+
     def __len__(self):
         return len(self.numbers)
 

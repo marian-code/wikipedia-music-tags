@@ -5,7 +5,7 @@ import sys
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from wiki_music.library.tags_handler import File
-from wiki_music.library.ID3_tags import read_tags, write_tags
+from wiki_music.library.tags_io import read_tags, write_tags
 from pprint import pprint
 from PIL import Image
 from io import BytesIO

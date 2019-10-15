@@ -1,20 +1,29 @@
+import logging
 import re  # lazy loaded
 from os import path
 from typing import Dict, Optional, Union
 
 import mutagen  # lazy loaded
-
-from wiki_music.constants.colors import GREEN, YELLOW, RED, RESET
+from wiki_music.constants.colors import GREEN, RED, RESET, YELLOW
 from wiki_music.constants.tags import TAGS
-from wiki_music.library import tags_handler as taglib
-from wiki_music.utilities import SharedVars, exception, log_tags
+from wiki_music.library import tags_handler
+from wiki_music.utilities import SharedVars, exception
 
-__all__ = ["read_tags", "write_tags"]
+__all__ = ["read_tags", "write_tags", "supported_tags"]
+
+log = logging.getLogger(__name__)
 
 
-@exception(log_tags)
+def supported_tags():
+    """Print a list of wiki_music supported tags."""
+
+    print("wiki_music supports these tags:")
+    print(", ".join(TAGS))
+
+
+@exception(log)
 def write_tags(data: Dict[str, Union[str, float, list, bytearray]]):
-    """ Convenience function which takes care of writing data to tags.
+    """Convenience function which takes care of writing data to tags.
 
     See also
     --------
@@ -50,11 +59,11 @@ def write_tags(data: Dict[str, Union[str, float, list, bytearray]]):
         return
 
     try:
-        song = taglib.File(data["FILE"])
+        song = tags_handler.File(data["FILE"])
     except mutagen.MutagenError as e:
         print(f'Couldn´t open file {data["FILE"]} for writing')
         SharedVars.exception(e)
-        log_tags.exception(e)
+        log.exception(e)
     else:
 
         print(GREEN + "Writing tags to:" + RESET, data["FILE"])
@@ -85,12 +94,12 @@ def write_tags(data: Dict[str, Union[str, float, list, bytearray]]):
         except (mutagen.MutagenError, TypeError, ValueError) as e:
             print(f'Couldn´t save file {data["FILE"]}')
             SharedVars.exception(e)
-            log_tags.exception(e)
+            log.exception(e)
         else:
             print(GREEN + "Tags written succesfully!")
 
 
-@exception(log_tags)
+@exception(log)
 def read_tags(song_file: str) -> Dict[str, Union[str, list, bytearray]]:
     """ Convenience function which takes care of reading tags from file.
     Abstracts away from low level mutagen API. If no tags are read, function
@@ -116,11 +125,11 @@ def read_tags(song_file: str) -> Dict[str, Union[str, list, bytearray]]:
     """
 
     try:
-        song = taglib.File(song_file)
+        song = tags_handler.File(song_file)
     except mutagen.MutagenError as e:
         print(RED + "Error in reading file: " + RESET + song_file)
         SharedVars.exception(e)
-        log_tags.exception(e)
+        log.exception(e)
         return {}
     else:
         # convert selective dict to normal dict, selectivness is needed only

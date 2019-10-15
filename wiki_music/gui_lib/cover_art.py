@@ -2,6 +2,7 @@
 of cover art picture.
 """
 
+import logging
 import queue
 from os import path
 from threading import Thread
@@ -16,14 +17,15 @@ from wiki_music.gui_lib.qt_importer import (QDialog, QHBoxLayout, QIcon,
                                             QMessageBox, QSize, Qt, QTimer,
                                             QWidget, Signal, uic)
 from wiki_music.utilities import (MultiLog, SharedVars, comp_res, exception,
-                                  get_icon, get_image, get_image_size, log_gui)
+                                  get_icon, get_image, get_image_size)
                                   # , send_to_clipboard)
 
-log_gui.debug("coverart imports done")
+log = logging.getLogger(__name__)
+log.debug("coverart imports done")
 
 
 class PictureContainer(SelectablePixmap):
-    """ Holds the selected picture that is being edited. The raw picture is
+    """Holds the selected picture that is being edited. The raw picture is
     stored in bytes data. Which are the loaded by `PIL` for manipulation
     or by GUI to display.
 
@@ -450,7 +452,7 @@ class PictureEdit(QDialog):
         """
         return self.compresion_spinbox.value()
 
-    @exception(log_gui)
+    @exception(log)
     def _get_crop_ratio(self, value: str):
         """ Sets the desired aspect ratio for cropping
 
@@ -595,7 +597,7 @@ class CoverArtSearch(BaseGui):
     search_dialog: SearchDialog
     picture_editor: PictureEdit
 
-    @exception(log_gui)
+    @exception(log)
     def cover_art_search(self):
         """ Method that takes care of cover art search, download and edit.
 
@@ -674,7 +676,7 @@ class CoverArtSearch(BaseGui):
         # continue loading images
         QTimer.singleShot(0, self._async_loader)
 
-    @exception(log_gui)
+    @exception(log)
     def _async_loader(self):
         """ Periodically checks background thread (every 50 ms) for new
         downloaded images. When a new image is found it is loaded and passed to
@@ -739,7 +741,7 @@ class CoverArtSearch(BaseGui):
         if all(continue_load()):
             QTimer.singleShot(50, self._async_loader)
 
-    @exception(log_gui)
+    @exception(log)
     def _select_picture(self, index: int):
         """ Method that initializes necessary classes for selected picture
         editing.

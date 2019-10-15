@@ -6,6 +6,7 @@ All parser interaciton should be hanhled by this class. Parser methods and
 attributes should not be accesed directly in GUI.
 """ 
 
+import logging
 from typing import Iterable, List, Optional, Union
 
 from wiki_music.constants import GUI_HEADERS, SPLIT_HEADERS, STR_TAGS
@@ -16,9 +17,10 @@ from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QModelIndex,
                                             QPixmap, QStandardItemModel,
                                             QTimer)
 from wiki_music.library.parser import WikipediaRunner
-from wiki_music.utilities import SharedVars, exception, log_gui
+from wiki_music.utilities import SharedVars, exception
 
-log_gui.debug("data model imports done")
+log = logging.getLogger(__name__)
+log.debug("data model imports done")
 
 
 class ParserInteract(BaseGui):
@@ -300,7 +302,7 @@ class DataModel(ParserInteract):
 
     def __init__(self) -> None:
 
-        log_gui.debug("init data model")
+        log.debug("init data model")
 
         super().__init__()
 
@@ -313,7 +315,7 @@ class DataModel(ParserInteract):
         self.proxy = NumberSortModel()
         self.proxy.setSourceModel(self.table)
 
-        log_gui.debug("init data model done")
+        log.debug("init data model done")
 
     def _gui_to_parser(self):
         """Transfers data from GUI to parser.
@@ -361,7 +363,7 @@ class DataModel(ParserInteract):
             self.cover_art = ResizablePixmap(self.COVERART)
             self.picture_layout.addWidget(self.cover_art)
 
-    @exception(log_gui)
+    @exception(log)
     def _parser_to_gui(self):
         """Transfers data from parser GUI.
 
@@ -375,7 +377,7 @@ class DataModel(ParserInteract):
 
         if self.number_of_tracks:
 
-            log_gui.debug("init entries")
+            log.debug("init entries")
 
             self.table.setRowCount(self.number_of_tracks)
 
@@ -395,14 +397,14 @@ class DataModel(ParserInteract):
 
             self.tableView.update()
 
-            log_gui.debug("show cover art")
+            log.debug("show cover art")
             self._display_image()
 
-            log_gui.debug("init entries done")
+            log.debug("init entries done")
         else:
             QTimer.singleShot(100, self._parser_to_gui)
 
-    @exception(log_gui)
+    @exception(log)
     def _detail(self, proxy_index: QModelIndex):
         """Display detail of the row that is clicked and sync changes to table.
 
@@ -431,7 +433,7 @@ class DataModel(ParserInteract):
             (7, self.file_detail)
         ]
 
-        log_gui.debug("connect detail function")
+        log.debug("connect detail function")
 
         for col, ent in entries:
             ent.disconnect()

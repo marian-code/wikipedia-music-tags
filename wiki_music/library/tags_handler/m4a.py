@@ -1,15 +1,15 @@
 """Module for handling m4a tags."""
 
+import logging
 from collections import OrderedDict
 from typing import Dict, Union, cast
 
 from mutagen.mp4 import MP4, MP4Cover, MP4MetadataError
 
-from wiki_music.utilities import log_tags
-
 from .tag_base import TagBase
 
-log_tags.debug("loading m4a module")
+log = logging.getLogger(__name__)
+log.debug("loading m4a module")
 
 
 class TagM4a(TagBase):
