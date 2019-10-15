@@ -56,6 +56,10 @@ setup(
     },
 )
 
+# this stops the aditional data installation for readthedocs build
+if "readthedocs.org" in os.getcwd():
+    sys.exit()
+
 # optional installation of NLTK data
 print("\nThe package requires downloading of NLTK data to function to its\n"
       "full potential. It will work without the data, but the extraction\n"
