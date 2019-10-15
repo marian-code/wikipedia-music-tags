@@ -22,6 +22,6 @@ python:
   version: 3.7
   install:
     - requirements: docs/requirements_readthedocs.txt
-    - method: setuptools
+    - method: pip
       path: .
   system_packages: true
