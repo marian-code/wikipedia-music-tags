@@ -57,8 +57,15 @@ setup(
 )
 
 # this stops the aditional data installation for readthedocs build
-if "readthedocs.org" in __file__:
+print(sys.platform)
+print(os.getcwd())
+print(os.getlogin())
+print(__file__)
+print(os.path.dirname(__file__))
+if "readthedocs.org" in os.path.dirname(__file__):
     sys.exit()
+
+sys.exit()
 
 # optional installation of NLTK data
 print("\nThe package requires downloading of NLTK data to function to its\n"
