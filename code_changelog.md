@@ -37,6 +37,7 @@
 - cover art search could anounce new downloaded images by signals if we were using QThreads
 - use custom widgets to simplify GUI https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/ e.g. tableWiew
 - implement main GUI progressbar
+- parser locks could be implemented easilly by getattr and set attr only for public attributes.
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
