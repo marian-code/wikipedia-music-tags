@@ -53,9 +53,10 @@ All modules are found in PyPI so installing should be as easy as:
     git clone git@github.com:marian-code/wikipedia-music-tags.git
     cd wikipedia-music-tags
     pip install -r requirements.txt
-    python setup.py develop
+    pip install -e .
 
-The app CLI and GUI version can be run by:
+This will install package in developement mode. The app CLI and GUI version
+can be run by:
 
 .. code-block:: bash
 

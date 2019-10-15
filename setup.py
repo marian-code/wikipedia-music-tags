@@ -1,9 +1,12 @@
 """Setup file for wiki_music."""
 
+import logging
 import os
 import sys
 from pathlib import Path
 from setuptools import setup, find_packages
+
+log = logging.getLogger(__name__)
 
 # The directory containing this file
 PKG_ROOT = os.path.dirname(__file__)
@@ -57,6 +60,10 @@ setup(
 )
 
 # this stops the aditional data installation for readthedocs build
+log.warning(sys.platform)
+log.warning(os.getcwd())
+log.warning(__file__)
+log.warning(os.path.abspath(__file__))
 if "readthedocs.org" in os.path.abspath(__file__):
     sys.exit()
 
