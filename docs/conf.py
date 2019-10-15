@@ -45,9 +45,6 @@ autodoc_default_options = {
     'show-inheritance': True
 }
 
-autodoc_mock_imports = ['sip', 'PyQt5', 'PyQt5.QtGui', 'PyQt5.QtCore',
-                        'PyQt5.QtWidgets']
-
 # Set master document otherwise read the docs assumes it is 'contents.rst'
 master_doc = "index"
 
