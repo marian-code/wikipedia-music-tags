@@ -57,7 +57,7 @@ setup(
 )
 
 # this stops the aditional data installation for readthedocs build
-if "readthedocs.org" in os.getcwd():
+if "readthedocs.org" in __file__:
     sys.exit()
 
 # optional installation of NLTK data
