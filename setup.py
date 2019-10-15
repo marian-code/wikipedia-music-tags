@@ -64,6 +64,7 @@ log.warning(sys.platform)
 log.warning(os.getcwd())
 log.warning(__file__)
 log.warning(os.path.abspath(__file__))
+log.warning(os.environ)
 if "readthedocs.org" in os.path.abspath(__file__):
     sys.exit()
 
