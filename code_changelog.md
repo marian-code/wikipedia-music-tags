@@ -3,8 +3,6 @@
 ### Main problems ordered by targeted release
 - 0.4a0
   - make docs 'about' page and open right url from GUI
-  - use more debugging prints and set default debugger level to INFO,
-    DEBUG should be activated by command line argument
   - test frozen gui app
   - create a github release
 - 0.5a0
@@ -48,8 +46,9 @@
 
 # Change Log
 
-### 14.10.2019 - 0.3a3
+### 14.10.2019 - 0.3a4
 - completelly reworked logging
+- finally readthedocs build is passing, had to install with pip
 - publish to PyPi
 
 ### 14.10.2019 - 0.3a2
