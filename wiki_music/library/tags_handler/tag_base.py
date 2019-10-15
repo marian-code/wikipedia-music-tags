@@ -1,8 +1,11 @@
 """ Base module for all tag handlers. """
 
 import collections
+import logging
 from abc import ABC, abstractmethod
-from typing import Dict, ClassVar, Optional
+from typing import ClassVar, Dict, Optional
+
+logging.getLogger(__name__)
 
 
 class SelectiveDict(dict):

@@ -24,7 +24,7 @@ author = 'Marián Rynik'
 # The full version, including alpha/beta/rc tags
 with open(os.path.join(os.path.dirname(__file__),
                        "..", "wiki_music", "version.py"), "r") as f:
-    VERSION = f.read().split(" = ")[1]
+    VERSION = f.read().split(" = ")[1].replace("\"", "")
 release = VERSION
 
 
@@ -44,6 +44,9 @@ autodoc_default_options = {
     'private-members': True,
     'show-inheritance': True
 }
+
+autodoc_mock_imports = ['sip', 'PyQt5', 'PyQt5.QtGui', 'PyQt5.QtCore',
+                        'PyQt5.QtWidgets']
 
 # Set master document otherwise read the docs assumes it is 'contents.rst'
 master_doc = "index"

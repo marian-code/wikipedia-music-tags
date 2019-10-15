@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle  # lazy loaded
 from abc import abstractmethod
@@ -12,6 +13,8 @@ from wiki_music.utilities import (
 from ..lyrics import save_lyrics
 from ..tags_io import read_tags, write_tags
 from .base import ParserBase
+
+logging.getLogger(__name__)
 
 wnc = win_naming_convetion
 nc = normalize_caseless

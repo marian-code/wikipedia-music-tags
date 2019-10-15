@@ -1,11 +1,14 @@
 """Holds various html formats information extractors."""
 
+import logging
 import re  # lazy loaded
-from typing import List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
-from wiki_music.constants import TO_DELETE, ORDER_NUMBER, TIME
-from wiki_music.utilities import (
-    NoTracklistException, SharedVars, normalize_caseless)
+from wiki_music.constants import ORDER_NUMBER, TIME, TO_DELETE
+from wiki_music.utilities import (NoTracklistException, SharedVars,
+                                  normalize_caseless)
+
+logging.getLogger(__name__)
 
 __all__ = ["DataExtractors"]
 

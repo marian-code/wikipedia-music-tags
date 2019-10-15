@@ -1,5 +1,6 @@
 """This module houses custom Qt classes designed to support the package."""
 
+import logging
 from os import makedirs, path
 from typing import Callable, Iterable, Optional, Tuple, Union
 
@@ -16,6 +17,8 @@ from wiki_music.gui_lib.qt_importer import (Property, QBuffer, QByteArray,
                                             QVariant, QVBoxLayout, QWidget,
                                             Signal)
 from wiki_music.utilities.gui_utils import get_music_path
+
+logging.getLogger(__name__)
 
 __all__ = ["NumberSortModel", "CustomQStandardItem", "ImageTable",
            "ResizablePixmap", "CustomQStandardItemModel", "RememberDir"]
