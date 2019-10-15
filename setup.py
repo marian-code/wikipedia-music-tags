@@ -59,7 +59,6 @@ setup(
 # this stops the aditional data installation for readthedocs build
 print(sys.platform)
 print(os.getcwd())
-print(os.getlogin())
 print(__file__)
 print(os.path.dirname(__file__))
 if "readthedocs.org" in os.path.dirname(__file__):
