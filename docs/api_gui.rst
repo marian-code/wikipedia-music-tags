@@ -2,9 +2,8 @@ wiki_music.gui_lib module
 =========================
 
 .. warning:: 
-    This file describes wiki_music API reference. Beware, some things might not
-    be up to date and all is subject to change since we are still in early
-    development stage.
+    Documentation is stil under construction some things might not be up to
+    date.
 
 gui_lib.qt_importer
 -------------------

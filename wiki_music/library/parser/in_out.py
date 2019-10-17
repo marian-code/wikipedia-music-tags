@@ -1,3 +1,5 @@
+"""Module with parser inpu-output methods."""
+
 import logging
 import os
 import pickle  # lazy loaded
@@ -23,10 +25,13 @@ __all__ = ["ParserInOut"]
 
 
 class ParserInOut(ParserBase):
-    """ Class that is inherited by
+    """Encapsulates parser input and output methods.
+
+    Class is inherited by
     :class:`wiki_music.library.parser.process_page.WikipediaParser`. Takes care
     of outputing and loading information.
     """
+
     def __init__(self, protected_vars):
 
         super().__init__(protected_vars=protected_vars)
@@ -34,12 +39,12 @@ class ParserInOut(ParserBase):
         self._debug_folder: str = ""
 
     @abstractmethod
-    def info_tracks(self):
+    def _info_tracks(self):
         raise NotImplementedError("Call to abstract method")
 
     @property
     def bracketed_types(self) -> List[str]:  # type: ignore
-        """ takes `_bracketed_types` list, populates and returns it.
+        """Takes `_bracketed_types` list, populates and returns it.
 
         See also
         --------
@@ -48,27 +53,24 @@ class ParserInOut(ParserBase):
 
         :type: List[str]
         """
-
         if not self._bracketed_types:
-            self._bracketed_types = bracket(self.types)
-            return self._bracketed_types
-        else:
-            return self._bracketed_types
+            self._bracketed_types = bracket(self._types)
+
+        return self._bracketed_types
 
     @property  # type: ignore
     def files(self) -> List[str]:  # type: ignore
-        """ Gets list of music files in currently set working directory.
+        """Gets list of music files in currently set working directory.
 
         :type: List[str]
 
         See also
         --------
-        :meth:`reassign_files`
+        :meth:`_reassign_files`
 
         """
-
-        if len(self._files) < len(self.tracks):
-            self.reassign_files()
+        if len(self._files) < len(self._tracks) or not self._files:
+            self._reassign_files()
 
         return self._files
 
@@ -82,92 +84,84 @@ class ParserInOut(ParserBase):
 
         :type: str
         """
-
         if not self._debug_folder:
-            _win_name = win_naming_convetion(self.album, dir_name=True)
+            _win_name = win_naming_convetion(self._album, dir_name=True)
             self._debug_folder = os.path.join(OUTPUT_FOLDER, _win_name)
             os.makedirs(self._debug_folder, exist_ok=True)
 
         return self._debug_folder
 
-    def list_files(self):
-        """Lists files in current working directory.
-
-        See also
-        --------
-        :func:`wiki_music.utilities.utils.list_files`
-            function used for file searching
-        :attr:`work_dir`
-        """
-        self.files = list_files(self.work_dir)
-
-    def reassign_files(self):
-        """Searched the current working directory and tries to assign files to
-        the tracks.
-        """
-
+    def _reassign_files(self):
+        """Search current working directory and assign files to tracks."""
         wnc = win_naming_convetion
-        max_length = len(max(self.tracks, key=len))
 
         # write data to ID3 tags
-        disk_files = (self.work_dir)
-        files = []
+        disk_files = list_files(self.work_dir)
 
-        print(GREEN + "\nFound files:")
-        print(*disk_files, sep="\n")
-        print(GREEN + "\nAssigning files to tracks:")
+        # max() argument must have len >= 1
+        if self._tracks:
+            max_length = len(max(self._tracks, key=len))
 
-        for i, tr in enumerate(self.tracks):
-            self.tracks[i] = tr.strip()
+            files = []
 
-            for path in disk_files:
-                f = os.path.split(path)[1]
-                if (nc(wnc(tr)) in nc(f)
-                        and nc(self.types[i]) in nc(f)):  # noqa E129
+            print(GREEN + "\nFound files:")
+            print(*disk_files, sep="\n")
+            print(GREEN + "\nAssigning files to tracks:")
 
-                    print(LBLUE + tr + RESET,
-                          "-" * (1 + max_length - len(tr)) + ">", path)
-                    files.append(path)
-                    break
-            else:
-                print(YELLOW + tr + RESET, "." * (2 + max_length - len(tr)),
-                      "Does not have a matching file!")
+            for i, tr in enumerate(self._tracks):
+                self._tracks[i] = tr.strip()
 
-                files.append(None)
+                for path in disk_files:
+                    f = os.path.split(path)[1]
+                    if (nc(wnc(tr)) in nc(f) and nc(self._types[i]) in nc(f)):  # noqa E129
 
-        self.files = files
+                        print(LBLUE + tr + RESET,
+                              "-" * (1 + max_length - len(tr)) + ">", path)
+                        files.append(path)
+                        break
+                else:
+                    print(YELLOW + tr + RESET,
+                          "." * (2 + max_length - len(tr)),
+                          "Does not have a matching file!")
+
+                    files.append(None)
+
+            self.files = files
+
+        else:
+            self.files = disk_files
 
     def basic_out(self):
-        """ Outputs files in three basic formats:\n
+        """Outputs files in three basic formats.
+
         1. pickled version of the downloaded wikipedia page
         2. nicely formated html version of the wikipedia page
         3. plain text version of the wikipedia page
         """
-
+        # ensure directory for results storing exists
         os.makedirs(self.debug_folder, exist_ok=True)
 
         # save page object for offline debbug
         fname = os.path.join(self.debug_folder, 'page.pkl')
         if not os.path.isfile(fname):
             with open(fname, 'wb') as f:
-                pickle.dump(self.page, f)
+                pickle.dump(self._page, f)
 
         # save formated html to file
         fname = os.path.join(self.debug_folder, 'page.html')
         if not os.path.isfile(fname):
             with open(fname, 'w', encoding='utf8') as f:
-                f.write(self.soup.prettify())
+                f.write(self._soup.prettify())
 
         # save html converted to text
         fname = os.path.join(self.debug_folder, 'page.txt')
         if not os.path.isfile(fname):
             with open(fname, 'w', encoding='utf8') as f:
-                f.write(self.soup.get_text())
+                f.write(self._soup.get_text())
 
     def disk_write(self):
-        """ Saves tracklist and album personnel to disk in plain text formats.
-        """
-
+        """Save tracklist and personnel to disk in plain text format."""
+        # save tracklist to file
         for i, tracklist in enumerate(self.tracklist_2_str(to_file=True), 1):
             fname = os.path.join(self.debug_folder, f"tracklist_{i}.txt")
             with open(fname, "w", encoding="utf-8") as f:
@@ -181,7 +175,7 @@ class ParserInOut(ParserBase):
             f.write(self.personnel_2_str())
 
     def tracklist_2_str(self, to_file=True) -> list:
-        """ Convert tracklist to string to print out or write to disk.
+        """Convert tracklist to string to print out or write to disk.
 
         Parameters
         ----------
@@ -201,14 +195,14 @@ class ParserInOut(ParserBase):
                 return GREEN, LGREEN, RESET
 
         # compute number of spaces, wrong mypy detection
-        spaces, length = count_spaces(self.tracks,
+        spaces, length = count_spaces(self._tracks,
                                       self.bracketed_types)  # type: ignore
 
         G, LG, R = _set_color()
 
         # convert to string
         tracklists = []
-        for j, (ds, hd) in enumerate(zip(self.disks, self.header)):
+        for j, (ds, hd) in enumerate(zip(self._disks, self._header)):
             s = ""
             s += f"{G}\n{j + 1}. Disk:{R} {ds}"
             if len(hd) >= 2:
@@ -219,13 +213,13 @@ class ParserInOut(ParserBase):
                 s += f", {hd[3]}"
             s += f"{R}\n"
 
-            for i in range(self.disk_sep[j], self.disk_sep[j + 1]):
-                s += (f"{self.numbers[i]:>2}. {self.tracks[i]} "
+            for i in range(self._disk_sep[j], self._disk_sep[j + 1]):
+                s += (f"{self._numbers[i]:>2}. {self._tracks[i]} "
                       f"{self.bracketed_types[i]}{spaces[i]} "
-                      f"{', '.join(self.artists[i] + self.composers[i])}\n")
+                      f"{', '.join(self._artists[i] + self._composers[i])}\n")
 
                 for k, (sbtr, sbtp) in enumerate(
-                        zip(self.subtracks[i], self.sub_types[i])):
+                        zip(self._subtracks[i], self._subtypes[i])):
                     s += (f"  {write_roman(k + 1)}. {sbtr} {sbtp}\n")
 
             tracklists.append(s)
@@ -233,45 +227,43 @@ class ParserInOut(ParserBase):
         return tracklists
 
     def print_tracklist(self):
-        """ Prints tracklist to console.
+        """Prints tracklist to console.
 
         See also
         --------
         :func:`tracklist_2_str`
         """
-
         print("\n".join(self.tracklist_2_str(to_file=False)))
 
     def personnel_2_str(self):
-        """ Convert album personnel to string to print out or write to disk.
+        """Convert album personnel to string to print out or write to disk.
 
         Returns
         -------
         str
             nicely formated string representation of personnel
         """
-
         s = ""
-        if not self.personnel:
+        if not self._personnel:
             s += "---\n"
 
-        for pers, app in zip(self.personnel, self.appearences):
+        for pers, app in zip(self._personnel, self._appearences):
 
             if app:
                 s += pers + " - "
                 temp = 1000
 
                 for k, a in enumerate(sorted(app)):
-                    for j, _ in enumerate(self.disk_sep[:-1]):
+                    for j, _ in enumerate(self._disk_sep[:-1]):
 
-                        if (a >= self.disk_sep[j]
-                                and a < self.disk_sep[j + 1]):  # noqa E129
+                        if (a >= self._disk_sep[j]
+                                and a < self._disk_sep[j + 1]):  # noqa E129
 
                             if j != temp:
-                                s += f"{self.disks[j]}: {self.numbers[a]}"
+                                s += f"{self._disks[j]}: {self._numbers[a]}"
                                 temp = j
                             else:
-                                s += self.numbers[a]
+                                s += self._numbers[a]
 
                             if k != len(app) - 1:
                                 s += ", "
@@ -287,9 +279,10 @@ class ParserInOut(ParserBase):
 
     def data_to_dict(self
                      ) -> List[Dict[str, Union[str, int, bytearray, list]]]:
-        """ Converts parser data to list of dictionaries. If yaml_dump is
-        enabled list is written to 
-        
+        """Converts parser data to list of dictionaries.
+
+        If yaml_dump is enabled list is written to file.
+
         Warnings
         --------
         This class is not ment to be instantiated, only inherited.
@@ -305,9 +298,8 @@ class ParserInOut(ParserBase):
         List[Dict[str, Union[str, int, bytearray, list]]]
             each dictionary in list represents tags of one song
         """
-
         dict_data = []
-        for i, _ in enumerate(self.tracks):
+        for i, _ in enumerate(self._tracks):
 
             tags = dict()
 
@@ -327,8 +319,7 @@ class ParserInOut(ParserBase):
         return dict_data
 
     def write_tags(self) -> bool:
-        """ Write tags to coresponding files. Writing is done in a parallel
-        maner to speed things up.
+        """Write tags to coresponding files. Writing is done in a parallel.
 
         See also
         --------
@@ -344,7 +335,6 @@ class ParserInOut(ParserBase):
         bool
             If writing was successfull return true value
         """
-
         if not any(self.files):
             return False
         else:
@@ -354,8 +344,7 @@ class ParserInOut(ParserBase):
             return True
 
     def save_lyrics(self):
-        """Function that calls lyricsfinder to search for and save lyrics for
-        all tracks.
+        """Calls lyricsfinder to search for and save lyrics for all tracks.
 
         See also
         --------
@@ -367,28 +356,22 @@ class ParserInOut(ParserBase):
         lyrics search is controled by
         :attr:`wiki_music.utilities.sync.SharedVars.write_lyrics`
         """
-
         if SharedVars.write_lyrics:
-            self.lyrics = save_lyrics(self.tracks, self.types, self.band,
-                                      self.album, self.GUI)
+            self._lyrics = save_lyrics(self._tracks, self._types, self._band,
+                                       self._album, self._GUI)
         else:
-            self.lyrics = [""] * len(self)
+            self._lyrics = [""] * len(self)
 
     def read_files(self):
-        """ Read tags from files in working directory.
+        """Read tags from files in working directory.
 
         See also
         --------
-        :meth:`list_files`
-            method that takes care of file searching
         :func:`wiki_music.library.tags_io.read_tags`
             function that thandles tag reading
         """
-
         # initialize variables
         self.__init__(protected_vars=False)
-
-        self.list_files()
 
         for fl in self.files:
 
@@ -407,13 +390,13 @@ class ParserInOut(ParserBase):
         if self.files:
             # look for aditional artists in brackets behind track names and
             # complete artists names again with new info
-            self.info_tracks()
+            self._info_tracks()
 
-            self.log.info("Files loaded sucesfully")
+            self._log.info("Files loaded sucesfully")
         else:
-            self.album = ""
-            self.band = ""
-            self.selected_genre = ""
-            self.release_date = ""
+            self._album = ""
+            self._band = ""
+            self._selected_genre = ""
+            self._release_date = ""
 
-            self.log.info("No music files to Load")
+            self._log.info("No music files to Load")

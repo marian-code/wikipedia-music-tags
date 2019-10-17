@@ -37,16 +37,17 @@ def main():
 
     parser = WikipediaRunner(GUI=False)
 
-    parser.album = album
-    parser.band = band
+    parser.ALBUM = album
+    parser.ALBUMARTIST = band
     parser.work_dir = work_dir
     parser.with_log = with_log
-    parser.list_files()
 
     if only_lyrics:
         parser.run_lyrics()
     else:
         parser.run_wiki()
+
+    input("\nPress ENTER to continue")
 
 
 if __name__ == "__main__":

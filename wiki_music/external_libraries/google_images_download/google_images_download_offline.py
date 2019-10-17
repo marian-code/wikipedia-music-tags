@@ -14,7 +14,7 @@ log.info("Loaded Offline google images download")
 
 
 class googleimagesdownload:
-    """ Offline version imitating google images download. Main puprose is
+    """Offline version imitating google images download. Main puprose is
     offline testing.
 
     Attributes
@@ -35,7 +35,7 @@ class googleimagesdownload:
         self._files: List[str] = []
 
     def download(self, arguments: dict):
-        """ Start reding images from files.
+        """Start reding images from files.
 
         Parameters
         ----------
@@ -77,12 +77,12 @@ class googleimagesdownload:
         print(f"\nErrors: {errorCount}\n")
 
     def close(self):
-        """ Stop downloading images. """
+        """Stop downloading images"""
         self._exit = True
 
     @property
     def max(self) -> int:
-        """ Returns maximum number of loadable images. Needed to set progresbar
+        """Returns maximum number of loadable images. Needed to set progresbar
         in GUI. The value is cached for later use.
 
         See also
@@ -100,7 +100,7 @@ class googleimagesdownload:
 
     @property
     def files(self) -> List[str]:
-        """ List of image files to load in direstory.
+        """List of image files to load in direstory.
 
         See also
         --------

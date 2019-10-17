@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 class WikipediaRunner(WikipediaParser):
-    """ Toplevel Wikipedia Parser class which inherits all other parser
+    """Toplevel Wikipedia Parser class which inherits all other parser
     subclasses. This is the class that is intended for user interaction. Its
     methods know how to run the parser in order to produce meaningfull results.
 
@@ -35,22 +35,22 @@ class WikipediaRunner(WikipediaParser):
         log.debug("init parser runner")
 
         super().__init__(protected_vars=protected_vars)
-        self.GUI = GUI
+        self._GUI = GUI
         self.with_log = False
 
         log.debug("init parser runner done")
 
     @exception(log)
     def run_wiki(self):
-        """ Runs the whole wikipedia search, together with lyrics finding. """
+        """Runs the whole wikipedia search, together with lyrics finding"""
 
-        if self.GUI:
+        if self._GUI:
             self._run_wiki_gui()
         else:
             self._run_wiki_nogui()
 
     def _run_wiki_gui(self):
-        """ Runs wikipedia search with specifics of the GUI mode. """
+        """Runs wikipedia search with specifics of the GUI mode"""
         def wait_select(switch: str):
             SharedVars.switch = switch
             SharedVars.wait = True
@@ -59,39 +59,36 @@ class WikipediaRunner(WikipediaParser):
 
         # download wikipedia page
         if not SharedVars.offline_debbug:
-            self.log.info(f"Searching for: {self.album} by {self.band}")
+            self._log.info(f"Searching for: {self.ALBUM} by "
+                           f"{self.ALBUMARTIST}")
         else:
-            self.log.info("Using offline cached page insted of web page")
+            self._log.info("Using offline cached page insted of web page")
 
         error_msg = self.get_wiki()
         if error_msg:
-            self.log.exception(error_msg)
+            self._log.exception(error_msg)
             return
 
         else:
-            self.log.info(f"Found at: {self.url}")
-            self.log.info("Cooking Soup")
+            self._log.info(f"Found at: {self.url}")
+            self._log.info("Cooking Soup")
 
             error_msg = self.cook_soup()
             if error_msg:
-                self.log.exception(error_msg)
+                self._log.exception(error_msg)
                 return
             else:
-                self.log.info("Soup ready")
-
-        # get page contents
-        self.get_contents()
+                self._log.info("Soup ready")
 
         # find release date
-        self.get_release_date()
-        self.log.info(f"Found release date {self.release_date}")
+        self._log.info(f"Found release date: {self.get_release_date()}")
 
         # find list of genres
         self.get_genres()
-        self.log.info(f"Found genre(s): {', '.join(self.genres)}")
+        self._log.info(f"Found genre(s): {', '.join(self.genres)}")
 
         # download cover art from wikipedia
-        self.log.info("Downloading cover art")
+        self._log.info("Downloading cover art")
         self.get_cover_art()
 
         if not we_are_frozen():
@@ -99,47 +96,32 @@ class WikipediaRunner(WikipediaParser):
             self.basic_out()
 
         # print out page contents
-        self.log.info(f"Found page contents: {', '.join(self.contents)}")
+        self._log.info(f"Found page contents: {', '.join(self.get_contents())}")
 
         # extract track list
-        self.log.info("Extracting tracks")
-        self._get_tracks()
+        self._log.info("Extracting tracks")
+        self.get_tracks()
 
         # extract personel names
-        self.log.info("Extracting additional personnel")
+        self._log.info("Extracting additional personnel")
         self.get_personnel()
 
-        # complete artists names
-        self.complete()
-
-        # look for aditional artists in brackets behind track names and
-        # complete artists names again with new info
-        self.log.info("Getting tracks info")
-        self.info_tracks()
-
         # extract writers, composers
-        self.log.info("Extracting composers")
+        self._log.info("Extracting composers")
         self.get_composers()
-
-        # complete artists names
-        self.complete()
 
         if not we_are_frozen():
             # save to files
-            self.log.info("Writing to disc")
+            self._log.info("Writing to disc")
             self.disk_write()
 
-        # merge artists and personel which have some apperences
-        self.log.info("merge artists and personnel")
-        self.merge_artist_personnel()
-
         # select genre
-        self.log.info("Select genre")
-        if not self.selected_genre:
+        self._log.info("Select genre")
+        if not self.GENRE:
             wait_select("genres")
 
         # decide what to do with artists
-        self.log.info("Assign artists to composers")
+        self._log.info("Assign artists to composers")
 
         # first load already known values to GUI
         # wait must be set before load,
@@ -154,7 +136,7 @@ class WikipediaRunner(WikipediaParser):
             self.merge_artist_composers()
 
         # decide if you want to find lyrics
-        self.log.info("Searching for Lyrics")
+        self._log.info("Searching for Lyrics")
         wait_select("lyrics")
         self.save_lyrics()
 
@@ -162,18 +144,18 @@ class WikipediaRunner(WikipediaParser):
         # announce that main app thread has reached the barrier
         SharedVars.barrier.wait()
 
-        self.log.info("Done")
+        self._log.info("Done")
 
     def _run_wiki_nogui(self):
-        """ Runs wikipedia search with specifics of the CLI mode. """
+        """Runs wikipedia search with specifics of the CLI mode"""
 
         # download wikipedia page
         if not SharedVars.offline_debbug:
 
             self._log_print(msg_WHITE="Accessing Wikipedia...")
 
-            print("Searching for: " + GREEN + self.album + RESET + " by " +
-                  GREEN + self.band)
+            print("Searching for: " + GREEN + self.ALBUM + RESET + " by " +
+                  GREEN + self.ALBUMARTIST)
 
         else:
             self._log_print(msg_GREEN="Using offline cached page insted "
@@ -197,13 +179,9 @@ class WikipediaRunner(WikipediaParser):
             else:
                 self._log_print(msg_WHITE="Soup ready")
 
-        # get page contents
-        self.get_contents()
-
         # find release date
-        self.get_release_date()
-        self._log_print(msg_GREEN="Found release date",
-                        msg_WHITE=self.release_date)
+        self._log_print(msg_GREEN="Found release date:",
+                        msg_WHITE=self.get_release_date())
 
         # find list of genres
         self.get_genres()
@@ -214,12 +192,12 @@ class WikipediaRunner(WikipediaParser):
             # basic html textout for debug
             self.basic_out()
 
-        # print out page contents
+        # get and print out page contents
         self._log_print(msg_GREEN="Found page contents",
-                        msg_WHITE="\n".join(self.contents))
+                        msg_WHITE="\n".join(self.get_contents()))
 
         # extract track list
-        self._get_tracks()
+        self.get_tracks()
 
         # extract personel names
         self._log_print(msg_GREEN="Extracting additional personnel")
@@ -230,22 +208,11 @@ class WikipediaRunner(WikipediaParser):
         if not we_are_frozen():
             print(self.personnel_2_str())
 
-        # complete artists names
-        self.complete()
-
-        # look for aditional artists in brackets behind track names and
-        # complete artists names again with new info
-        self.info_tracks()
-
         # extract writers, composers
         self._log_print(msg_GREEN="Extracting composers")
-        self.get_composers()
-
-        # complete artists names
-        self.complete()
 
         self._log_print(msg_GREEN="Found composers",
-                        msg_WHITE="\n".join(flatten_set(self.composers)))
+                        msg_WHITE="\n".join(flatten_set(self.get_composers())))
 
         if not we_are_frozen():
             # save to files
@@ -256,11 +223,8 @@ class WikipediaRunner(WikipediaParser):
         self._log_print(msg_GREEN="Found Track list(s)")
         self.print_tracklist()
 
-        # merge artists and personel which have some apperences
-        self.merge_artist_personnel()
-
         # select genre
-        if not self.selected_genre:
+        if not self.GENRE:
             if not self.genres:
                 print(CYAN + "Input genre:", end="")
                 self.genre = input()
@@ -276,7 +240,7 @@ class WikipediaRunner(WikipediaParser):
                 except ValueError:
                     index = 0
 
-                self.selected_genre = self.genres[index]
+                self.GENRE = self.genres[index]
 
         # decide what to do with artists
         print(CYAN + "Do you want to assign artists to composers? ([y]/n)",
@@ -305,29 +269,29 @@ class WikipediaRunner(WikipediaParser):
 
     @exception(log)
     def run_lyrics(self):
-        """ Runs only the lyrics search. """
+        """Runs only the lyrics search"""
 
-        if self.GUI:
+        if self._GUI:
             self._run_lyrics_gui()
         else:
             self._run_lyrics_nogui()
 
     def _run_lyrics_gui(self):
-        """ Runs only lyrics search with specifics of the GUI mode. """
+        """Runs only lyrics search with specifics of the GUI mode"""
 
-        self.log.info("Searching for lyrics")
+        self._log.info("Searching for lyrics")
 
         self.save_lyrics()
 
-        self.log.info("Done")
+        self._log.info("Done")
         SharedVars.done = True
-        self.log.info("wait barrier")
+        self._log.debug("wait barrier")
 
         # announce that main app thread has reached the barrier
         SharedVars.barrier.wait()
 
     def _run_lyrics_nogui(self):
-        """ Runs only lyrics search with specifics of the CLI mode. """
+        """Runs only lyrics search with specifics of the CLI mode"""
 
         self.read_files()
 
@@ -346,7 +310,7 @@ class WikipediaRunner(WikipediaParser):
                    msg_GREEN: str = "",
                    msg_WHITE: str = "",
                    level: str = "INFO"):
-        """ Redirects the input to sandard print function and to logger.
+        """Redirects the input to sandard print function and to logger.
 
         Parameters
         ----------

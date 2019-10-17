@@ -1,4 +1,4 @@
-""" Fancy wrapper function used in whole package. """
+"""Fancy wrapper functions used in whole package."""
 
 import logging
 import os
@@ -20,9 +20,10 @@ if TYPE_CHECKING:
 
 
 def exception(logger: "Logger", show_GUI: bool = True) -> Callable:
-    """
-    A decorator that wraps the passed in function and logs exceptions should
-    one. Messages are sent to gui through SharedVars and to logger.
+    """Wraps the passed in function and logs exceptions should one occure.
+
+    Messages are sent to gui through SharedVars and to logger. Application
+    is not interupted.
 
     Warnings
     --------
@@ -56,15 +57,16 @@ def exception(logger: "Logger", show_GUI: bool = True) -> Callable:
 
 
 def synchronized(lock: "Lock") -> Callable:
-    """ Synchronization decorator. Syncs all callables wrapped by this
-    decorator which are passed the same lock
+    """Synchronization decorator.
+
+    Syncs all decorated callables which are passed the same lock.
 
     Warnings
     --------
     Do not use on computationally heavy functions, as this could cause GUI
     freezing. When dealing with such functions always lock only single
     variables
-    
+
     Parameters
     ----------
     lock: threading.Lock
@@ -75,7 +77,6 @@ def synchronized(lock: "Lock") -> Callable:
     Callable
         callable synchronized with passed lock
     """
-
     def real_wrapper(function: Callable) -> Callable:
         @wraps(function)
         def wrapper(*args, **kwargs):
@@ -89,10 +90,10 @@ def synchronized(lock: "Lock") -> Callable:
 
 
 def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
-    """
-    A decorator that wraps the passed in function and logs AttributeErrors
-    to logger warning and Exceptions to logger exceptions. Messages are sent to
-    gui through SharedVars and to logger.
+    """Catch and inform user of module defined exceptions.
+
+    A decorator that wraps the passed in function and logs wiki_music defined
+    errors to logger warning. Messages are sent to gui through SharedVars.
 
     Warnings
     --------
@@ -111,7 +112,6 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
     Callable
         wrapped callable which will not crash app when it raises error
     """
-
     def real_wrapper(function: Callable) -> Callable:
         @wraps(function)
         def wrapper(*args, **kwargs):
@@ -120,7 +120,8 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
             except (NoTracklistException, NoReleaseDateException,
                     NoGenreException, NoCoverArtException,
                     NoNames2ExtractException, NoContentsException,
-                    NoPersonnelException, Mp3tagNotFoundException) as e:
+                    NoPersonnelException, Mp3tagNotFoundException,
+                    NltkUnavailableException) as e:
                 logger.warning(e)
                 if show_GUI:
                     SharedVars.warning(e)
@@ -130,7 +131,7 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
 
 
 class Timer:
-    """ Timing context manager. measures execution time of a function.
+    """Timing context manager. measures execution time of a function.
 
     Parameters
     ----------
@@ -174,8 +175,7 @@ class Timer:
 
 
 def time_methods(function: Callable) -> Callable:
-    """ A decorator that wraps the passed in function and measures execution
-    time.
+    """Wraps the passed in function and measures execution time.
 
     Parameters
     ----------
@@ -188,10 +188,11 @@ def time_methods(function: Callable) -> Callable:
 
     return wrapper
 
+
 # TODO why exceptions are thrown for static methods??
 def for_all_methods(decorator: Callable[[Any], Callable],
                     exclude: List[str] = []) -> Callable:
-    """ Decorates class methods, except the ones in excluded list.
+    """Decorates class methods, except the ones in excluded list.
 
     Warnings
     --------
@@ -201,7 +202,7 @@ def for_all_methods(decorator: Callable[[Any], Callable],
     References
     ----------
     https://stackoverflow.com/questions/6307761/how-to-decorate-all-functions-of-a-class-without-typing-it-over-and-over-for-eac
-    
+
     Parameters
     ----------
     decorator: Callable
@@ -209,7 +210,6 @@ def for_all_methods(decorator: Callable[[Any], Callable],
     exclude: List[str]
         list of method names to exclude from decorating
     """
-
     @wraps(decorator)
     def decorate(cls: Callable) -> Callable:
         for attr in cls.__dict__:

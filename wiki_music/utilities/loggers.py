@@ -52,6 +52,7 @@ def set_log_handles(level: int):
     already_set: Set[str] = set()
     for name in logging.root.manager.loggerDict:
         if "wiki_music" in name:
+            log = logging.getLogger(name)
             # assumed format is wiki_music.<submodule>.<subsubmodule>.<...>
             try:
                 log_name = name.split(".")[1]
@@ -67,10 +68,10 @@ def set_log_handles(level: int):
                 fh.setLevel(level)
                 fh.setFormatter(FORMATTER)
 
-                log = logging.getLogger(name)
-                log.setLevel(level)
                 log.addHandler(fh)
 
                 already_set.add(log_name)
+            finally:
+                log.setLevel(level)
 
     return log

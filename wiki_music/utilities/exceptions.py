@@ -7,7 +7,8 @@ logging.getLogger(__name__)
 __all__ = ["NoTracklistException", "NoReleaseDateException",
            "NoGenreException", "NoCoverArtException",
            "NoNames2ExtractException", "NoContentsException",
-           "NoPersonnelException", "Mp3tagNotFoundException"]
+           "NoPersonnelException", "Mp3tagNotFoundException",
+           "NltkUnavailableException"]
 
 
 class NoTracklistException(Exception):
@@ -53,6 +54,12 @@ class NoPersonnelException(Exception):
 
 
 class Mp3tagNotFoundException(Exception):
+    """Exception raised when Mp3tag could not be run."""
+
+    pass
+
+
+class NltkUnavailableException(Exception):
     """Exception raised when Mp3tag could not be run."""
 
     pass

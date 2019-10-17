@@ -27,7 +27,7 @@ __all__ = ["save_lyrics"]
 
 def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
                 GUI: bool) -> List[str]:
-    """ This function does some preprocessing before it starts the lyricsfinder
+    """This function does some preprocessing before it starts the lyricsfinder
     module and downloads the lyrics. In preproces, tracks which will have same
     lyrics are identified so the same lyrics are not downloaded twice. The
     lyrics are then downloaded asynchronously each in separate thread for
@@ -130,7 +130,7 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
 def _get_lyrics(manager: 'LyricsManager', artist: str, album: str, song: str,
                 GOOGLE_API_KEY: str
                 ) -> Dict[str, Optional[Union[str, Dict[str, str]]]]:
-    """ Function which calls lyricsfinder.LyricsManager.search_lyrics method
+    """Function which calls lyricsfinder.LyricsManager.search_lyrics method
     to find and download lyrics for specified song.
 
     See also

@@ -16,10 +16,12 @@ build/
 dist/
 
 # build dir
-setup/build/
-setup/*dist/
-setup/wiki_music.spec
-setup/unnecessary_dependencies.txt
+freeze/build/
+freeze/*dist/
+freeze/upx/
+freeze/wiki_music.spec
+freeze/unnecessary_dependencies.txt
+freeze/numpy-1.16.5+vanilla-cp37-cp37m-win_amd64.whl
 
 # dir for file output, profiling, logs
 wiki_music/logs/
@@ -43,3 +45,6 @@ deprecated/
 docs/_build/
 docs/_static/
 docs/_templates/
+
+# PyPi tokens
+.pypirc

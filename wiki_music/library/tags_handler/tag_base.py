@@ -1,4 +1,4 @@
-""" Base module for all tag handlers. """
+"""Base module for all tag handlers"""
 
 import collections
 import logging

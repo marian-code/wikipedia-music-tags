@@ -37,7 +37,7 @@ For more detailes refer to Documentation which can be found at:
 
 Anyone is welcome to use it or contribute. All of the dependencies are fairly
 common so you shouldn't encounter any problems. Curentlly supported versions of
-python are **3.6** and **3.7**.
+python are **3.6** - **3.8**.
 
 ## Bugs & Features
 

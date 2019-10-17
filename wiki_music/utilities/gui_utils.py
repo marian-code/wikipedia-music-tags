@@ -24,7 +24,7 @@ __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
 
 
 def abstract_warning():
-    """ Raises error when abstract method is called directly.
+    """Raises error when abstract method is called directly.
     Raises
     ------
     NotImplementedError
@@ -106,7 +106,7 @@ def get_music_path() -> str:
 
 
 def get_image(address: str) -> Optional[bytes]:
-    """ Based on addres decides if the image is online or local. If address
+    """Based on addres decides if the image is online or local. If address
     has http prefix, image is downloaded from internet. If not then it is read
     from disk.
 
@@ -136,7 +136,7 @@ def get_image(address: str) -> Optional[bytes]:
 
 
 def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
-    """ Compress and/or change image resolution. If x and y dimension are
+    """Compress and/or change image resolution. If x and y dimension are
     both specified than image is resized to these dimension otherwise it is
     only compressed
 
@@ -176,7 +176,7 @@ def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
 
 
 def get_image_size(image: bytearray) -> str:
-    """ get size of image in memory
+    """get size of image in memory
 
     Parameters
     ----------
@@ -193,7 +193,7 @@ def get_image_size(image: bytearray) -> str:
 
 
 def get_icon() -> str:
-    """ returns application icon path
+    """returns application icon path
 
     Raises
     ------
@@ -214,7 +214,7 @@ def get_icon() -> str:
 
 
 def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
-    """ Get file size and image size (None if not known) of picture on the
+    """Get file size and image size (None if not known) of picture on the
     internet without downloading it.
 
     Parameters

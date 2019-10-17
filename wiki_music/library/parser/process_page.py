@@ -1,4 +1,4 @@
-""" This module containns the whole parser with all the inherited subclasses.
+"""This module containns the whole parser with all the inherited subclasses.
 Class :class:`WikipediaParser` has complete functionallity but its methods need
 to be called in the correst order to give sensible results.
 """
@@ -7,7 +7,7 @@ import logging
 import re  # lazy loaded
 from os import path
 from threading import Thread
-from typing import List
+from typing import List, Tuple
 
 import datefinder  # lazy loaded
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
@@ -39,7 +39,7 @@ __all__ = ["WikipediaParser"]
 
 @for_all_methods(time_methods)
 class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
-    """ Class for parsing the wikipedia page and extracting tags data from it.
+    """Class for parsing the wikipedia page and extracting tags data from it.
 
     Warnings
     --------
@@ -58,7 +58,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
     protected_vars: bool
         defines if certain variables should be initialized by __init__ method
         or not
-    """   
+    """
 
     def __init__(self, protected_vars: bool = True) -> None:
 
@@ -70,29 +70,36 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         log.debug("init parser done")
 
     @warning(log)
-    def get_release_date(self):
-        """ Gets album release date from information box in the
+    def get_release_date(self) -> str:
+        """Gets album release date from information box in the
         top right corner of wikipedia page. Populates:attr:`wiki_music.DATE`
 
         Raises
         ------
         :exc:`utilities.exceptions.NoReleaseDateException`
             raised if no release date was extracted
+
+        Returns
+        -------
+        str
+            release year as a string
         """
 
-        dates = self.sections["infobox"].find(class_="published")
+        dates = self._sections["infobox"].find(class_="published")
 
         if dates:
             dates = datefinder.find_dates(dates.get_text())
             date_year = [d.strftime('%Y') for d in dates]
-            self.release_date = list(set(date_year))[0]
+            self._release_date = list(set(date_year))[0]
         else:
-            self.release_date = ""
+            self._release_date = ""
             raise NoReleaseDateException
 
+        return self._release_date
+
     @warning(log)
-    def get_genres(self):
-        """ Gets list of album genres from information box in the
+    def get_genres(self) -> List[str]:
+        """Gets list of album genres from information box in the
         top right corner of wikipedia page. If found genre if only one then
         assigns is value to :attr:`GENRE`
 
@@ -100,9 +107,14 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         ------
         :exc:`wiki_music.utilities.exceptions.NoGenreException`
             if no genres could be extracted from page
+
+        Returns
+        -------
+        List[str]
+            list of found genres
         """
 
-        genres = self.sections["infobox"].find(class_="category hlist")
+        genres = self._sections["infobox"].find(class_="category hlist")
 
         if genres:
             self.genres = [g.string for g in genres.find_all(href=WIKI_GENRES,
@@ -113,11 +125,13 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         # auto select genre if only one was found
         if len(self.genres) == 1:
-            self.selected_genre = self.genres[0]
+            self._selected_genre = self.genres[0]
+
+        return self.genres
 
     @warning(log)
     def get_cover_art(self):
-        """ Gets album cover art information box in the top right corner
+        """Gets album cover art information box in the top right corner
         of wikipedia page. Runs in a separate thread because the cover art
         data is not used by parser in any way, so it can be downloaded in
         the background. Populates :attr:`COVERART`
@@ -133,7 +147,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         def cover_art_getter():
 
             """
-            for child in self.sections["infobox"].children:
+            for child in self._sections["infobox"].children:
                 if child.find("img") is not None:
                     image = child.find("img")
                     image_url = f"https:{image['src']}"
@@ -141,9 +155,9 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                     self.cover_art = get_image(image_url)
                     break
             """
-            for img in self.sections["infobox"].find_all("img", src=True,
-                                                         alt=True):
-                if fuzz.token_set_ratio(img["alt"], self.album) > 90:
+            for img in self._sections["infobox"].find_all("img", src=True,
+                                                          alt=True):
+                if fuzz.token_set_ratio(img["alt"], self._album) > 90:
                     break
 
             if img:
@@ -156,8 +170,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         Thread(target=cover_art_getter, name="CoverArtGetter").start()
 
-    def get_composers(self):
-        """ Extracts composers from wikipedia page. Employs complex logic.
+    def get_composers(self) -> List[List[str]]:
+        """Extracts composers from wikipedia page. Employs complex logic.
         First Person named entities are extracted by nltk. Then merges them
         with composers. After that uses this list of names to try to guess
         composers and coresponding tracks from short text above the table.
@@ -166,16 +180,21 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         --------
         :meth:`get_personnel`
             this method should run first because it populates the
-            :attr:`personnel` used by this method
+            :attr:`_personnel` used by this method
 
         Warnings
         --------
         This method is not as robust as it should be. It fails for many
         types of formating.
+
+        Returns
+        -------
+        List[List[str]]
+            list of composers for every track
         """
 
         def check_name_complete(name, text):
-            """ Checks if name retrieved fromm text is complete or only part by
+            """Checks if name retrieved fromm text is complete or only part by
             checking the following words in text.
 
             Warnings
@@ -205,15 +224,12 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             else:
                 return name
 
-        # extract names from text using NLTK
-        self.extract_names()
-
-        self.NLTK_names = set(self.NLTK_names + self.personnel)
+        NLTK_names = set(self.NLTK_names + self._personnel)
 
         # get the short comment above the table which is marked as html
         # paragraph with <p>...</p>
-        if self.sections["track_listing"][0].name == "p":
-            html = self.sections["track_listing"][0].get_text()
+        if self._sections["track_listing"][0].name == "p":
+            html = self._sections["track_listing"][0].get_text()
         else:
             html = ""
 
@@ -233,47 +249,58 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             # find which track are affected by except
             index = []
             if len(parts) == 2:
-                for i, tr in enumerate(self.tracks):
+                for i, tr in enumerate(self._tracks):
                     if caseless_contains(tr, parts[1]):
                         index.append(i)
 
             # assign composers to tracks
-            for name in self.NLTK_names:
+            for name in NLTK_names:
 
                 if len(parts) == 2:
                     if caseless_contains(name, parts[1]):
                         n = check_name_complete(name, parts[1])
 
                         for ind in index:
-                            self.composers[ind].append(n)
+                            self._composers[ind].append(n)
 
                 if caseless_contains(name, parts[0]):
                     n = check_name_complete(name, parts[0])
-                    for i, comp in enumerate(self.composers):
+                    for i, comp in enumerate(self._composers):
                         if i not in index:
                             if n not in comp:
-                                self.composers[i].append(n)
+                                self._composers[i].append(n)
+
+        self._complete()
+
+        return self._composers
 
     @warning(log)
-    def get_contents(self):
-        """ Extract page contets from keys in :attr:`sections` dictionary.
-        
+    def get_contents(self) -> List[str]:
+        """Extract page contets from keys in :attr:`_sections` dictionary.
+
         Raises
         ------
         :exc:`wiki_music.utilities.exceptions.NoContentsException`
             if no contents were retrieved
+
+        Returns
+        -------
+        List[str]
+            page contents as a list
         """
 
         # the last element is infobox which was added manually
-        self.contents = [s.replace("_", " ").capitalize()
-                         for s in self.sections.keys()][:-1]
+        self._contents = [s.replace("_", " ").capitalize()
+                          for s in self._sections.keys()][:-1]
 
-        if len(self.contents) == 0:
+        if len(self._contents) == 0:
             raise NoContentsException
 
+        return self._contents
+
     @warning(log)
-    def get_personnel(self):
-        """ Extract personnel from wikipedia page sections defined by:
+    def get_personnel(self) -> Tuple[List[str], List[List[int]]]:
+        """Extract personnel from wikipedia page sections defined by:
         :const:`wiki_music.constants.parser_const.PERSONNEL_SECTIONS` then
         parse these entries for additional data like apperences on tracks.
 
@@ -281,27 +308,30 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         ------
         :exc:`wiki_music.utilities.exceptions.NoPersonnelException`
             if no table or list with personnel was found
+
+        Returns
+        -------
+        Tuple[List[str], List[List[int]]]
+            two lists, first contains found personnel and the second has for
+            each person list of tracks on which the person appeared
         """
 
         personnel = []
         appearences = []
-        
+
         for s in PERSONNEL_SECTIONS:
 
-            if s not in self.sections:
+            if s not in self._sections:
                 continue
 
-            for html in self.sections[s]:
+            for html in self._sections[s]:
                 # if the toplevel tag is the list itself
                 if html.name in ("ul", "ol"):
                     personnel.extend(self._html2python_list(html))
-            
+
                 # if the list is nested inside some other tags
                 for h in html.find_all(["ul", "ol"]):
                     personnel.extend(self._html2python_list(h))
-
-        if len(personnel) == 0:
-            raise NoPersonnelException
 
         for i, person in enumerate(personnel):
 
@@ -310,7 +340,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
             # remove reference
             person = re.sub(r"\[ *\d+ *\]", "", person)
-            
+
             # split to person and the rest
             try:
                 person, appear = re.split(r" \W | as ", person, 1, flags=re.I)
@@ -330,7 +360,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                     appearences[i].append(int(app))
 
             # find references to song names
-            for j, t in enumerate(self.tracks):
+            for j, t in enumerate(self._tracks):
                 if re.match(t, appear, re.I):
                     appearences[i].append(j)
 
@@ -339,15 +369,21 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             appearences[i] = [a - 1 for a in appearences[i]]
             personnel[i] = person
 
-            #print(person, "|", appear, "|", appearences[i])               
+        self._personnel = personnel
+        self._appearences = appearences
 
-        self.personnel = personnel
-        self.appearences = appearences
+        self._complete()
+        self._info_tracks()
+        self._merge_artist_personnel()
+
+        if len(personnel) == 0:
+            raise NoPersonnelException
+
+        return self._personnel, self._appearences
 
     @warning(log)
-    def _get_tracks(self):
-        """ Method that attempts to extract tracklist from table or list
-        format on the wikipedia page.
+    def get_tracks(self) -> Tuple[List[str], List[List[str]]]:
+        """Attempt to extract tracklist from html table or list on wikipedia.
 
         See also
         --------
@@ -355,7 +391,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             used to parse tracklist in htlm table
         :meth:`_from_list`
             used to parse tracklist in html list
-        :meth:`process_tracks`
+        :meth:`_process_tracks`
             method called to parse raw extracted table and get
             song numbers, artists, composers ...
 
@@ -363,23 +399,38 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         ------
         :exc:`wiki_music.utilities.exceptions.NoTracklistException`
             raised if no tracklist in any format was found
+
+        Returns
+        -------
+        Tuple[List[str], List[List[str]]]
+            list of tracks and for each track list of atrists
         """
 
-        tables = self.soup.find_all("table", class_="tracklist")
+        tables = []
+        for html in self._sections["track_listing"]:
+            # if the toplevel tag is the table itself
+            if html.name == "table":
+                if "tracklist" in html["class"]:
+                    tables.extend(html)
+
+            # if the list is nested inside some other tags
+            for h in html.find_all("table", class_="tracklist"):
+                tables.extend(h)
 
         if tables:
             data = self._from_table(tables)
         else:
             try:
                 tables = []
-                for s in self.sections["track_listing"]:
+                for s in self._sections["track_listing"]:
                     if s.name in ("ul", "ol"):
                         tables.append(s)
                     else:
                         tables.extend(s.find_all(["ul", "ol"]))
-            except AttributeError as e:
+            except AttributeError:
                 msg = (f"No tracklist found!\nURL: {self.url}\nprobably "
-                       f"doesn´t belong to album: {self.album} by {self.band}")
+                       f"doesn´t belong to album: {self._album} by "
+                       f"{self._band}")
                 SharedVars.warning(msg)
                 raise NoTracklistException(msg)
             else:
@@ -387,36 +438,43 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 for t in tables:
                     data.extend(self._from_list(t))
 
-        self.process_tracks(data)
+        return self._process_tracks(data)
 
-    def process_tracks(self, data: List[List[str]]):
-        """ Process raw extracted list of tables with trackist for
-        track details. """
+    def _process_tracks(self, data: List[List[str]]
+                        ) -> Tuple[List[str], List[List[str]]]:
+        """Process raw extracted list of tables with trackists for
+        track details.
+        
+        Returns
+        -------
+        Tuple[List[str], List[List[str]]]
+            list of tracks and for each track list of atrists
+        """
 
-        self.disk_sep.append(0)
+        self._disk_sep.append(0)
 
         index = 1
         for CD in data:
 
-            self.disks.append([f"{self.album} CD {index}", len(self)])
+            self._disks.append([f"{self._album} CD {index}", len(self)])
             index += 1
             for song in CD:
                 if "no" in nc(song[0]):
                     # table header - possibly use in future
                     # posladny stlpec je length a ten väčšinou netreba
                     if "length" in nc(song[-1]):
-                        self.header.append(song[:-1])
+                        self._header.append(song[:-1])
                     else:
-                        self.header.append(song)
+                        self._header.append(song)
                 elif re.match(ORDER_NUMBER, song[0]):
-                    self.numbers.append(song[0].replace(".", ""))
+                    self._numbers.append(song[0].replace(".", ""))
                     tmp1, tmp2 = self._get_track(song[1])
-                    self.tracks.append(tmp1)
-                    self.subtracks.append(tmp2)
+                    self._tracks.append(tmp1)
+                    self._subtracks.append(tmp2)
 
                     if len(song) > 3:
-                        self.artists.append([])
-                        self.composers.append([])
+                        self._artists.append([])
+                        self._composers.append([])
 
                         # all columns between track and track length belong to
                         # artists we assign them to artists or composers
@@ -425,63 +483,66 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                             a = self._get_artist(song[i])
                             try:
                                 is_composer = process.extractOne(
-                                    self.header[-1][i], COMPOSER_HEADER,
+                                    self._header[-1][i], COMPOSER_HEADER,
                                     score_cutoff=90, scorer=fuzz.ratio)
                             except:
-                                self.artists[-1].extend(a)
+                                self._artists[-1].extend(a)
                             else:
                                 if is_composer:
-                                    self.composers[-1].extend(a)
+                                    self._composers[-1].extend(a)
                                 else:
-                                    self.artists[-1].extend(a)
+                                    self._artists[-1].extend(a)
                     else:
-                        self.artists.append([])
-                        self.composers.append([])
+                        self._artists.append([])
+                        self._composers.append([])
                 elif "total" in nc(song[0]):
                     # total length summary
                     pass
                 else:
                     # if all else passes than line must be disc title
-                    self.disks[-1] = [song[0], len(self)]
+                    self._disks[-1] = [song[0], len(self)]
 
         # bonus track are sometimes marked as another disc
-        disks_filtered = [d for d in self.disks if "bonus" not in nc(d[0])]
+        disks_filtered = [d for d in self._disks if "bonus" not in nc(d[0])]
 
-        self.disk_sep = [i[1] for i in disks_filtered]
-        self.disk_sep.append(len(self))
-        self.disks = [i[0] for i in disks_filtered]
+        self._disk_sep = [i[1] for i in disks_filtered]
+        self._disk_sep.append(len(self))
+        self._disks = [i[0] for i in disks_filtered]
 
         # assign disc number to tracks
-        for i, _ in enumerate(self.tracks):
-            for j, _ in enumerate(self.disk_sep[:-1]):
-                if self.disk_sep[j] <= i and i < self.disk_sep[j + 1]:
-                    self.disc_num.append(j + 1)
+        for i, _ in enumerate(self._tracks):
+            for j, _ in enumerate(self._disk_sep[:-1]):
+                if self._disk_sep[j] <= i and i < self._disk_sep[j + 1]:
+                    self._disc_num.append(j + 1)
 
-    def info_tracks(self):
-        """ Parse track names for aditional information like
-        artist, composer, type... . Also get rid of useless strings like
+        return self._tracks, self._artists
+
+    def _info_tracks(self):
+        """Parse track names for aditional information.
+
+        Like artist, composer, type... . Also get rid of useless strings like
         bonus track, featuring... . These informations are assumed to be
         enclosed in brackets behind the track name.
         """
 
-        self.types = []
-        self.sub_types = []
+        self._types = []
+        self._subtypes = []
 
-        comp_flat = flatten_set(self.composers)
+        comp_flat = flatten_set(self._composers)
 
         # hladanie umelcov ked su v zatvorke za skladbou
         # + zbavovanie sa bonus track a pod.
-        for i, tr in enumerate(self.tracks):
+        for i, tr in enumerate(self._tracks):
 
-            self.types.append("")
-            self.sub_types.append([])
+            self._types.append("")
+            self._subtypes.append([])
 
             start_list = [m.start() for m in re.finditer(r'\(', tr)]
             end_list = [m.start() for m in re.finditer(r'\)', tr)]
 
             for start, end in zip(start_list, end_list):
 
-                self.tracks[i] = re.sub(TO_DELETE, "", tr, re.I)
+                self._tracks[i] = re.sub(TO_DELETE, "", tr, re.I)
 
                 artist = re.sub("[,:]", "", tr[start + 1:end])
                 artist = re.split(r",|\/|\\", artist)
@@ -492,28 +553,28 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
                     # TODO all these maybe should be in the UNWANTED loop??
                     # check against additional personnel
-                    for person in self.personnel:
+                    for person in self._personnel:
                         if fuzz.token_set_ratio(art, person) > 90:
-                            self.artists[i].append(person)
-                            self.tracks[i] = self._cut_out(tr, start, end)
+                            self._artists[i].append(person)
+                            self._tracks[i] = self._cut_out(tr, start, end)
 
                     # check agains composers
                     for comp in comp_flat:
                         if fuzz.token_set_ratio(art, comp) > 90:
-                            self.artists[i].append(comp)
-                            self.tracks[i] = self._cut_out(tr, start, end)
+                            self._artists[i].append(comp)
+                            self._tracks[i] = self._cut_out(tr, start, end)
 
                     # check if instrumental, ...
                     _type, score = process.extractOne(
                         art, DEF_TYPES, scorer=fuzz.token_sort_ratio)
                     if score > 90:
-                        self.types[i] = art  # _type
-                        self.tracks[i] = self._cut_out(tr, start, end)
+                        self._types[i] = art  # _type
+                        self._tracks[i] = self._cut_out(tr, start, end)
 
-            if self.subtracks:
-                for j, sbtr in enumerate(self.subtracks[i]):
+            if self._subtracks:
+                for j, sbtr in enumerate(self._subtracks[i]):
 
-                    self.sub_types[i] = [""] * len(sbtr)
+                    self._subtypes[i] = [""] * len(sbtr)
 
                     start_list = [m.start() for m in re.finditer(r'\(', sbtr)]
                     end_list = [m.start() for m in re.finditer(r'\)', sbtr)]
@@ -524,27 +585,27 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
                         for a in art:
                             # check against additional personnel
-                            for person in self.personnel:
+                            for person in self._personnel:
                                 if fuzz.token_set_ratio(a, person) > 90:
-                                    self.artists[i].append(person)
+                                    self._artists[i].append(person)
                                     sbtr = self._cut_out(sbtr, start, end)
-                                    self.subtracks[i][j] = sbtr
+                                    self._subtracks[i][j] = sbtr
 
                             # check if instrumental, ...
                             _type, score = process.extractOne(
                                 a, DEF_TYPES, scorer=fuzz.token_sort_ratio)
                             if score > 90:
-                                self.sub_types[i][j] = _type
+                                self._subtypes[i][j] = _type
                                 sbtr = self._cut_out(sbtr, start, end)
-                                self.subtracks[i][j] = sbtr
+                                self._subtracks[i][j] = sbtr
 
-    def complete(self):
-        """ Recursively traverses: :attr:`composers`, :attr:`artists` and
-        :attr:`personnel` and checks each name with each if some is found to be
-        incomplete then it is replaced by longer version from other list.
-        """ 
+    def _complete(self):
+        """Recursively traverses: :attr:`_composers`, :attr:`artists` and
+        :attr:`_personnel` and checks each name with each if some is found to
+        be incomplete then it is replaced by longer version from other list.
+        """
 
-        to_complete = (self.composers, self.artists, self.personnel)
+        to_complete = (self._composers, self._artists, self._personnel)
         delete: list = ["", " "]
 
         # complete everything with everything
@@ -553,8 +614,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 complete_N_dim(to_replace, to_find)
 
         # sort artist alphabeticaly
-        if self.artists:
-            for a in self.artists:
+        if self._artists:
+            for a in self._artists:
                 a.sort()
 
         for tc in to_complete:
@@ -571,27 +632,29 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 if isinstance(t, list):
                     tc[i] = sorted(list(set(t)))
 
-    def merge_artist_personnel(self):
-        """ Assigns personnel which have appearences specified to coresponding
+    def _merge_artist_personnel(self):
+        """Assigns personnel which have appearences specified to coresponding
         list of track artists.
         """
+        self._log.debug("merge artists and personnel")
 
-        for person, appear in zip(self.personnel, self.appearences):
+        for person, appear in zip(self._personnel, self._appearences):
             for a in appear:
-                self.artists[a].append(person)
+                self._artists[a].append(person)
 
     def merge_artist_composers(self):
-        """ Move all artists to composers list. This is done or left out based
-        on user input. """
+        """Move all artists to composers list. This is done or left out based
+        on user input"""
 
-        for i, (c, a) in enumerate(zip(self.composers, self.artists)):
-            self.composers[i] = sorted(list(filter(None, set(c + a))))
+        for i, (c, a) in enumerate(zip(self._composers, self._artists)):
+            self._composers[i] = sorted(list(filter(None, set(c + a))))
 
-        self.artists = [""] * len(self.composers)
+        self._artists = [""] * len(self._composers)
 
+    @property
     @warning(log, show_GUI=False)
-    def extract_names(self):
-        """ Used nltk to estract person names from supplied sections of the
+    def NLTK_names(self):
+        """Use nltk to extract person names from supplied sections of the
         wikipedia page.
 
         See also
@@ -609,52 +672,58 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             cluttered by hardly classifiable information.
         """
 
-        document = ""
-        for key, value in self.sections.items():
+        if not self._NLTK_names:
 
-            if key in (PERSONNEL_SECTIONS + ("track_listing", )):
-                for val in value:
-                    document += val.get_text(" ")
+            document = ""
+            for key, value in self._sections.items():
 
-        # if none of the sections is present exit method
-        if not document:
-            raise NoNames2ExtractException
+                if key in (PERSONNEL_SECTIONS + ("track_listing", )):
+                    for val in value:
+                        document += val.get_text(" ")
 
-        stop = NLTK.nltk.corpus.stopwords.words('english')
+            # if none of the sections is present exit method
+            if not document:
+                raise NoNames2ExtractException
 
-        document = ' '.join([i for i in document.split() if i not in stop])
-        sentences = NLTK.nltk.tokenize.sent_tokenize(document)
-        sentences = [NLTK.nltk.word_tokenize(sent) for sent in sentences]
-        sentences = [NLTK.nltk.pos_tag(sent) for sent in sentences]
+            try:
+                stop = NLTK.nltk.corpus.stopwords.words('english')
+            except AttributeError:
+                raise NltkUnavailableException("NLTK not available!")
 
-        names = []
-        for tagged_sentence in sentences:
-            for chunk in NLTK.nltk.ne_chunk(tagged_sentence):
-                if type(chunk) == NLTK.nltk.tree.Tree:
-                    if chunk.label() == 'PERSON':
-                        names.append(' '.join([c[0] for c in chunk]))
+            document = ' '.join([i for i in document.split() if i not in stop])
+            sentences = NLTK.nltk.tokenize.sent_tokenize(document)
+            sentences = [NLTK.nltk.word_tokenize(sent) for sent in sentences]
+            sentences = [NLTK.nltk.pos_tag(sent) for sent in sentences]
 
-        names = sorted(list(set(names)))
+            names = []
+            for tagged_sentence in sentences:
+                for chunk in NLTK.nltk.ne_chunk(tagged_sentence):
+                    if type(chunk) == NLTK.nltk.tree.Tree:
+                        if chunk.label() == 'PERSON':
+                            names.append(' '.join([c[0] for c in chunk]))
 
-        # TODO smetimes when two names are separated only by "and", "by"..
-        # or such short word the two names are found together as one
-        # and the sunsequent completion messes the right names that were found
-        """
-        # filter incomplete names
-        selected_names = []
-        for n1 in names:
-            name = n1
-            for n2 in names:
-                if name in n2:
-                    name = n2
-                else:
-                    pass
+            names = sorted(list(set(names)))
 
-            selected_names.append(name)
-        """
+            # TODO smetimes when two names are separated only by "and", "by"..
+            # or such short word the two names are found together as one
+            # and the sunsequent completion messes the right names
+            # that were found
+            """
+            # filter incomplete names
+            selected_names = []
+            for n1 in names:
+                name = n1
+                for n2 in names:
+                    if name in n2:
+                        name = n2
+                    else:
+                        pass
 
-        # filter out already found tracks
-        filtered_names = [n for n in names
-                          if fuzz.token_set_ratio(n, self.tracks) < 90]
+                selected_names.append(name)
+            """
 
-        self.NLTK_names = filtered_names
+            # filter out already found tracks
+            filtered_names = [n for n in names
+                              if fuzz.token_set_ratio(n, self._tracks) < 90]
+
+        return self._NLTK_names

@@ -15,7 +15,7 @@ log.debug("loading mp3 module")
 
 
 class TagMp3(TagBase):
-    """A low level implementation of tag handling for mp3 files. """
+    """A low level implementation of tag handling for mp3 files"""
     __doc__ += TagBase.__doc__  # type: ignore
 
     _map_keys = OrderedDict([
@@ -34,7 +34,7 @@ class TagMp3(TagBase):
     )
 
     def _open(self, filename: str):
-        """Function reading mp3 file to mutagen.id3.ID3 class. """
+        """Function reading mp3 file to mutagen.id3.ID3 class"""
 
         try:
             self._song = ID3(filename=filename)

@@ -14,7 +14,7 @@ log.debug("loading flac module")
 
 
 class TagFlac(TagBase):
-    """A low level implementation of tag handling for flac files. """
+    """A low level implementation of tag handling for flac files"""
     __doc__ += TagBase.__doc__  # type: ignore
 
     _map_keys = OrderedDict([
@@ -33,7 +33,7 @@ class TagFlac(TagBase):
     )
 
     def _open(self, filename: str):
-        """Function reading flac file to mutagen.flac.FLAC class. """
+        """Function reading flac file to mutagen.flac.FLAC class"""
 
         try:
             self._song = FLAC(filename=filename)

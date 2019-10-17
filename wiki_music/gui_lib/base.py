@@ -1,4 +1,4 @@
-""" The base module for Qt frontend. """
+"""The base module for Qt frontend."""
 
 import ctypes
 import logging
@@ -17,9 +17,10 @@ log.debug("base imports done")
 
 # inherit base from QMainWindow and lyaout from Ui_MainWindow
 class BaseGui(QMainWindow):
-    """Base class for all GUI classes, initializes UI from Qt Designer
-    generated files. then sets up needed variables. Connects buttons and input
-    fields signals to methods. All GUI classes should subclass this class.
+    """Base for all GUI classes, initializes UI from Qt Designer ui files.
+
+    Then sets up needed variables. Connects buttons and input fields signals to
+    methods. All GUI classes should subclass this class.
 
     Warnings
     --------
@@ -39,23 +40,21 @@ class BaseGui(QMainWindow):
 
         # call QMainWindow __init__ method
         super().__init__()
+
+        # misc
+        self.work_dir: str = ""
+        self._log: MultiLog = MultiLog(log)
+
         # call Ui_MainWindow user interface setup method
         uic.loadUi(MAIN_WINDOW_UI, self)
 
         # initialize
-        self.__initUI__()
-
-        # misc
-        self.work_dir: str = ""
-        self.log: MultiLog = MultiLog(log)
+        self._initUI()
 
         log.debug("init base done")
 
-    def __initUI__(self):
-        """ Has three responsibilities: load and set window and tray icon and
-        Set application name.
-        """
-
+    def _initUI(self):
+        """Load and set window tray icon and set application name."""
         self.setWindowTitle("Wiki Music")
         myappid = "WikiMusic"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
@@ -65,16 +64,15 @@ class BaseGui(QMainWindow):
         tray_icon.show()
 
     def _do_nothing(self):
-        """ Developement convenience function, shows messagebox with a warning
-        about functionality not being implemented yet.
-        """
+        """Show warning about functionality not being implemented yet.
 
+        Developement convenience function.
+        """
         log.warning("Not implemented yet")
         QMessageBox(QMessageBox.Warning,
                     "Info", "Not implemented yet!").exec_()
 
     @abstractmethod
     def _display_image(self, image=None):
-        """ Will be reimpemented in :mod:`wiki_music.gui_lib.data_model` module
-        """
+        """Will be reimpemented in :mod:`wiki_music.gui_lib.data_model`."""
         abstract_warning()

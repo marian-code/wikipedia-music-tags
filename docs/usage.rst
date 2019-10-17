@@ -1,6 +1,10 @@
 Usage instructions
 ==================
 
+.. warning:: 
+    Documentation is stil under construction some things might not be up to
+    date.
+
 As an application
 -----------------
 
@@ -9,13 +13,13 @@ use two scripts provided by the package:
 
 .. code-block:: bash
 
-    wiki_music_cli(.exe)
+    wiki-music-cli(.exe)
 
 which runs the CLI app, and
 
 .. code-block:: bash
 
-    wiki_music_gui(.exe)
+    wiki-music-gui(.exe)
 
 which runs the GUI app. Both can be run with -h or --help to list addinional
 command line parameters.
@@ -84,16 +88,10 @@ You can initialize the parser and call its methods:
     'https://en.wikipedia.org/wiki/When_a_Shadow_Is_Forced_into_the_Light'
     >>> parser.cook_soup()
     >>> parser.get_contents()
-    >>> parser.contents
-    ['Track listing', 'Personnel', 'Charts', 'References']
-    >>> parser.get_contents()
-    >>> parser.contents
     ['Track listing', 'Personnel', 'Charts', 'References']
     >>> parser.get_genres()
-    >>> parser.genres
     ['Post-metal', 'gothic metal', 'black metal', 'doom metal']
     >>> parser.get_personnel()
-    >>> parser.personnel
     ['Mikko Kotamäki',  'Juho Räihä', 'Juha Raivio', 'Jaani Peuhu',
      'Matti Honkonen', 'Juuso Raatikainen']
 

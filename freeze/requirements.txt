@@ -1,3 +1,4 @@
 # optional - for freezing
 # installs: altgraph, future, pefile, pywin32-ctypes
 pyinstaller>=3.5
+pypiwin32

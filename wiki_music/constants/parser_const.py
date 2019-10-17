@@ -1,4 +1,4 @@
-""" Holds constants that are used in parser. """
+"""Holds constants that are used in parser"""
 import re  # lazy loaded
 from typing import Tuple, Pattern
 

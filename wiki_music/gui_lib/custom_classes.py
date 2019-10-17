@@ -105,7 +105,7 @@ class CustomQStandardItem(QStandardItem):
             return self._filtered
 
     def setData(self, value: QVariant, role: Qt.UserRole):
-        """ Reimplemented, sets new data for QStandardItem.
+        """Reimplemented, sets new data for QStandardItem.
         also sets the :attr:`_filtered` to None so the path for the new item
         can be filtered again.
 
@@ -121,7 +121,7 @@ class CustomQStandardItem(QStandardItem):
         super().setData(value, role)
 
     def real_data(self, role: Qt.ItemDataRole) -> str:
-        """ Workaround to show real contained data because the
+        """Workaround to show real contained data because the
         :meth:`QStandardItem.data` method is overridden.
 
         Parameters
@@ -159,15 +159,17 @@ class CustomQStandardItem(QStandardItem):
 
         if split and "," in data:
             return [x.strip() for x in data.split(",")]
+        else:
+            return data
 
 
 class CustomQStandardItemModel(QStandardItemModel):
-    """ Overrides the default impementation adds `__getitem__` method so the
+    """Overrides the default impementation adds `__getitem__` method so the
     table columns ca be indexed by its names.
     """
 
     def __getitem__(self, name: str) -> int:
-        """ Column index from column header name.
+        """Column index from column header name.
 
         Parameters
         ----------
@@ -221,7 +223,7 @@ class ImageWidget(QWidget):
         self.initUi()
 
     def initUi(self):
-        """ Sets the text and image to be visible. """
+        """Sets the text and image to be visible"""
 
         image = QImage()
         image.loadFromData(self._img)
@@ -395,9 +397,14 @@ class ResizablePixmap(QLabel):
 
     bytes_image_edit: bytearray
 
-    def __init__(self, bytes_image: bytearray) -> None:
+    def __init__(self, bytes_image: bytearray, stretch: bool = True) -> None:
         QLabel.__init__(self)
-        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+
+        if stretch:
+            self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        else:            
+            self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Ignored)
+
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("background-color: #ffffff;")
 
@@ -464,7 +471,7 @@ class ResizablePixmap(QLabel):
 
     @staticmethod
     def _pixmap2bytes(pixmap: QPixmap) -> bytearray:
-        """ Convert `QPixmap` to bytes image.
+        """Convert `QPixmap` to bytes image.
 
         Parameters
         ----------
@@ -593,7 +600,7 @@ class SelectablePixmap(ResizablePixmap):
         self.selectionActive.emit(False)
 
     def scale(self, fromResize: bool = False):
-        """ Handle picture and selection scaling caused by window resize.
+        """Handle picture and selection scaling caused by window resize.
 
         Parameters
         ----------
@@ -671,7 +678,7 @@ class SelectablePixmap(ResizablePixmap):
         return super(SelectablePixmap, self).eventFilter(source, event)
 
     def mousePressEvent(self, event: QEvent):
-        """ Handles left mouse button cliks.
+        """Handles left mouse button cliks.
 
         If the clicked position is inside the current selection than that
         selection is moved. If it is outside tahn a new selection is created.
@@ -824,19 +831,26 @@ class RememberDir:
         # ensure directory for storing file exists
         makedirs(path.dirname(DIR_FILE), exist_ok=True)
 
-    def get_dir(self) -> str:
+    def get_dir(self) -> Tuple[str, bool]:
         """Shows a folder selection dialog with the last visited dir as root.
 
         After the user has selected directory it is remenbered, returned to
         user and upon context exit saved to file.
+
+        Returns
+        -------
+        str
+            string with directory name
+        bool
+            True if some directory was selected, False if dialog was canceled
         """
         self._start_dir = QFileDialog.getExistingDirectory(
             self.window_instance, "Open Folder", self._start_dir)
 
-        return self._start_dir
+        return self._start_dir, bool(self._start_dir)
 
     def __enter__(self):
-        """ Load last visited directory from file.
+        """Load last visited directory from file.
 
         If the file could not be read, try to get music path on local PC
         """
@@ -853,7 +867,7 @@ class RememberDir:
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        """ On context exit try to save opened directory to file. """
+        """On context exit try to save opened directory to file"""
 
         with open(DIR_FILE, "w") as f:
             f.write(self._start_dir)

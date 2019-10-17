@@ -1,4 +1,4 @@
-""" Constants used by :mod:`wiki_music.gui_lib` """
+"""Constants used by :mod:`wiki_music.gui_lib` """
 from os import path
 from typing import Tuple
 

@@ -1,4 +1,4 @@
-""" Base module for all parser classes from which they import ParserBase
+"""Base module for all parser classes from which they import ParserBase
 class that sets all the default attributes.
 """
 
@@ -41,30 +41,30 @@ class ParserBase:
 
     Attributes
     ----------
-    contents: List[str]
+    _contents: List[str]
         stores the wikipedia page contents
-    disk_sep: List[int]
+    _disk_sep: List[int]
         list of tracks separating disks e.g. if CD 1 = (1, 13) and
-        CD 2 = (14, 20), disk_sep = [0, 12, 19] the offset by one if because of
+        CD 2 = (14, 20), _disk_sep = [0, 12, 19] the offset by one if because of
         zero first index
-    disks: List[list]
+    _disks: List[list]
         holds album disks titles
     genres: List[str]
         list of genres found in wikipedia page
-    header: List[str]
+    _header: List[str]
         tracklist table headers
     NLTK_names: List[str]
         list of Person Named Entities extracted from wikipedia page by nltk.
-        See :meth:`wiki_music.library.parser.process_page.WikipediaParser.extract_names`
+        See :meth:`wiki_music.library.parser.process_page.WikipediaParser._extract_names`
         for details on how and from which parts of test the names are extracted
-    personnel: List[str]
+    _personnel: List[str]
         list holding adittional personnel participating on album
-    appearences: List[List[int]]
+    _appearences: List[List[int]]
         list coresponding to personnel holding for each person list of tracks
         that the said person has appeared on
-    subtracks: List[List[str]]
+    _subtracks: List[List[str]]
         each entry holds list of subtracks for one track
-    sub_types: List[List[str]]
+    _subtypes: List[List[str]]
         each entry holds list of types for each subtrack
     work_dir: str
         string with path to directory with music files, this variable can be
@@ -72,7 +72,7 @@ class ParserBase:
     log: :class:`wiki_music.utilities.utils.MultiLog`
         instance of MUltiLog which sends messages to logger and
         :class:`wiki_music.utilities.sync.SharedVars`
-    sections: Dict[str, List[Bs4Soup]]
+    _sections: Dict[str, List[Bs4Soup]]
         dictionary of lists of BeautifulSoup objects each entry in the
         dict contains one whole section of the page and is indexed by that
         section title
@@ -80,114 +80,114 @@ class ParserBase:
 
     files: SList
     bracketed_types: SList
-    sections: Dict[str, List["Bs4Soup"]]
-    page: "WikiPage"
-    soup: "Bs4Soup"
+    _sections: Dict[str, List["Bs4Soup"]]
+    _page: "WikiPage"
+    _soup: "Bs4Soup"
 
     def __init__(self, protected_vars: bool) -> None:
 
         log.debug("parser base")
 
         # lists 1D
-        self.contents: SList = []
-        self.tracks: SList = []
-        self.types: SList = []
-        self.disc_num: IList = []
-        self.disk_sep: IList = []
-        self.disks: List[list] = []
+        self._contents: SList = []
+        self._tracks: SList = []
+        self._types: SList = []
+        self._disc_num: IList = []
+        self._disk_sep: IList = []
+        self._disks: List[list] = []
         self.genres: SList = []
-        self.header: SList = []
-        self.lyrics: SList = []
-        self.NLTK_names: SList = []
-        self.numbers: SList = []
-        self.personnel: SList = []
+        self._header: SList = []
+        self._lyrics: SList = []
+        self._NLTK_names: SList = []
+        self._numbers: SList = []
+        self._personnel: SList = []
         self._bracketed_types: SList = []
         self._files: SList = []
 
         # lists 2D
-        self.appearences: NIList = []
-        self.artists: NSList = []
-        self.composers: NSList = []
-        self.sub_types: NSList = []
-        self.subtracks: NSList = []
+        self._appearences: NIList = []
+        self._artists: NSList = []
+        self._composers: NSList = []
+        self._subtypes: NSList = []
+        self._subtracks: NSList = []
 
         # bytearray
         self.cover_art: bytearray = bytearray()
 
         # strings
-        self.release_date: str = ""
-        self.selected_genre: str = ""
+        self._release_date: str = ""
+        self._selected_genre: str = ""
 
         # atributes protected from GUIs reinit method
         # when new search is started
         if protected_vars:
-            self.album: str = ""
-            self.band: str = ""
+            self._album: str = ""
+            self._band: str = ""
             self.work_dir: str = ""
-            self.log: MultiLog = MultiLog(log)
-            self.GUI = False
+            self._log: MultiLog = MultiLog(log)
+            self._GUI = False
 
-        self.log.debug("parser base done")
+        self._log.debug("parser base done")
 
     def __len__(self):
-        return len(self.numbers)
+        return len(self._numbers)
 
     def __bool__(self):
         return bool(self.__len__())
 
     @property
     def ALBUM(self) -> str:
-        """ string with album name, this variable can be protected from
+        """string with album name, this variable can be protected from
         reseting in __init__ method.
         
         :type: str
         """
-        return self.album
+        return self._album
 
     @ALBUM.setter
     def ALBUM(self, value: str):
-        self.album = value
+        self._album = value
 
     @property
     def ALBUMARTIST(self) -> str:
-        """ string with band name, this variable can be protected from reseting
+        """string with band name, this variable can be protected from reseting
         in __init__ method.
 
         :type: str
         """
-        return self.band
+        return self._band
 
     @ALBUMARTIST.setter
     def ALBUMARTIST(self, value: str):
-        self.band = value
+        self._band = value
 
     @property
     def ARTIST(self) -> NSList:
-        """ Each entry in list holds list of artists for one track.
+        """Each entry in list holds list of artists for one track.
 
         :type: List[List[str]]
         """
-        return self.artists
+        return self._artists
 
     @ARTIST.setter
     def ARTIST(self, value: NSList):
-        self.artists = value
+        self._artists = value
 
     @property
     def COMPOSER(self) -> NSList:
-        """ Each entry in list holds list of composers for one track.
+        """Each entry in list holds list of composers for one track.
 
         :type: List[List[str]]
         """
-        return self.composers
+        return self._composers
 
     @COMPOSER.setter
     def COMPOSER(self, value: NSList):
-        self.composers = value
+        self._composers = value
 
     @property
     def COVERART(self) -> bytearray:
-        """ Holds coverart read into memory as a bytes object. 
+        """Holds coverart read into memory as a bytes object. 
 
         :type: bytearray
         """
@@ -199,15 +199,15 @@ class ParserBase:
 
     @property
     def DATE(self) -> str:
-        """ Album release date.
+        """Album release date.
 
         :type: str
         """
-        return self.release_date
+        return self._release_date
 
     @DATE.setter
     def DATE(self, value: str):
-        self.release_date = value
+        self._release_date = value
 
     @property
     def DISCNUMBER(self) -> IList:
@@ -215,11 +215,11 @@ class ParserBase:
 
         :type: List[int]
         """
-        return self.disc_num
+        return self._disc_num
 
     @DISCNUMBER.setter
     def DISCNUMBER(self, value: IList):
-        self.disc_num = value
+        self._disc_num = value
 
     @property
     def GENRE(self) -> str:
@@ -228,11 +228,11 @@ class ParserBase:
 
         :type: str
         """
-        return self.selected_genre
+        return self._selected_genre
 
     @GENRE.setter
     def GENRE(self, value: str):
-        self.selected_genre = value
+        self._selected_genre = value
 
     @property
     def LYRICS(self) -> SList:
@@ -240,39 +240,39 @@ class ParserBase:
 
         :type: List[str]
         """
-        return self.lyrics
+        return self._lyrics
 
     @LYRICS.setter
     def LYRICS(self, value: SList):
-        self.lyrics = value
+        self._lyrics = value
 
     @property
     def TITLE(self) -> SList:
-        """ List of track names.
+        """List of track names.
 
         :type: List[str]
         """
-        return self.tracks
+        return self._tracks
 
     @TITLE.setter
     def TITLE(self, value: SList):
-        self.tracks = value
+        self._tracks = value
 
     @property
     def TRACKNUMBER(self) -> SList:
-        """ List of numbers for each track.
+        """List of numbers for each track.
 
         :type: List[str]
         """
-        return self.numbers
+        return self._numbers
 
     @TRACKNUMBER.setter
     def TRACKNUMBER(self, value: SList):
-        self.numbers = value
+        self._numbers = value
 
     @property
     def FILE(self) -> SList:
-        """ List of files on local disk corresponding to each track.
+        """List of files on local disk corresponding to each track.
 
         :type: List[str]
         """
@@ -284,7 +284,7 @@ class ParserBase:
 
     @property
     def TYPE(self) -> SList:
-        """ List of track types.
+        """List of track types.
 
         :type: List[str]
         """

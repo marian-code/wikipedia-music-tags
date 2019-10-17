@@ -1,4 +1,4 @@
-""" wiki_music submodule which provides all the GUI functionallity built with
+"""wiki_music submodule which provides all the GUI functionallity built with
 support of all major python Qt bindings.
 """
 

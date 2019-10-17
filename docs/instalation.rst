@@ -17,8 +17,15 @@ for GUI and one for CLI version.
 
 .. code-block:: bash
 
-    wiki_music_gui(.exe)
-    wiki_music_cli(.exe)
+    wiki-music-gui(.exe)
+    wiki-music-cli(.exe)
+
+There are also binary releases available on
+`Github Releases <https://github.com/marian-code/wikipedia-music-tags/releases>`_.
+
+.. warning::
+    Binary releases are still in very early development stage and may not work
+    properly.
 
 For Developers
 --------------
@@ -36,7 +43,7 @@ With only some minor modifications it should be able to run on Linux and
 Os X too. Problems concern mainly default paths and interaction with
 clipboard in GUI.
 
-Multiple Qt backends are supported with the help of QtPy. So you can substitute 
+Multiple Qt backends are supported thanks to QtPy. So you can substitute 
 PyQt5 for: PyQt4, PySide2 or PySide. However, for now only compatibility with 
 PyQt5 is tested, so naturally it is also recomended.
 
@@ -103,8 +110,8 @@ Building frozen app
     you can use option ``--exclude-module=<module_name>`` in freeze.py to
     exclude unwanted libraries. See section `Creating virtual environment`_
 
-There is one optional optimization which you can do before building frozen app.
-You can use 'vanilla' numpy to further reduce size of freezed app. Vanilla
+There are few optional optimization which you can do before building frozen
+app. You can use 'vanilla' numpy to further reduce size of freezed app. Vanilla
 numpy build can be downloaded from here:
 `numpy vanilla <https://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_.
 The problem with regular numpy is building against OPENBLAS (pip version ~40MB)
@@ -114,6 +121,15 @@ for your python version, install it by:
 .. code-block:: bash
 
     pip install <package-name>.whl
+
+Other than that you can use `UPX <https://upx.github.io>`_ to compress the app
+to a smaller size. It prooves to be quite effective reducing app size..
+If you want to use it go to the provided link and download apropriate
+version for your system. Then unpack it in upx folder under wiki_music/freeze.
+
+.. warning::
+    This is not recomended in debugging stage as it adds another layer of
+    complexity.
 
 Now you are ready to go:
 
@@ -127,8 +143,9 @@ To build the CLI app:
 
     python freeze.py cli
 
-When building in virtual env the frozen app should have ~ 75MB.
-Without vanilla numpy ~105MB.
+When building in virtual env the frozen app should have ~75MB.
+With UPX compression and vanilla Numpy ~56MB
+With OPENBLAS numpy and UPX compression ~105MB.
 
 To build the GUI app:
 
@@ -136,8 +153,9 @@ To build the GUI app:
 
     python freeze.py gui
 
-When building in virtual env the frozen app should have ~ 120MB.
-Without vanilla numpy ~150MB.
+When building in virtual env the frozen app should have ~120MB.
+With UPX compression and vanilla Numpy ~75MB
+With OPENBLAS numpy and UPX compression ~150MB.
 
 This will generate list three directories under setup/ folder: gdist/ cdist/
 and build/. Build contains just pyinstaller help files and **(g/c)dist/wiki_music**

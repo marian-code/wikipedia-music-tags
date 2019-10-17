@@ -1,8 +1,11 @@
+"""Freezes wiki_music into standalone executable."""
+
 import PyInstaller
 import argparse
+from typing import Set
 
 if float(PyInstaller.__version__[0]) >= 4:
-    from PyInstaller.depend.imphook import ModuleHook
+    from PyInstaller.depend.imphook import ModuleHook  # pylint: disable=no-name-in-module, import-error
 else:
     from PyInstaller.building.imphook import ModuleHook
 
@@ -19,10 +22,11 @@ HOOKS_DIR = path.join(WORK_DIR, "custom_hooks")
 PATCH_HOOKS = [path.join(HOOKS_DIR, f.name) for f in scandir(HOOKS_DIR)
                if f.name != "__init__.py"]
 
-patched = set()
+patched: Set[str] = set()
 
-# monkey patch hooks
+
 def patched_load_hook_module(self):
+    """Monkey pytch PyInstaller hooks, with ones from custom_hooks dir."""
     global patched
 
     for ph in PATCH_HOOKS:
@@ -39,14 +43,14 @@ def patched_load_hook_module(self):
 
 
 def input_parser():
-    """ Parse command line input parameters. """
-
+    """Parse command line input parameters."""
     parser = argparse.ArgumentParser(description="script to build freezed app")
     parser.add_argument("mode", type=str, help="choose CLI/GUI build mode",
                         choices=["gui", "cli"])
     args = parser.parse_args()
 
     return args.mode.upper()
+
 
 # monkey patch hooks
 original_load_hook_module = ModuleHook._load_hook_module
@@ -83,14 +87,20 @@ installer_opt = [
     # constnts build options
     "--clean",
     "--noconfirm",
-    #"--noupx",
-    #"--upx-dir=<DIR>",
-    #"--version-file=<FILE>",
+    # "--version-file=<FILE>",
 
     # debbugging options
-    #"--debug=bootloader",
-    #"--debug=all",
-    #"--debug=noarchive",
+    # "--debug=bootloader",
+    # "--debug=all",
+    # "--debug=noarchive",
+
+    # upx options
+    "--noupx",
+    "--upx-exclude=vcruntime140.dll",
+    "--upx-exclude=msvcp140.dll",
+    "--upx-exclude=qwindows.dll",
+    "--upx-exclude=qwindowsvistastyle.dll",
+    f"--upx-dir={path.join(WORK_DIR, 'upx')}",
 
     # pyinstaller data paths and hooks
     f"--paths={PACKAGE_PATH}",
@@ -102,7 +112,7 @@ installer_opt = [
 
     # what to build
     "--onedir",
-    #"--onefile",
+    # "--onefile",
     "--name=wiki_music"
 ]
 
@@ -137,4 +147,3 @@ for root, dirs, files in walk(PACKAGE_PATH):
     for f in files:
         if f.endswith(".pyo"):
             remove(path.join(root, f))
-

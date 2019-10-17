@@ -2,9 +2,8 @@ wiki_music.external_libraries module
 ====================================
 
 .. warning:: 
-    This file describes wiki_music API reference. Beware, some things might not
-    be up to date and all is subject to change since we are still in early
-    development stage.
+    Documentation is stil under construction some things might not be up to
+    date.
 
 Here the quality of the documentation is not guaranted since we rely only on
 the docstrings provided by the autors of respectable packages, which are

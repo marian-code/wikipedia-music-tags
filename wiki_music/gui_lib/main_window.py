@@ -9,10 +9,13 @@ import webbrowser  # lazy loaded
 from threading import Thread
 from typing import Optional, Union
 
-from wiki_music.constants import API_KEY_MESSAGE, MP3_TAG, ROOT_DIR
+from wiki_music import __version__
+from wiki_music.constants import API_KEY_MESSAGE, LOG_DIR, MP3_TAG, ROOT_DIR
 from wiki_music.gui_lib import BaseGui, CoverArtSearch, DataModel, RememberDir
 from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QFileDialog,
-                                            QInputDialog, QMessageBox, QTimer)
+                                            QInputDialog, QMessageBox,
+                                            QProgressBar, QProgressDialog, Qt,
+                                            QTimer)
 from wiki_music.utilities import (Mp3tagNotFoundException, SharedVars,
                                   exception, synchronized, warning,
                                   we_are_frozen)
@@ -33,7 +36,7 @@ class Checkers(BaseGui):
 
         super().__init__()
 
-        self._remember: Optional[str] = None
+        self.progressShow: Optional[QProgressDialog] = None
 
     def _init_checkers(self):
         """Initializes timers for periodically repeating methods.
@@ -47,6 +50,8 @@ class Checkers(BaseGui):
             with errors
         :meth:`Checkers._conditions_check`
             checks for parser progres descritions
+        :meth:`Checkers._threadpool_check`
+            checks for progress of function running in threadpool
         :meth:`Checkers._start_checkers`
             starts the initialized timers
         """
@@ -62,6 +67,10 @@ class Checkers(BaseGui):
         self.conditions_timer.timeout.connect(self._conditions_check)
         self.conditions_timer.setSingleShot(True)
 
+        self.threadpool_timer = QTimer()
+        self.threadpool_timer.timeout.connect(self._threadpool_check)
+        self.threadpool_timer.setSingleShot(True)
+
     def _start_checkers(self):
         """Initializes timers of periodically repeating methods.
 
@@ -70,7 +79,6 @@ class Checkers(BaseGui):
         :meth:`Checkers._init_checkers`
             initializes timers
         """
-
         self.description_timer.start(200)
         self.exception_timer.start(500)
         self.conditions_timer.start(400)
@@ -83,7 +91,6 @@ class Checkers(BaseGui):
         Periodically checks if parser requires user input, if so displays
         dialog with appropriate description and input options.
         """
-
         def msg_process(out: QMessageBox.StandardButton) -> Union[str, bool]:
             if out == QMessageBox.Yes:
                 return True
@@ -133,11 +140,20 @@ class Checkers(BaseGui):
 
                 SharedVars.write_lyrics = msg_process(msg.exec_())
 
+                if SharedVars.write_lyrics:
+                    # show download progress
+                    self.progressShow = QProgressDialog("Downloading lyrics",
+                                                        "", 0,
+                                                        self.number_of_tracks,
+                                                        self)
+                    self.progressShow.setCancelButton(None)
+                    self._threadpool_check()
+
             if SharedVars.switch == "api_key":
                 log.debug("ask to get google api key")
                 msg = QMessageBox(QMessageBox.Information, "Warning",
                                   API_KEY_MESSAGE.replace("\n", ""),
-                                  QMessageBox.Yes | QMessageBox.No | 
+                                  QMessageBox.Yes | QMessageBox.No |
                                   QMessageBox.Ignore)
                 # change button text
                 dont_bother_button = msg.button(QMessageBox.Ignore)
@@ -151,7 +167,7 @@ class Checkers(BaseGui):
                 dialog.setInputMode(QInputDialog.TextInput)
                 dialog.setLabelText("Key:")
                 dialog.setWindowTitle("Paste goole API key")
-                dialog.resize(350, 70)                          
+                dialog.resize(350, 70)
 
                 if dialog.exec_():
                     SharedVars.get_api_key = dialog.textValue()
@@ -180,12 +196,12 @@ class Checkers(BaseGui):
         displays message with information and if applicable option to exit the
         app
         """
-
         if SharedVars.has_exception:
             msg = QMessageBox(QMessageBox.Critical, "Exception",
                               SharedVars.has_exception)
             # TODO set right logging file
-            msg.setDetailedText(open("logger","r").read())
+            path = os.path.join(LOG_DIR, "wiki_music_library.log")
+            msg.setDetailedText(open(path, "r").read())
             msg.exec_()
             SharedVars.has_exception = ""
 
@@ -221,19 +237,21 @@ class Checkers(BaseGui):
 
         Runs periodically.
         """
-
-        if " . . ." in SharedVars.describe:
-            SharedVars.describe = SharedVars.describe.replace(" . . .", "")
-
-        self._remember = SharedVars.describe
-
-        if SharedVars.describe.strip():
-            if (self._remember == SharedVars.describe and
-                "Done" not in SharedVars.describe):  # noqa E129
-                SharedVars.describe += " ."
-            self.statusbar.showMessage(SharedVars.describe)
+        for item in ("Done", "Preload"):
+            if item in SharedVars.describe:
+                self.progressBar.setValue(self.progressBar.maximum())
+                break
         else:
-            self.statusbar.showMessage("")
+            self.progressBar.setValue(SharedVars.progress)
+
+        self.progressBar.setFormat(SharedVars.describe)
+
+    def _threadpool_check(self):
+
+        self.progressShow.setValue(SharedVars.threadpool_prog)
+
+        if self.progressShow.maximum() != SharedVars.threadpool_prog:
+            self.threadpool_timer.start(50)
 
 
 class Buttons(BaseGui):
@@ -245,11 +263,19 @@ class Buttons(BaseGui):
     """
 
     @exception(log)
-    def __open_dir__(self):
-        """Opens the current search folder."""
-
-        if self.work_dir:
-            self.log.info("Opening folder...")
+    def _open_dir(self, folder: str = ""):
+        """Opens the current search folder, or the one from input.
+        
+        Parameters
+        ----------
+        folder: str
+            force opening this folder instead of working directory
+        """
+        if folder:
+            self._log.info("Opening folder...")
+            os.startfile(folder)
+        elif self.work_dir:
+            self._log.info("Opening folder...")
             os.startfile(self.work_dir)
         else:
             QMessageBox(QMessageBox.Information, "Message",
@@ -258,8 +284,8 @@ class Buttons(BaseGui):
     def _select_file(self, description: str = "Select song file",
                      file_types: str = "Audio files (*.mp3 *.flac *.m4a)"
                      ) -> str:
-        """Handle file selection
-        
+        """Handle file selection.
+
         Parameters
         ----------
         description: str
@@ -278,7 +304,6 @@ class Buttons(BaseGui):
         self.file_detail.setText(_file[0])
         return _file[0]
 
-
     @exception(log)
     def _open_browser(self, url: Optional[str] = None):
         """Opens the found wikipedia page in default web browser.
@@ -288,14 +313,13 @@ class Buttons(BaseGui):
         url: Optional[str]
             force opening of input url instead of parser wikipedia url
         """
-
         if url:
             webbrowser.open_new_tab(url)
         else:
             if self.url and not SharedVars.offline_debbug:
                 webbrowser.open_new_tab(self.url)
             elif SharedVars.offline_debbug:
-                self.log.warning("You are in offline debugging mode")
+                self._log.warning("You are in offline debugging mode")
             else:
                 QMessageBox(QMessageBox.Information, "Message",
                             "You must run the search first!").exec_()
@@ -310,7 +334,6 @@ class Buttons(BaseGui):
         This action works only in Windods if Mp3tag is not installed in the
         right directory a dialog to set the path is displayed.
         """
-
         global MP3_TAG
         path_file = os.path.join(ROOT_DIR, "files", "MP3_TAG_PATH.txt")
 
@@ -320,7 +343,8 @@ class Buttons(BaseGui):
 
         if not MP3_TAG:
             msg = QMessageBox(QMessageBox.Warning, "Unable to locate Mp3tag",
-                              "Do you want to set the location?",
+                              "Mp3tag is a complementary app to this one. "
+                              "Do you want to set its location?",
                               QMessageBox.Yes | QMessageBox.No)
             if msg.exec_() == QMessageBox.No:
                 return
@@ -350,40 +374,41 @@ class Buttons(BaseGui):
 
     def _show_help(self, help_type):
 
-        if help_type == "idx":
+        if help_type == "index":
             self._open_browser("https://wikipedia-music-tags.readthedocs.io"
                                "/en/latest/index.html")
-        elif help_type == "about":
-            self._open_browser("https://github.com/marian-code/"
-                               "wikipedia-music-tags")
         elif help_type == "git":
             self._open_browser("https://github.com/marian-code/"
                                "wikipedia-music-tags")
+        elif help_type == "version":
+            QMessageBox(QMessageBox.Information, "Message",
+                        f"You are using version: {__version__}").exec_()
+        elif help_type == "logs":
+            self._open_dir(LOG_DIR)
 
-    def __entry_band__(self):
+
+    def _entry_band(self):
         """Connect to albumartist entry field."""
         self.ALBUMARTIST = self.band_entry_input.text()
-        self.start_preload()
 
-    def __entry_album__(self):
+    def _entry_album(self):
         """Connect to album entry field."""
         self.ALBUM = self.album_entry_input.text()
-        self.start_preload()
 
-    def __select_json__(self):
+    def _select_json(self):
         """Connect to json checkbox."""
         SharedVars.write_json = self.json_write_sw.isChecked()
 
-    def __select_offline_debbug__(self):
+    def _select_offline_debbug(self):
         """Connect to offline debug checkbox.
-        
+
         Note
         ----
-        If the checkbox is unselected preload is stopped.
+        Restarts the preload with right settings.
         """
         SharedVars.offline_debbug = self.offline_debbug_sw.isChecked()
-        if SharedVars.offline_debbug:
-            self.stop_preload()
+        if SharedVars.offline_debbug and self._input_is_present():
+            self.start_preload()
 
 
 class Window(DataModel, Checkers, Buttons, CoverArtSearch):
@@ -399,7 +424,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
         log.debug("setup overlay")
         # set overlay functions
-        self.__setup_overlay__()
+        self._setup_overlay()
 
         log.debug("start checkers")
         # start checkers
@@ -407,21 +432,19 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         self._start_checkers()
 
     # setup methods
-    def __setup_overlay__(self):
+    def _setup_overlay(self):
         """Sets up GUI input elements siganl connections."""
-
         # map buttons to functions
         # must use lambda otherwise wrapper doesnt work correctly
-        self.browse_button.clicked.connect(lambda: self.__select_dir__())
-        self.wiki_search_button.clicked.connect(lambda: self.__run_search__())
+        self.browse_button.clicked.connect(lambda: self._select_dir())
+        self.wiki_search_button.clicked.connect(lambda: self._run_search())
         self.coverArt.clicked.connect(lambda: self.cover_art_search())
-        self.lyrics_button.clicked.connect(
-            lambda: self.__run_lyrics_search__())
+        self.lyrics_button.clicked.connect(lambda: self._run_lyrics_search())
         self.toolButton.clicked.connect(lambda: self._select_file())
 
         # connect the album and band entry field to preload function
-        self.band_entry_input.editingFinished.connect(self.__entry_band__)
-        self.album_entry_input.editingFinished.connect(self.__entry_album__)
+        self.band_entry_input.editingFinished.connect(self._entry_band)
+        self.album_entry_input.editingFinished.connect(self._entry_album)
 
         # create table-proxy mapping for sorting
         self.tableView.setModel(self.proxy)
@@ -441,41 +464,55 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
         # connect menubar actions to functions
         # must use lambda otherwise wrapper doesnt work correctly
-        self.actionDirectory.triggered.connect(lambda: self.__open_dir__())
+        self.actionDirectory.triggered.connect(lambda: self._open_dir())
         self.actionWikipedia.triggered.connect(lambda: self._open_browser())
         self.actionMp3_Tag.triggered.connect(lambda: self._run_Mp3tag())
-        self.actionAll_Tags.triggered.connect(lambda: self.__save_all__())
-        # TODO get rid of save only lyrics button, we now save inteligently
-        # TODO only changed tags
-        self.actionOnly_Lyrics.triggered.connect(lambda: self.__save_all__())
+
+        # save action
+        self.actionAll_Tags.triggered.connect(lambda: self._save_all())
 
         # show help
-        self.actionHelp_Index.triggered.connect(lambda: self._show_help("idx"))
-        self.actionAbout.triggered.connect(lambda: self._show_help("about"))
+        self.actionHelp.triggered.connect(lambda: self._show_help("index"))
         self.actionGit.triggered.connect(lambda: self._show_help("git"))
+        self.actionLogs.triggered.connect(lambda: self._show_help("logs"))
+        self.actionVersion.triggered.connect(
+            lambda: self._show_help("version"))
+
+        # search actons
+        self.actionWikipedia.triggered.connect(lambda: self._run_search())
+        self.actionLyrics.triggered.connect(lambda: self.cover_art_search())
+        self.actionCoverArt.triggered.connect(
+            lambda: self._run_lyrics_search())
+
+        # main actions
+        self.actionOpen.triggered.connect(lambda: self._select_dir())
 
         # TODO menubar buttons taht are not implemented
         self.actionNew.triggered.connect(self._do_nothing)
-        self.actionOpen.triggered.connect(self._do_nothing)
         self.actionExit.triggered.connect(self._do_nothing)
         self.actionSave.triggered.connect(self._do_nothing)
 
-        # TODO this needs to be hidden alfo for pip
+        # add starusbar to progress bar
+        self.progressBar = QProgressBar()
+        self.progressBar.setTextVisible(True)
+        self.progressBar.setAlignment(Qt.AlignCenter)
+        self.progressBar.setFormat("")
+
+        self.statusbar.addPermanentWidget(self.progressBar)
+
         if not self._DEBUG:
-            # show switches only if not frozen
             self.offline_debbug_sw.hide()
             self.json_write_sw.hide()
         else:
             # connect switches to functions
             self.offline_debbug_sw.stateChanged.connect(
-                self.__select_offline_debbug__)
-            self.json_write_sw.stateChanged.connect(self.__select_json__)
+                self._select_offline_debbug)
+            self.json_write_sw.stateChanged.connect(self._select_json)
 
     # methods that bind to gui elements
     @exception(log)
-    def __save_all__(self):
+    def _save_all(self):
         """Save changes to file tags, after saving reload files from disk."""
-
         # first stop any running preload, as it is not needed any more
         self.stop_preload()
 
@@ -489,11 +526,17 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
                             "You must specify directory with files!").exec_()
                 return
 
+            # show save progress
+            self.progressShow = QProgressDialog("Writing tags", "", 0,
+                                                self.number_of_tracks, self)
+            self.progressShow.setCancelButton(None)
+            self._threadpool_check()
+
             if not self.write_tags():
                 msg = ("Cannot write tags because there are no "
                        "coresponding files")
                 QMessageBox(QMessageBox.Information, "Info", msg)
-                self.log.info(msg)
+                self._log.info(msg)
 
             # reload files from disc after save
             self.reinit_parser()
@@ -501,11 +544,16 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
             self._parser_to_gui()
 
     @exception(log)
-    def __select_dir__(self):
+    def _select_dir(self):
         """Select working directory, read found files and start preload."""
-
         with RememberDir(self) as rd:
-            self.work_dir = rd.get_dir()
+            self.work_dir, load_ok = rd.get_dir()
+
+        # if dialog was canceled, return imediatelly
+        if not load_ok:
+            return
+
+        self._init_progress_bar(0, 2)
 
         # TODO non-atomic
         # read files and start preload
@@ -514,53 +562,27 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
         self._parser_to_gui()
 
-    def __check_input_is_present__(self) -> bool:
-        """Check if apropriate input to conduct search is present.
+    def _init_progress_bar(self, minimum: int, maximum: int):
+        """Resets main progresbar to 0 and sets range.
 
-        Returns
-        -------
-        bool
-            true if all requested inputs are present
+        Parameters
+        ----------
+        minimum: int
+            minimal progressbar value
+        maximum: int
+            maximum progressbar value
         """
-
-        group = [self.ALBUMARTIST, self.ALBUM, self.work_dir]
-        if all(group):
-            return True
-        else:
-            alb, bnd, wkd, inp, com, _and = [""] * 6
-            if not self.ALBUM:
-                alb = " album"
-            if not self.ALBUMARTIST:
-                bnd = " band"
-            if not self.work_dir:
-                wkd = " select working directory"
-
-            if any([alb, bnd]):
-                inp = "input"
-            if all([alb, bnd, wkd]):
-                com = ","
-            elif all([alb, bnd]):
-                com = " and"
-            if all([alb, wkd]) or all([wkd, bnd]):
-                _and = " and"
-
-            msg = f"You must {inp}{alb}{com}{bnd}{_and}{wkd}"
-
-            message = QMessageBox()
-            message.setIcon(QMessageBox.Information)
-            message.setWindowTitle("Message")
-            message.setText(msg)
-            message.exec_()
-            self.log.warning(msg)
-
-            return False
+        SharedVars.progress = minimum
+        self.progressBar.setRange(minimum, maximum)
+        self.progressBar.setValue(minimum)
 
     @exception(log)
-    def __run_search__(self):
+    def _run_search(self):
         """Start wikipedia search in background thread."""
-
-        if not self.__check_input_is_present__():
+        if not self._input_is_present(with_warn=True):
             return
+
+        self._init_progress_bar(0, 16)
 
         log.info("starting wikipedia search")
 
@@ -573,13 +595,20 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         main_app.start()
 
     @exception(log)
-    def __run_lyrics_search__(self):
+    def _run_lyrics_search(self):
         """Start only lyric search in background thread."""
-
         self.stop_preload()
 
-        if not self.__check_input_is_present__():
+        if not self._input_is_present(with_warn=True):
             return
+
+        self._init_progress_bar(0, 2)
+
+        # show download progress
+        self.progressShow = QProgressDialog("Downloading lyrics", "", 0,
+                                            self.number_of_tracks, self)
+        self.progressShow.setCancelButton(None)
+        self._threadpool_check()
 
         log.info("starting lyrics search")
 

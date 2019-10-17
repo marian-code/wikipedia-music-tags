@@ -1,4 +1,4 @@
-""" Constants used by whole :mod:`wiki_music` module."""
+"""Constants used by whole :mod:`wiki_music` module."""
 from typing import Tuple
 
 __all__ = ["TAGS", "EXTENDED_TAGS", "STR_TAGS"]

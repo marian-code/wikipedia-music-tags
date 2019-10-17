@@ -51,9 +51,9 @@ def module_path() -> str:
     """
 
     if hasattr(sys, "frozen"):
-        return path.dirname(sys.executable)
+        return path.abspath(path.dirname(sys.executable))
     else:
-        return path.join(path.dirname(__file__), "..")
+        return path.abspath(path.join(path.dirname(__file__), ".."))
 
 
 #: toplevel directory for file saving

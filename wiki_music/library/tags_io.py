@@ -101,7 +101,7 @@ def write_tags(data: Dict[str, Union[str, float, list, bytearray]]):
 
 @exception(log)
 def read_tags(song_file: str) -> Dict[str, Union[str, list, bytearray]]:
-    """ Convenience function which takes care of reading tags from file.
+    """Convenience function which takes care of reading tags from file.
     Abstracts away from low level mutagen API. If no tags are read, function
     can guess track title from file name, assumming some decent formating.
 

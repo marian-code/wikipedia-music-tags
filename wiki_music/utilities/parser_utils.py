@@ -15,8 +15,9 @@ import yaml  # lazy loaded
 from wiki_music.constants.colors import GREEN, RESET
 
 from .utils import normalize
+from .sync import SharedVars
 
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -94,25 +95,26 @@ class _NltkMeta(type):
 
 
 class NLTK(metaclass=_NltkMeta):
-    """A thread safe nltk importer. Will make other threads wait if they want
-        to access nltk until it is imported.
+    """A thread safe nltk importer.
+
+    Will make other threads wait if they want to access nltk
+    until it is imported.
     """
 
     _import_running: bool = False
     # nltk class attribute is provided by metaclass
     _nltk = None
     _lock: Lock = Lock()
-    
+
     @classmethod
     def run_import(cls, logger: "Logger"):
         """Import nltk in separate thread and assign it to class attribute.
-        
+
         Parameters
         ----------
         logger: logging.Logger
             instance of a logger to log import messages
         """
-
         def imp():
             with cls._lock:
                 logger.debug("import nltk")
@@ -134,7 +136,7 @@ class NLTK(metaclass=_NltkMeta):
 
 
 class ThreadWithReturn(Thread):
-    """ Subclass of python threading.Thread which can return result of
+    """Subclass of python threading.Thread which can return result of
     running function. The result is return by calling the Thread.join()
     method.
 
@@ -160,15 +162,15 @@ class ThreadWithReturn(Thread):
         self._return: Any = None
 
     def run(self):
-        """ Override standard threading.Thread.run() method to store
+        """Override standard threading.Thread.run() method to store
         running function return value.
         """
 
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
 
-    def join(self, timeout:Optional[float] = None) -> Any:
-        """ Override standard threading.Thread.join() method to return
+    def join(self, timeout: Optional[float] = None) -> Any:
+        """Override standard threading.Thread.join() method to return
         running function return value.
         """
 
@@ -178,7 +180,7 @@ class ThreadWithReturn(Thread):
 
 
 class ThreadPool:
-    """ Spawns pool of threads to excecute function. If the list of arguments
+    """Spawns pool of threads to excecute function. If the list of arguments
     contains only one tuple, run the function in the calling thread to
     avoid unnecessary overhead as a result of spawning a new thread.
 
@@ -188,21 +190,26 @@ class ThreadPool:
         callable that each thread should run
     args: List[tuple]
         each tuple in list contains args for one thread running target
-    
+
     See Also
     --------
     :class:`ThreadWithReturn`
     """
 
-    def __init__(self, target:Callable[..., list] = lambda *args: [],
-                 args:List[tuple] = [tuple()]) -> None:
+    def __init__(self, target: Callable[..., list] = lambda *args: [],
+                 args: List[tuple] = [tuple()]) -> None:
 
         self._args = args
         self._target = target
 
     def run(self, timeout: Optional[float] = 60) -> list:
-        """ Starts the execution of threads in pool. returns after all threads
+        """Starts the execution of threads in pool. returns after all threads
         join() metod has returned.
+
+        See also
+        --------
+        :meth:`wiki_music.utilities.sync.SharedVars.set_threadpool_prog`
+            inform GUI of threadpool progress
 
         Parameters
         ----------
@@ -225,15 +232,24 @@ class ThreadPool:
                                                 name=f"ThreadPoolWorker-{i}"))
                 threads[-1].daemon = True
                 threads[-1].start()
-            
+
+            # report progress to gui
+            while True:
+                count = [t.is_alive() for t in threads].count(False)
+                SharedVars.set_threadpool_prog(count)
+                if count == len(threads):
+                    break
+
+                time.sleep(0.05)
+
             for i, l in enumerate(threads):
                 threads[i] = l.join(timeout=timeout)
 
             return threads
-    
+
 
 def bracket(data: List[str]) -> List[str]:
-    """ Puts elements of the list in brackets.\n
+    """Puts elements of the list in brackets.
 
     Parameters
     ----------
@@ -257,7 +273,8 @@ def bracket(data: List[str]) -> List[str]:
 
 
 def write_roman(num: Union[int, str]):
-    """ Convert integer to roman number 
+    """Convert integer to roman number.
+
     Parameters
     ----------
     num: int
@@ -273,39 +290,34 @@ def write_roman(num: Union[int, str]):
         roman number converted from integer
     """
 
-    roman_numerals = [
-        ('M', 1000),
-        ('CM', 900),
-        ('D', 500),
-        ('CD', 400),
-        ('C', 100),
-        ('XC', 90),
-        ('L', 50),
-        ('XL', 40),
-        ('X', 10),
-        ('IX', 9),
-        ('V', 5),
-        ('IV', 4),
-        ('I', 1)
-    ]
+    roman = collections.OrderedDict()
+    roman[1000] = "M"
+    roman[900] = "CM"
+    roman[500] = "D"
+    roman[400] = "CD"
+    roman[100] = "C"
+    roman[90] = "XC"
+    roman[50] = "L"
+    roman[40] = "XL"
+    roman[10] = "X"
+    roman[9] = "IX"
+    roman[5] = "V"
+    roman[4] = "IV"
+    roman[1] = "I"
 
-    num = str(num)
-
-    ix = 0
-    result = 0
-    while ix < len(num):
-        for k, v in roman_numerals:
-            if num.startswith(k, ix):
-                result += v
-                ix += len(k)
+    def roman_num(num):
+        for r in roman.keys():
+            x, y = divmod(num, r)
+            yield roman[r] * x
+            num -= (r * x)
+            if num <= 0:
                 break
-        else:
-            raise ValueError('Invalid Roman number.')
-    return result
+
+    return "".join([a for a in roman_num(num)])
 
 
 def normalize_caseless(text: str) -> str:
-    """ NFKD casefold string normalization 
+    """NFKD casefold string normalization.
 
     Parameters
     ----------
@@ -321,7 +333,7 @@ def normalize_caseless(text: str) -> str:
 
 
 def caseless_equal(left: str, right: str) -> bool:
-    """ Check for normalized string equality 
+    """Check for normalized string equality.
 
     Parameters
     ----------
@@ -343,7 +355,7 @@ def caseless_equal(left: str, right: str) -> bool:
 
 
 def caseless_contains(string: str, in_text: str) -> bool:
-    """ Check if string is contained in text.\n
+    """Check if string is contained in text.
 
     Parameters
     ----------
@@ -361,7 +373,6 @@ def caseless_contains(string: str, in_text: str) -> bool:
     --------
     :func:`normalize_caseless`
     """
-
     if normalize_caseless(string) in normalize_caseless(in_text):
         return True
     else:
@@ -369,7 +380,7 @@ def caseless_contains(string: str, in_text: str) -> bool:
 
 
 def count_spaces(*lists: Tuple[List[str], ...]) -> Tuple[List[str], int]:
-    """ Counts max length of elements in list and croesponding spaces for
+    """Counts max length of elements in list and coresponding spaces for
     each item to fit that length.
 
     Parameters
@@ -384,7 +395,6 @@ def count_spaces(*lists: Tuple[List[str], ...]) -> Tuple[List[str], int]:
         list of number os apces to append to list elements to make them span
         max length
     """
-
     transposed: List[List[str]] = list(map(list, zip(*lists)))
     max_length: int = 0
     spaces: List[str] = []
@@ -401,25 +411,24 @@ def count_spaces(*lists: Tuple[List[str], ...]) -> Tuple[List[str], int]:
 
 
 def yaml_dump(dict_data: List[Dict[str, str]], save_dir: str):
-    """ Save yaml file to disk. Each dictionary in list contains tags 
-    of one album track
+    """Save yaml tracklist file to disk.
 
     Parameters
     ----------
     dict_data: List[Dict[str, str]]
-        list of dictionarie to save to disk
+        list of dictionarie to save to disk, each dictionary in list contains
+        tags of one album track
     save_dir: str
         directory to save to
     """
-
-    _path = os.path.join(save_dir, "database.yaml")
-    print(GREEN + "\nSaving YAML file: " + RESET + _path + "\n")
-    with open(_path, "w") as outfile:
-        yaml.dump(dict_data, outfile, default_flow_style=False)
+    path = os.path.join(save_dir, "database.yaml")
+    print(GREEN + "\nSaving YAML file: " + RESET + path + "\n")
+    with open(path, "w") as f:
+        yaml.dump(dict_data, f, default_flow_style=False)
 
 
 def yaml_load(yml_file: str) -> List[dict]:
-    """ Loads yaml format file to dictionary. 
+    """Loads yaml format file to dictionary.
     
     Parameters
     ----------
@@ -431,14 +440,13 @@ def yaml_load(yml_file: str) -> List[dict]:
     List[dict]
         list of loaded dictionaries
     """
-
     with open(yml_file, "r") as infile:
         return yaml.full_load(infile)
 
 
 def _find_N_dim(array: Union[list, str], template: str
-               ) -> Optional[Union[list, str]]:
-    """ Recursive helper function with two nested list as input. array is
+                ) -> Optional[Union[list, str]]:
+    """Recursive helper function with two nested list as input. array is
     traversed and its elements are fuzzy tested if they match expresion in 
     template
 
@@ -455,7 +463,6 @@ def _find_N_dim(array: Union[list, str], template: str
     :func:`complete_N_dim`
     :func:`replace_N_dim`
     """
-
     if isinstance(array, list):
         for a in array:
             ret = _find_N_dim(a, template)
@@ -469,9 +476,9 @@ def _find_N_dim(array: Union[list, str], template: str
 
 
 def complete_N_dim(to_complete: list, to_find: list):
-    """ Recursive function with two list as input, one list contains incomplete
+    """Recursive function with two list as input, one list contains incomplete
     versions of strings and the other has full versions. Lists can be nested.
-    both are then traversed and the strings in the first list are completed 
+    both are then traversed and the strings in the first list are completed
     with strings from the second list. Changes are made in place.
 
     Parameters
@@ -488,7 +495,6 @@ def complete_N_dim(to_complete: list, to_find: list):
     --------
     :func:`_find_N_dim`
     """
-
     if isinstance(to_complete, list):
         for i, _ in enumerate(to_complete):
             ret = complete_N_dim(to_complete[i], to_find)
@@ -499,7 +505,7 @@ def complete_N_dim(to_complete: list, to_find: list):
 
 
 def replace_N_dim(to_replace: list, to_find: str):
-    """ Recursive function with nested list as input. The nested list elements
+    """Recursive function with nested list as input. The nested list elements
     are traversed and defined expresion is replaced by empty string in each
     element. Changes are made in place.
 
@@ -514,7 +520,6 @@ def replace_N_dim(to_replace: list, to_find: str):
     --------
     :func:`_find_N_dim`
     """
-
     if isinstance(to_replace, list):
         for i, _ in enumerate(to_replace):
             ret = replace_N_dim(to_replace[i], to_find)
@@ -525,7 +530,7 @@ def replace_N_dim(to_replace: list, to_find: str):
 
 
 def delete_N_dim(to_delete: list, to_find: list) -> list:  # type: ignore
-    """ Recursive function with nested list as input. The nested list elements
+    """Recursive function with nested list as input. The nested list elements
     are traversed and each that is equal to one of the elements in to_find list
     is deleted. Changes are made in place.
 
@@ -536,7 +541,6 @@ def delete_N_dim(to_delete: list, to_find: list) -> list:  # type: ignore
     to_find: str
        list of unwanted elements
     """
-
     if to_delete:
         if isinstance(to_delete[0], list):
             for i, td in enumerate(to_delete):

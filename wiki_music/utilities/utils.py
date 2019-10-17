@@ -1,4 +1,4 @@
-""" Basic utilities used by the whole package. """
+"""Basic utilities used by the whole package"""
 
 import argparse  # lazy loaded
 import logging
@@ -26,7 +26,7 @@ __all__ = ["list_files", "to_bool", "normalize", "we_are_frozen",
 
 
 class MultiLog:
-    """ Passes the messages to logger instance and to SharedVars sychronization
+    """Passes the messages to logger instance and to SharedVars sychronization
     class where applicable as SharedVars does not implement whole Logger API
 
     See also
@@ -40,39 +40,40 @@ class MultiLog:
         Logger instance
     """
     def __init__(self, logger):
-        self.logger = logger
+        self._logger = logger
 
     def debug(self, message: Any):
-        """ Issue a debug message. """
-        self.logger.debug(message)
+        """Issue a debug message"""
+        self._logger.debug(message)
 
     def info(self, message: Any):
-        """ Issue a info message. """
-        self.logger.info(message)
+        """Issue a info message"""
+        self._logger.info(message)
         SharedVars.info(message)
+        SharedVars.increment_progress()
 
     def warning(self, message: Any):
-        """ Issue a warning message. """
-        self.logger.warning(message)
+        """Issue a warning message"""
+        self._logger.warning(message)
         SharedVars.has_warning = message
 
     def error(self, message: Any):
-        """ Issue a error message. """
-        self.logger.error(message)
+        """Issue a error message"""
+        self._logger.error(message)
 
     def critical(self, message: Any):
-        """ Issue a critical message. """
-        self.logger.critical(message)
+        """Issue a critical message"""
+        self._logger.critical(message)
 
     def exception(self, message: Any):
-        """ Issue a exception message. """
-        self.logger.exception(message)
+        """Issue a exception message"""
+        self._logger.exception(message)
         SharedVars.has_exception = message
 
 
 def list_files(work_dir: str, file_type: str = "music",
                recurse: bool = True) -> List[str]:
-    """ List music files in directory.
+    """List music files in directory.
 
     Parameters
     ----------
@@ -123,7 +124,7 @@ def list_files(work_dir: str, file_type: str = "music",
 
 
 def to_bool(string: Union[str, bool]) -> bool:
-    """ Coverts string (yes, no, y, n adn capitalized versions) to bool.\n
+    """Coverts string (yes, no, y, n adn capitalized versions) to bool.\n
 
     Parameters
     ----------
@@ -147,7 +148,7 @@ def to_bool(string: Union[str, bool]) -> bool:
 
 
 def normalize(text: str) -> str:
-    """ NFKD string normalization
+    """NFKD string normalization
 
     Parameters
     ----------
@@ -163,7 +164,7 @@ def normalize(text: str) -> str:
 
 
 def we_are_frozen() -> bool:
-    """ Checks if the running code is frozen (e.g by cx-Freeze, pyinstaller).
+    """Checks if the running code is frozen (e.g by cx-Freeze, pyinstaller).
 
     Returns
     -------
@@ -176,7 +177,7 @@ def we_are_frozen() -> bool:
 
 
 def read_google_api_key(GUI) -> Optional[str]:
-    """ Reads google api key needed by lyricsfinder in external libraries from
+    """Reads google api key needed by lyricsfinder in external libraries from
     file.
 
     Returns
@@ -258,7 +259,7 @@ def _get_google_api_key(GUI: bool) -> Optional[str]:
 
 
 def win_naming_convetion(string: str, dir_name=False) -> str:
-    """ Returns Windows normalized path name with removed forbiden
+    """Returns Windows normalized path name with removed forbiden
     characters. If platworm is not windows string is returned without changes.
 
     Parameters
@@ -283,7 +284,7 @@ def win_naming_convetion(string: str, dir_name=False) -> str:
 
 
 def flatten_set(array: List[list]) -> set:
-    """ Converst 2D list to 1D set.
+    """Converst 2D list to 1D set.
 
     Parameters
     ----------
@@ -386,7 +387,7 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
 
 
 def loading():
-    """ CLI loading marker
+    """CLI loading marker
 
     Warnings
     --------

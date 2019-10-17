@@ -1,16 +1,14 @@
 # To-Do
 
 ### Main problems ordered by targeted release
-- 0.4a0
-  - make docs 'about' page and open right url from GUI
-  - test frozen gui app
-  - create a github release
 - 0.5a0
+  - fix extraction for endless forms most beautiful
   - fix as many bugs as possible
+  - make parallel freezing, and package for release
+  - fix gui startup and show file speed, too slow, mybe big cover art?
   - preload needs a complete rewrite the logic is horribly complex, too many
     classes manipulate preload related variables
 - 0.xb0
-  - use underscores to mark private things
   - fix gui scaling and elements moving around
   - convert constants to re patterns for better matching and use more re for better extraction
   - try to setup some CI system
@@ -22,7 +20,8 @@
   - support more music formats
 
 ### Freezing problems
-- try compression options - upx
+- upx probably messes some dll, PIXmap does not work, pictures are blank
+- pyinstaller now does not include wiki_music in frozen app
 
 ### Ideas
 - parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
@@ -36,8 +35,8 @@
 - research PIL interface to PyQt, and what about Pyside?
 - cover art search could anounce new downloaded images by signals if we were using QThreads
 - use custom widgets to simplify GUI https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/ e.g. tableWiew
-- implement main GUI progressbar
 - parser locks could be implemented easilly by getattr and set attr only for public attributes.
+- cells with dropdowns for subtracks
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -46,6 +45,25 @@
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
 # Change Log
+
+### 16.10.2019 0.4a0
+- selenium dependency was caused by high download limit for
+  google_images_download, limit is now set to 100
+- fixed premature preload start
+- experiment with UPX
+- cleanup in parser.in_out
+- some dlls must be excluded from UPX compression otherwise they are messed up
+  and the executable is not working
+- we got ~37% reduction in size of GUI app and 25% for CLI app
+
+### 15.10.2019 - 0.3a4
+- fixed some gui scaling problems
+- parser get methods now return so they can be used directly
+- fixed marking of private methods in parser
+- added GUI progressbar
+- implemeted theadpool progressbar
+- added selenium dependency for google_images_download
+- added pypiwin32 dependency for building frozen app
 
 ### 14.10.2019 - 0.3a4
 - completelly reworked logging

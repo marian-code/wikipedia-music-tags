@@ -54,25 +54,26 @@ class WikiCooker(ParserBase):
     ----------
     page: wikipedia.WikipediaPage
         downloaded page to be parsed by BeautifulSoup
-    soup: bs4.BeautifulSoup
+    _soup: bs4.BeautifulSoup
         BeautibulSoup object representing the whole page
-    sections: Dict[str, bs4.BeautifulSoup]
-        the :attr:`soup` split to page sections indexed by their titles
+    _sections: Dict[str, bs4.BeautifulSoup]
+        the :attr:`_soup` split to page sections indexed by their titles
     """
+
     def __init__(self, protected_vars: bool) -> None:
 
         super().__init__(protected_vars=protected_vars)
 
-        self.log.debug("cooker imports")
+        self._log.debug("cooker imports")
 
         if protected_vars:
-            self.sections = {}
-            self.page = None
-            self.soup = None
+            self._sections = {}
+            self._page = None
+            self._soup = None
 
             # control download and cook status are indexed by na of album
-            self.wiki_downloaded: queue.Queue = queue.Queue(maxsize=1)
-            self.soup_ready: queue.Queue = queue.Queue(maxsize=1)
+            self._wiki_downloaded: queue.Queue = queue.Queue(maxsize=1)
+            self._soup_ready: queue.Queue = queue.Queue(maxsize=1)
 
         # control
         self.preload_running: bool = False
@@ -84,7 +85,7 @@ class WikiCooker(ParserBase):
         # pass reference of current class instance to subclass
         self.Preload.outer_instance = self
 
-        self.log.debug("cooker imports done")
+        self._log.debug("cooker imports done")
 
     # TODO maybe we can move needed methods from outer class to preload so we
     # can have more instances of preload running at once, the results of each
@@ -95,6 +96,7 @@ class WikiCooker(ParserBase):
         """Contolling the preload of wikipedia page.
 
         It is totally self-contained exposes only start and stop methods.
+        Aborts automatically when no album or band is specified.
 
         Attributes
         ----------
@@ -116,23 +118,25 @@ class WikiCooker(ParserBase):
             ----
             Currently running preload is stopped before new one is started
             """
-
             cls.stop()
 
             # first empty records of previous download
             try:
-                cls.outer_instance.wiki_downloaded.get(block=False)
+                cls.outer_instance._wiki_downloaded.get(block=False)
             except queue.Empty:
                 pass
             try:
-                cls.outer_instance.wiki_downloaded.get(block=False)
+                cls.outer_instance._wiki_downloaded.get(block=False)
             except queue.Empty:
                 pass
             cls.outer_instance.error_msg = None
 
+            if not all([cls.outer_instance._album, cls.outer_instance._band]):
+                return
+
             log.debug(f"Starting wikipedia preload for: "
-                      f"{cls.outer_instance.album} by "
-                      f"{cls.outer_instance.band}")
+                      f"{cls.outer_instance._album} by "
+                      f"{cls.outer_instance._band}")
 
             cls._preload_thread = ThreadWithTrace(
                 target=cls.outer_instance._preload_run, name="WikiPreload")
@@ -144,8 +148,8 @@ class WikiCooker(ParserBase):
             if cls.outer_instance.preload_running:
 
                 log.debug(f"Stoping wikipedia preload for: "
-                          f"{cls.outer_instance.album} by "
-                          f"{cls.outer_instance.band}")
+                          f"{cls.outer_instance._album} by "
+                          f"{cls.outer_instance._band}")
                 cls._preload_thread.kill()
                 cls._preload_thread.join()
 
@@ -169,16 +173,17 @@ class WikiCooker(ParserBase):
         """
         if not self._url:
             if SharedVars.offline_debbug:
-                self._url = path.join(OUTPUT_FOLDER, self.album, "page.pkl")
+                self._url = path.abspath(path.join(OUTPUT_FOLDER, self._album,
+                                                   "page.pkl"))
             else:
-                self._url = str(self.page.url)  # type: ignore
+                self._url = str(self._page.url)  # type: ignore
 
         return self._url
 
     # TODO doesn't work without GUI
     def terminate(self, message: str):
         """Send message to GUI to ask user if he wishes to terminate the app.
-        
+
         If the answer if yes than parser is destroyed and GUI terminated.
 
         See also
@@ -208,8 +213,9 @@ class WikiCooker(ParserBase):
     # TODO if the propper page cannot be found we could show a dialog with a
     # list of possible matches for user to choose from
     def _check_band(self) -> bool:
-        """Check if the artist that was input in search is the same as the one
-        found on wikipedia page. If not issues warning about mismatch and asks
+        """Check if artist from input is the same as the one on wikipedia page.
+
+        If the artist is not the same issues warning about mismatch and asks
         user if he wants to continue.
 
         See also
@@ -217,19 +223,19 @@ class WikiCooker(ParserBase):
         :meth:`terminate`
             method that takes care of ending the app execution
         """
-        album_artist = self.sections["infobox"].find(
+        album_artist = self._sections["infobox"].find(
             href="/wiki/Album")  # type: ignore
         if album_artist:
             album_artist = album_artist.parent.get_text()
 
-            if fuzz.token_set_ratio(nc(self.band), nc(album_artist)) > 90:
+            if fuzz.token_set_ratio(nc(self._band), nc(album_artist)) > 90:
                 return True
             else:
                 b = re.sub(r"[Bb]y|[Ss]tudio album", "", album_artist).strip()
-                m = (f"The Wikipedia entry for album: {self.album} belongs to "
-                     f"band: {b}\nThis probably means that entry for: "
-                     f"{self.album} by {self.band} does not exist.")
-                self.log.exception(m)
+                m = (f"The Wikipedia entry for album: {self._album} belongs to"
+                     f" band: {b}\nThis probably means that entry for: "
+                     f"{self._album} by {self._band} does not exist.")
+                self._log.exception(m)
                 self.terminate(m)
 
                 return False
@@ -237,8 +243,9 @@ class WikiCooker(ParserBase):
             return False
 
     def _preload_run(self):
-        """ The main method which runs in the preload thread and calls other
-        methods based on input to load and parse the wikipedia page.
+        """Organizes the preload thread and calls other methods.
+
+        Based on input decides how to load and parse the wikipedia page.
 
         See also
         --------
@@ -247,7 +254,6 @@ class WikiCooker(ParserBase):
         :meth:`cook_soup`
             method to parse the page
         """
-
         self.preload_running = True
 
         self.get_wiki(preload=True)
@@ -256,16 +262,20 @@ class WikiCooker(ParserBase):
             self.cook_soup()
 
             if not self.error_msg:
-                self.log.info(f"Preload finished successfully, "
-                                f"found: {self.url}")
+                # file path can be too long to show in GUI
+                if "pkl" in self.url:
+                    url = "..." + self.url.rsplit("wiki_music", 1)[1]
+                else:
+                    url = self.url
+                self._log.info(f"Found: {url}")
 
         if self.error_msg:
-            self.log.info(f"Preload unsucessfull: {self.error_msg}")
+            self._log.info(f"Preload unsucessfull: {self.error_msg}")
 
         self.preload_running = False
 
     def get_wiki(self, preload=False) -> Optional[str]:
-        """ Gets wikipedia page uses offline or online version.
+        """Gets wikipedia page uses offline or online version.
 
         Parameters
         ----------
@@ -281,7 +291,6 @@ class WikiCooker(ParserBase):
         :meth:`_from_web`
             fetches the online version of page
         """
-
         # when function is called from application,
         # wait until all preloads are finished and then continue
         if not preload:
@@ -289,14 +298,14 @@ class WikiCooker(ParserBase):
                 time.sleep(0.05)
 
         try:
-            downloaded = self.wiki_downloaded.get(block=False) == self.ALBUM
+            downloaded = self._wiki_downloaded.get(block=False) == self.ALBUM
         except queue.Empty:
             downloaded = False
         finally:
             if downloaded:
                 return self.error_msg
 
-        self.log.debug("getting wiki")
+        self._log.debug("getting wiki")
 
         if SharedVars.offline_debbug:
             return self._from_disk()
@@ -304,28 +313,26 @@ class WikiCooker(ParserBase):
             return self._from_web()
 
     def _from_web(self) -> Optional[str]:
-        """ Guesses the right wikipedia page from innput artist and album name
-        and downloads it.
+        """Guesses the right wikipedia page from input and downloads it.
 
         Returns
         -------
         Optional[str]
             if some error occured return string with its description
         """
-
-        self.log.debug("from web")
+        self._log.debug("from web")
 
         searches = [
-            f"{self.album} ({self.band} album)", f"{self.album} (album)",
-            self.album
+            f"{self._album} ({self._band} album)", f"{self._album} (album)",
+            self._album
         ]
 
         try:
             for query in searches:
-                self.log.debug(f"trying query: {query}")
-                self.page = wiki.page(title=query, auto_suggest=True)
-                summ = nc(self.page.summary)
-                if nc(self.band) in summ and nc(self.album) in summ:
+                self._log.debug(f"trying query: {query}")
+                self._page = wiki.page(title=query, auto_suggest=True)
+                summ = nc(self._page.summary)
+                if nc(self._band) in summ and nc(self._album) in summ:
                     break
             else:
                 self.error_msg = "Could not get wikipedia page."
@@ -333,9 +340,9 @@ class WikiCooker(ParserBase):
         except wiki.exceptions.DisambiguationError as e:
             print("Found entries: {}\n...".format("\n".join(e.options[:3])))
             for option in e.options:
-                if self.band in option:
+                if self._band in option:
                     print(f"\nSelecting: {option}\n")
-                    self.page = wiki.page(option)
+                    self._page = wiki.page(option)
                     break
             else:
                 self.error_msg = ("Couldn't select best album entry "
@@ -343,46 +350,47 @@ class WikiCooker(ParserBase):
 
         except wiki.exceptions.PageError:
             try:
-                self.page = wiki.page(f"{self.album} {self.band}")
+                self._page = wiki.page(f"{self._album} {self._band}")
             except wiki.exceptions.PageError as e:
                 self.error_msg = "Album was not found on wikipedia"
 
-        # TODO this is dangerous, can hide other types of exceptions
-        except (wiki.exceptions.HTTPTimeoutError, Exception) as e:
+        except wiki.exceptions.HTTPTimeoutError as e:
             self.error_msg = ("Search failed probably due to "
-                              "poor internet connetion.")
+                              "poor internet connetion:")
+        except Exception as e:
+            self.error_msg = (f"Search failed with unspecified exception: {e}")
         else:
             self.error_msg = None
-            self.wiki_downloaded.put(self.ALBUM)
+            self._wiki_downloaded.put(self.ALBUM)
 
         return self.error_msg
 
     def _from_disk(self) -> Optional[str]:
-        """Loads wikipedia page from pickle file on disk.
+        """Load wikipedia page from pickle file on disk.
 
         Returns
         -------
         Optional[str]
             if some error occured return string with its description
         """
-
         # TODO pickle probably cannot handle some complex pages
-        self.log.debug(f"loading pickle file {self.url}")
+        self._log.debug(f"loading pickle file {self.url}")
         if path.isfile(self.url):
             with open(self.url, 'rb') as f:
-                self.log.debug("loading ...")
-                self.page = pickle.load(f)
-            self.log.debug("done")
+                self._log.debug("loading ...")
+                self._page = pickle.load(f)
+            self._log.debug("done")
             self.error_msg = None
-            self.wiki_downloaded.put(self.ALBUM)
+            self._wiki_downloaded.put(self.ALBUM)
         else:
             self.error_msg = "Cannot find cached offline version of page."
 
         return self.error_msg
 
     def cook_soup(self) -> Optional[str]:
-        """ Takes page downloaded from wikipedia and and parses it with use
-        of bs4. Then splits the page to dictionary of sections each section
+        """Parse downloaded wikipedia page with bs4 to BeautifulSoup object.
+
+        Then splits the page to dictionary of sections, where each section
         is indexed by its name.
 
         Returns
@@ -390,9 +398,8 @@ class WikiCooker(ParserBase):
         Optional[str]
             if some error occured return string with its description
         """
-
         try:
-            cooked = self.soup_ready.get(block=False) == self.ALBUM
+            cooked = self._soup_ready.get(block=False) == self.ALBUM
         except queue.Empty:
             cooked = False
         finally:
@@ -400,14 +407,14 @@ class WikiCooker(ParserBase):
                 return self.error_msg
 
         # make BeautifulSoup black magic
-        self.soup = bs4.BeautifulSoup(self.page.html(),
-                                      features="lxml")  # type: ignore
+        self._soup = bs4.BeautifulSoup(self._page.html(),
+                                       features="lxml")  # type: ignore
 
         # split page to parts
-        self.sections = collections.OrderedDict()
+        self._sections = collections.OrderedDict()
 
         # h2 mark the main haedings in document
-        for h2 in self.soup.find_all("h2"):
+        for h2 in self._soup.find_all("h2"):
 
             # heading should have a name marked by css class mw-headline
             # if not skip it
@@ -428,15 +435,15 @@ class WikiCooker(ParserBase):
                 else:
                     value.append(s)
 
-            self.sections[name] = value
+            self._sections[name] = value
 
         # add infobox to the sections
-        self.sections["infobox"] = self.soup.find(
+        self._sections["infobox"] = self._soup.find(
             "table", class_="infobox vevent haudio")
 
         # check if the album belongs to band that was requested
         if self._check_band():
-            self.soup_ready.put(self.ALBUM)
+            self._soup_ready.put(self.ALBUM)
             self.error_msg = None
         else:
             self.error_msg = "Album doesnt't belong to the requested band"

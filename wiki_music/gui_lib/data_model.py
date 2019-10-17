@@ -4,7 +4,7 @@ Warnings
 --------
 All parser interaciton should be hanhled by this class. Parser methods and
 attributes should not be accesed directly in GUI.
-""" 
+"""
 
 import logging
 from typing import Iterable, List, Optional, Union
@@ -15,7 +15,7 @@ from wiki_music.gui_lib import (BaseGui, CustomQStandardItem,
                                 ResizablePixmap)
 from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QModelIndex,
                                             QPixmap, QStandardItemModel,
-                                            QTimer)
+                                            QTimer, QMessageBox)
 from wiki_music.library.parser import WikipediaRunner
 from wiki_music.utilities import SharedVars, exception
 
@@ -62,11 +62,11 @@ class ParserInteract(BaseGui):
 
         :type: str
         """
-        return self._parser.selected_genre
+        return self._parser.GENRE
 
     @GENRE.setter
     def GENRE(self, value: str):
-        self._parser.selected_genre = value
+        self._parser.GENRE = value
         self.genre_entry.setText(value)
 
     @property
@@ -82,11 +82,11 @@ class ParserInteract(BaseGui):
 
         :type: str
         """
-        return self._parser.release_date
+        return self._parser.DATE
 
     @DATE.setter
     def DATE(self, value: str):
-        self._parser.release_date = value
+        self._parser.DATE = value
         self.year_entry.setText(value)
 
     @property
@@ -104,11 +104,11 @@ class ParserInteract(BaseGui):
 
         :type: str
         """
-        return self._parser.album
+        return self._parser.ALBUM
 
     @ALBUM.setter
     def ALBUM(self, value: str):
-        self._parser.album = value
+        self._parser.ALBUM = value
         self.album_entry.setText(value)
         self.album_entry_input.setText(value)
 
@@ -127,11 +127,11 @@ class ParserInteract(BaseGui):
 
         :type: str
         """
-        return self._parser.band
+        return self._parser.ALBUMARTIST
 
     @ALBUMARTIST.setter
     def ALBUMARTIST(self, value: str):
-        self._parser.band = value
+        self._parser.ALBUMARTIST = value
         self.band_entry.setText(value)
         self.band_entry_input.setText(value)
 
@@ -169,8 +169,6 @@ class ParserInteract(BaseGui):
         --------
         :attr:`wiki_music.library.parser.base.ParserBase.work_dir`
             parser attribute tied to this property
-        :class:`BaseGui.display_dir`
-            Qt entry field tied to this property
 
         :type: str
         """
@@ -178,8 +176,9 @@ class ParserInteract(BaseGui):
 
     @work_dir.setter
     def work_dir(self, value: str):
-        self.display_dir.setText(value)
         self._parser.work_dir = value
+        if value:
+            self.setWindowTitle(f"Wiki Music - {value}")
 
     @property
     def COVERART(self):
@@ -250,7 +249,7 @@ class ParserInteract(BaseGui):
 
         Number of tracks detected by parser on wikipedia or load from disk.
 
-        :type: int            
+        :type: int
         """
         return len(self._parser)
 
@@ -268,10 +267,8 @@ class ParserInteract(BaseGui):
         Reinitializes parser and SharedVars attributes so a new search can be
         performed.
         """
-
         # TODO non-atomic
         self._parser.__init__(protected_vars=False)
-        self._parser.list_files()
         SharedVars.re_init()
 
 
@@ -317,6 +314,47 @@ class DataModel(ParserInteract):
 
         log.debug("init data model done")
 
+    def _input_is_present(self, with_warn=False) -> bool:
+        """Check if apropriate input to conduct search is present.
+
+        Returns
+        -------
+        bool
+            true if all requested inputs are present
+        """
+        group = [self.ALBUMARTIST, self.ALBUM, self.work_dir]
+        if all(group):
+            return True
+        else:
+            alb, bnd, wkd, inp, com, _and = [""] * 6
+            if not self.ALBUM:
+                alb = " album"
+            if not self.ALBUMARTIST:
+                bnd = " band"
+            if not self.work_dir:
+                wkd = " select working directory"
+
+            if any([alb, bnd]):
+                inp = "input"
+            if all([alb, bnd, wkd]):
+                com = ","
+            elif all([alb, bnd]):
+                com = " and"
+            if all([alb, wkd]) or all([wkd, bnd]):
+                _and = " and"
+
+            msg = f"You must {inp}{alb}{com}{bnd}{_and}{wkd}"
+
+            if with_warn:
+                message = QMessageBox()
+                message.setIcon(QMessageBox.Information)
+                message.setWindowTitle("Message")
+                message.setText(msg)
+                message.exec_()
+                self._log.warning(msg)
+
+            return False
+
     def _gui_to_parser(self):
         """Transfers data from GUI to parser.
 
@@ -326,7 +364,6 @@ class DataModel(ParserInteract):
         locking mechanism. We rely on the fact that only GUI or the parser
         are trying to access data at a given time.
         """
-
         col: int
 
         # TODO non-atomic
@@ -346,21 +383,20 @@ class DataModel(ParserInteract):
         See also
         --------
         :class:`wiki_music.gui_lib.custom_classes.ResizablePixmap`
-        
+
         Parameters
         ----------
         image: bytearray
             force displaying of the input image instead of the one contained in
             parser. Also the input image is saved to parser.
         """
-
         if image:
             self.COVERART = image
 
         if self.cover_art:
             self.cover_art.update_pixmap(self.COVERART)
         else:
-            self.cover_art = ResizablePixmap(self.COVERART)
+            self.cover_art = ResizablePixmap(self.COVERART, stretch=False)
             self.picture_layout.addWidget(self.cover_art)
 
     @exception(log)
@@ -414,7 +450,6 @@ class DataModel(ParserInteract):
             index of the proxy model cell, needs to be translated to real table
             cell index
         """
-
         # proxy_index is QModelIndex proxyIndex Class type
         # it is index of data mapping as shown in gui
         # real indeces are different
@@ -445,11 +480,11 @@ class DataModel(ParserInteract):
             # None is the default argument for text since QTextEdit
             # signal doesn´t retutn text
             ent.textChanged.connect(
-                lambda text=None, c=col: self.__text_check__(row, c, text))
+                lambda text=None, c=col: self._text_check(row, c, text))
 
-    def __text_check__(self, row: int, col: int, text: Optional[str]):
+    def _text_check(self, row: int, col: int, text: Optional[str]):
         """Writes changed text in detail tab to table.
-        
+
         Parameters
         ----------
         row: int
@@ -459,7 +494,6 @@ class DataModel(ParserInteract):
         text: Optional[str]
             text put in cell, if None read it from :attr:`lyrics_detail`
         """
-
         if text is None:
             text = self.lyrics_detail.toPlainText()
 

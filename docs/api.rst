@@ -1,16 +1,20 @@
 API reference
 =============
 
+.. warning:: 
+    Documentation is stil under construction some things might not be up to
+    date.
 
 This file describes wiki_music API reference. Beware, some things might not be
 up to date and all is subject to change since we are still in early
 development phase.
 
-We often use throughout the documentation notation same as python 
-`typing <https://docs.python.org/3/library/typing.html>`_. 
-module to mark variable types as it is richer and preserves more information.
-e.g. List[str] obviously means list of strings. More on the matter can be
-read in the typing module documentation.
+.. note::
+    We often use throughout the documentation notation same as python 
+    `typing <https://docs.python.org/3/library/typing.html>`_. 
+    module to mark variable types as it is richer and preserves more
+    information. e.g. List[str] obviously means list of strings. More on the
+    matter can be read in the typing module documentation.
 
 .. toctree::
    :maxdepth: 2

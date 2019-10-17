@@ -4,10 +4,11 @@
 
 ###### Searching and Downloading Google Images to the local disk ######
 
-# libraries for wiki_music
+# ! added for wiki_music ##################################################
 from wiki_music.utilities.gui_utils import get_sizes
 import logging
 import queue
+# ! added for wiki_music ##################################################
 
 # Import Libraries
 import sys

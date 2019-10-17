@@ -6,7 +6,9 @@
 Welcome to Wiki music's documentation!
 ======================================
 
-Documentation is still under construction !!! but most parts are commplete.
+.. warning:: 
+    Documentation is stil under construction some things might not be up to
+    date.
 
 Projects home directory is:
 `wikipedia-music-tags <https://github.com/marian-code/wikipedia-music-tags>`_. 

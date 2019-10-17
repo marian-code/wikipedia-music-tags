@@ -9,7 +9,7 @@ from wiki_music.library.parser.base import ParserBase
 
 
 class TestTagConsistency(unittest.TestCase):
-    """ Test that tags in constnts and tag handlers are consistent """
+    """Test that tags in constnts and tag handlers are consistent """
 
     def test_flac_consistency(self):
         self.assertEqual(sorted(TagFlac._map_keys.values()), sorted(TAGS + ("COMMENT",)))

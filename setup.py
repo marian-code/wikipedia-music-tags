@@ -44,6 +44,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Multimedia :: Sound/Audio :: Analysis",
         "Typing :: Typed"
     ],
@@ -53,8 +54,8 @@ setup(
     python_requires=">=3.6",
     entry_points={
         "console_scripts": [
-            "wiki_music_gui=wiki_music.app_gui:main",
-            "wiki_music_cli=wiki_music.app_cli:main",
+            "wiki-music-gui=wiki_music.app_gui:main",
+            "wiki-music-cli=wiki_music.app_cli:main",
         ]
     },
 )

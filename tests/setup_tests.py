@@ -1,4 +1,4 @@
-""" Manipulate path so tests can import wiki_music_package. """
+"""Manipulate path so tests can import wiki_music_package"""
 import os
 import sys
 

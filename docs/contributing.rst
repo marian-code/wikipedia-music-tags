@@ -1,6 +1,10 @@
 Contributing Guide
 ==================
 
+.. warning:: 
+    Documentation is stil under construction some things might not be up to
+    date.
+
 Running the tests
 -----------------
 

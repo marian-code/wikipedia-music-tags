@@ -1,4 +1,4 @@
-""" Module which holds all the important constants used throughout the package.
+"""Module which holds all the important constants used throughout the package.
 """
 
 import logging
