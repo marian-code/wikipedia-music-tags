@@ -10,9 +10,9 @@ from wiki_music.utilities import input_parser, set_log_handles
 
 
 def main():
-
+    """GUI entry point."""
+    # setup logging levels and add file handles.
     debug = input_parser()[-1]
-
     if debug:
         set_log_handles(logging.DEBUG)
     else:

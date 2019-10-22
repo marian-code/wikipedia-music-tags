@@ -1,12 +1,19 @@
 """Fancy lyrics managment."""
 
 import logging
-from typing import Iterator, List
+from typing import TYPE_CHECKING, Iterator, List
 
 from . import extractors
 from .extractor import LyricsExtractor
+from .extractors.animelyrics import Animelyrics
+from .extractors.azlyrics import AZLyrics
+from .extractors.darklyrics import Darklyrics
+from .extractors.genius import Genius
+from .extractors.lyrical_nonsense import LyricalNonsense
+from .extractors.lyricsmode import Lyricsmode
+from .extractors.musixmatch import MusixMatch
 from .models import Lyrics, LyricsOrigin, exceptions
-from .utils import UrlData, search, generate_url
+from .utils import UrlData, generate_url, search
 
 log = logging.getLogger(__name__)
 
@@ -21,14 +28,15 @@ class LyricsManager:
     @classmethod
     def setup(cls):
         log.debug("setting up")
-        extractors.load_extractors()
+        # ! dissabled because of pyinstaller
+        # extractors.load_extractors()
 
         cls.extractors = LyricsExtractor.extractors
         log.info("loaded {} extractors".format(len(cls.extractors)))
 
     def extract_lyrics(self, url: str, song: str, artist: str) -> Lyrics:
         """Extract lyrics from url."""
-        #log.info("extracting lyrics from url \"{}\"".format(url))
+        log.info("extracting lyrics from url \"{}\"".format(url))
         url_data = UrlData(url)
         for ext in self.extractors:
 
@@ -38,7 +46,7 @@ class LyricsManager:
             extractor = ext()
 
             log.debug("using {} for {}".format(ext, url_data))
-            
+
             try:
                 lyrics = extractor.extract_lyrics(url_data, song, artist)
             except exceptions.NoLyrics:
@@ -56,7 +64,7 @@ class LyricsManager:
             else:
                 lyrics.origin = LyricsOrigin(url, extractor.name,
                                              extractor.url)
-                log.debug("extracted lyrics {}".format(lyrics))
+                log.debug(f"extracted lyrics {lyrics}")
                 return lyrics
         raise exceptions.NoExtractorError(url)
 

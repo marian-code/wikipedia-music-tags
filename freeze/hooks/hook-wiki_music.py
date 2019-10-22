@@ -1,8 +1,8 @@
 """Hook for wiki_music."""
 
-from PyInstaller.utils.hooks import collect_data_files
-from wiki_music.constants import ROOT_DIR
-import os
+#from PyInstaller.utils.hooks import collect_data_files
+#from wiki_music.constants import ROOT_DIR
+#import os
 
 hiddenimports = [
     "wiki_music.version",
@@ -20,6 +20,7 @@ hiddenimports = [
     "wiki_music.external_libraries.lyricsfinder.extractors.musixmatch",
 ]
 
+"""
 # collect the ui files
 UI_PATH = os.path.join(ROOT_DIR, "ui")
 
@@ -27,3 +28,4 @@ datas = []
 for f in os.scandir(UI_PATH):
     if f.is_file() and f.name.endswith(".ui"):
         datas.append((os.path.join(UI_PATH, f.name), "ui"))
+"""

@@ -1,17 +1,24 @@
 # To-Do
 
 ### Main problems ordered by targeted release
-- 0.5a0
+- 0.6a0
+  - delete do not bother setting when api key or nltk data are manually
+    downloaded
+  - fix manual google api search key running even if NO selcted
   - fix extraction for endless forms most beautiful
   - fix as many bugs as possible
   - make parallel freezing, and package for release
-  - fix gui startup and show file speed, too slow, mybe big cover art?
+  - fix gui startup and show file speed, too slow, maybe big cover art?
   - preload needs a complete rewrite the logic is horribly complex, too many
     classes manipulate preload related variables
 - 0.xb0
+  - make proper progressbar indicators
   - fix gui scaling and elements moving around
   - convert constants to re patterns for better matching and use more re for better extraction
   - try to setup some CI system
+  - cells with dropdowns for subtracks
+  - make parser iterable
+  - implement pathlib
 - 1.0.0
   - write automated tests
   - use https://coveralls.io for code test coverage stats
@@ -21,7 +28,6 @@
 
 ### Freezing problems
 - upx probably messes some dll, PIXmap does not work, pictures are blank
-- pyinstaller now does not include wiki_music in frozen app
 
 ### Ideas
 - parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
@@ -36,7 +42,8 @@
 - cover art search could anounce new downloaded images by signals if we were using QThreads
 - use custom widgets to simplify GUI https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/ e.g. tableWiew
 - parser locks could be implemented easilly by getattr and set attr only for public attributes.
-- cells with dropdowns for subtracks
+- keep reference of all running threads and gui elements and cleanup on exit
+
 
 ###  Individual problem cases 
 - load guests as in https://en.wikipedia.org/wiki/Emerald_Forest_and_the_Blackbird
@@ -44,9 +51,62 @@
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 
+# Release checklist
+- update version
+- update docs as necessary
+- run build docs test
+- remove dirs `dist` and `build`
+- build wheel with `python setup.py build bdist_wheel`
+- check if proper files are present in wheel
+- upload with `twine upload dist/*`
+- build frozen app, check if it runs, package to zip
+- create a github release
+
 # Change Log
 
-### 16.10.2019 0.4a0
+### 21.10.2019 - 0.5a0
+- finnished and tested new implementation of parser - GUI comunication, it is
+  a lot cleaner and less error prone
+- SharedVars class ha been simplified a lot
+- improved type checking in library.lyrics module
+- better progress reporting in ThreadPool with less overhead and potential to
+  collect messages from running thread.
+- fixed (with a workaround) a strange problem when low level lazy-loaded tag
+  handlers would refuse to load
+
+### 20.10.2019
+- comunication between gui and parser has been completely reworked with use of
+  queue.Queue. It is musch more elegant and effective. An action object is
+  passed byck anf forth by gui and parser
+- reworked exception classes loading
+- TypedDict implementation in google images download and lyrics for correct
+  type checking
+
+### 19.10.2019
+- finished porting to pathlib
+- fixed api key and nltk download halting gui
+- multiple docstings inprovements
+- simplified low level tag handling, used more of mutagen utilitie functions
+- added async threadpool generator
+- fixed multiple small bugs
+- tags for each song are read in separate thread
+- improvements to lock in SharedVars
+- fixed parser reinit, moved to separate method
+- tag writing tested, should be more reliable
+- fixed some typing errors
+- moved api key getter and nltk downloader to separate files
+
+### 18.10.2019
+- fixed lyricsfinding in frozen app, had to move away from lyricsfinder nice
+  automatic imports
+- moved nlth data download to app from setup.py
+- implemented one universal settings dict class which takes care of saving
+  and reading configuration
+- classes for getting google API key and nltk data are now in separate file:
+  getters under utilities
+- started pathlib implementation, this wil cause maaaaany bugs
+
+### 17.10.2019 - 0.4a0
 - selenium dependency was caused by high download limit for
   google_images_download, limit is now set to 100
 - fixed premature preload start
@@ -55,8 +115,9 @@
 - some dlls must be excluded from UPX compression otherwise they are messed up
   and the executable is not working
 - we got ~37% reduction in size of GUI app and 25% for CLI app
+- new docs build test
 
-### 15.10.2019 - 0.3a4
+### 16.10.2019 - 0.3a5
 - fixed some gui scaling problems
 - parser get methods now return so they can be used directly
 - fixed marking of private methods in parser
@@ -65,7 +126,7 @@
 - added selenium dependency for google_images_download
 - added pypiwin32 dependency for building frozen app
 
-### 14.10.2019 - 0.3a4
+### 15.10.2019 - 0.3a4
 - completelly reworked logging
 - finally readthedocs build is passing at long last, had to install with pip
 - publish to PyPi

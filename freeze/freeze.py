@@ -3,6 +3,8 @@
 import PyInstaller
 import argparse
 from typing import Set
+import logging
+import shutil
 
 if float(PyInstaller.__version__[0]) >= 4:
     from PyInstaller.depend.imphook import ModuleHook  # pylint: disable=no-name-in-module, import-error
@@ -52,6 +54,21 @@ def input_parser():
     return args.mode.upper()
 
 
+def set_loggers():
+    for name in logging.root.manager.loggerDict:
+        log = logging.getLogger(name)
+
+        if name == "PyInstaller":
+            fh = logging.FileHandler("freeze_build.log", mode="w")
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(logging.Formatter("%(levelname)s - %(module)s - "
+                                              "%(message)s"))
+            log.addHandler(fh)
+
+
+# setup loggers
+set_loggers()
+
 # monkey patch hooks
 original_load_hook_module = ModuleHook._load_hook_module
 ModuleHook._load_hook_module = patched_load_hook_module
@@ -90,12 +107,12 @@ installer_opt = [
     # "--version-file=<FILE>",
 
     # debbugging options
-    # "--debug=bootloader",
-    # "--debug=all",
-    # "--debug=noarchive",
+    "--debug=bootloader",
+    "--debug=all",
+    "--debug=noarchive",
 
     # upx options
-    "--noupx",
+    #"--noupx",
     "--upx-exclude=vcruntime140.dll",
     "--upx-exclude=msvcp140.dll",
     "--upx-exclude=qwindows.dll",
@@ -113,18 +130,37 @@ installer_opt = [
     # what to build
     "--onedir",
     # "--onefile",
-    "--name=wiki_music"
+    "--name=wiki_music",
 ]
 
 # installer options specific to gui or cli
 if input_parser() == "GUI":
+
+    try:
+        shutil.rmtree("gdist")
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        print(e)
+        sys.exit()
+
     installer_opt.extend([
         "--distpath=gdist",
-        "--windowed",
+        #"--windowed",
         f"--add-data={path.join(PACKAGE_PATH, 'wiki_music', 'data')};data",
+        f"--add-data={path.join(PACKAGE_PATH, 'wiki_music', 'ui')};ui",
         f"{path.join(PACKAGE_PATH, 'wiki_music', 'app_gui.py')}"
     ])
 else:
+
+    try:
+        shutil.rmtree("cdist")
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        print(e)
+        sys.exit()
+
     installer_opt.extend([
         "--distpath=cdist",
         "--console",

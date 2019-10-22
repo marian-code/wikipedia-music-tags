@@ -2,19 +2,25 @@
 
 import logging
 from collections import OrderedDict
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from mutagen.flac import FLAC, FLACNoHeaderError, Picture
 from mutagen.id3 import PictureType
 
 from .tag_base import TagBase
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 log = logging.getLogger(__name__)
 log.debug("loading flac module")
 
+__all__ = ["TagFlac"]
+
 
 class TagFlac(TagBase):
-    """A low level implementation of tag handling for flac files"""
+    """A low level implementation of tag handling for flac files."""
+
     __doc__ += TagBase.__doc__  # type: ignore
 
     _map_keys = OrderedDict([
@@ -32,15 +38,14 @@ class TagFlac(TagBase):
         ("picture", "COVERART")]
     )
 
-    def _open(self, filename: str):
-        """Function reading flac file to mutagen.flac.FLAC class"""
-
+    def _open(self, filename: "Path"):
+        """Function reading flac file to mutagen.flac.FLAC class."""
         try:
             self._song = FLAC(filename=filename)
         except FLACNoHeaderError:
-            print("Cannot read FLAC tags")
+            log.warning("Cannot read FLAC tags")
 
-    def _read(self) -> Dict[str, Union[str, bytearray]]:
+    def _read(self) -> Dict[str, Union[str, bytes]]:
 
         tags = dict()
         for key, value in self._map_keys.items():  # pylint: disable=no-member
@@ -50,17 +55,15 @@ class TagFlac(TagBase):
                     continue
                 else:
                     tag = self._song.tags[key]
-                    if isinstance(tag, list):
-                        tag = tag[0]
-                    tag = str(tag).strip()
+
             except (KeyError, AttributeError):
-                tag = ""
+                tag = self._get_default_tag(value)
             finally:
-                tags[value] = tag
+                tags[value] = self._process_tag(tag)
 
         return tags
 
-    def _write(self, tag: str, value: Union[str, bytearray]):
+    def _write(self, tag: str, value: Union[str, bytes]):
 
         if tag == "COVERART":
 

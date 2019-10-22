@@ -1,8 +1,7 @@
-"""Base module for all parser classes from which they import ParserBase
-class that sets all the default attributes.
-"""
+"""Base module for all parser classes."""
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from wiki_music.utilities import MultiLog
@@ -11,24 +10,22 @@ __all__ = ["ParserBase"]
 
 log = logging.getLogger(__name__)
 
-# only for static typechecker, is False at runtime
 if TYPE_CHECKING:
-    from wikipedia import WikipediaPage
     from bs4 import BeautifulSoup
-
     Bs4Soup = Optional["BeautifulSoup"]
-    WikiPage = Optional["WikipediaPage"]
 
 SList = List[str]  # list of strings
+PList = List[Path]  # list of strings
 IList = List[int]  # list of ints
 NSList = List[SList]  # nested list
 NIList = List[IList]  # nested list
 
 
 class ParserBase:
-    """The base clas for all :mod:`wiki_music.parser` subclasses. Defines the
-    necessary attributes. The uppercased attributes correspond to tag names
-    for easier access.
+    """The base clas for all :mod:`wiki_music.parser` subclasses.
+
+    Defines the necessary attributes. The uppercased attributes correspond to
+    tag names for easier access.
 
     Warnings
     --------
@@ -41,12 +38,16 @@ class ParserBase:
 
     Attributes
     ----------
+    offline_debug: bool
+        determines if app will run in offline debug mode
+    write_yaml: bool
+        determines if tracklist in  format will be output
     _contents: List[str]
         stores the wikipedia page contents
     _disk_sep: List[int]
         list of tracks separating disks e.g. if CD 1 = (1, 13) and
-        CD 2 = (14, 20), _disk_sep = [0, 12, 19] the offset by one if because of
-        zero first index
+        CD 2 = (14, 20), _disk_sep = [0, 12, 19] the offset by one if because
+        of zero first index
     _disks: List[list]
         holds album disks titles
     genres: List[str]
@@ -55,7 +56,7 @@ class ParserBase:
         tracklist table headers
     NLTK_names: List[str]
         list of Person Named Entities extracted from wikipedia page by nltk.
-        See :meth:`wiki_music.library.parser.process_page.WikipediaParser._extract_names`
+        See :attr:`wiki_music.library.parser.process_page.WikipediaParser.NLTK_names`
         for details on how and from which parts of test the names are extracted
     _personnel: List[str]
         list holding adittional personnel participating on album
@@ -66,7 +67,7 @@ class ParserBase:
         each entry holds list of subtracks for one track
     _subtypes: List[List[str]]
         each entry holds list of types for each subtrack
-    work_dir: str
+    work_dir: Path
         string with path to directory with music files, this variable can be
         protected from reseting in __init__ method
     log: :class:`wiki_music.utilities.utils.MultiLog`
@@ -78,11 +79,9 @@ class ParserBase:
         section title
     """
 
-    files: SList
+    files: PList
     bracketed_types: SList
     _sections: Dict[str, List["Bs4Soup"]]
-    _page: "WikiPage"
-    _soup: "Bs4Soup"
 
     def __init__(self, protected_vars: bool) -> None:
 
@@ -102,7 +101,7 @@ class ParserBase:
         self._numbers: SList = []
         self._personnel: SList = []
         self._bracketed_types: SList = []
-        self._files: SList = []
+        self._files: PList = []
 
         # lists 2D
         self._appearences: NIList = []
@@ -111,8 +110,8 @@ class ParserBase:
         self._subtypes: NSList = []
         self._subtracks: NSList = []
 
-        # bytearray
-        self.cover_art: bytearray = bytearray()
+        # bytes
+        self.cover_art: bytes = bytes()
 
         # strings
         self._release_date: str = ""
@@ -123,23 +122,32 @@ class ParserBase:
         if protected_vars:
             self._album: str = ""
             self._band: str = ""
-            self.work_dir: str = ""
+            self.offline_debug = False
+            self.write_yaml = False
+            self.work_dir: Path = Path("")
             self._log: MultiLog = MultiLog(log)
             self._GUI = False
 
         self._log.debug("parser base done")
 
+    def reinit(self, protected_vars: bool):
+        """Reinitializes parser variables."""
+        ParserBase.__init__(self, protected_vars=protected_vars)
+
     def __len__(self):
+        """Return parser number of tracks."""
         return len(self._numbers)
 
     def __bool__(self):
+        """Return True if parser has at least one track."""
         return bool(self.__len__())
 
     @property
     def ALBUM(self) -> str:
-        """string with album name, this variable can be protected from
-        reseting in __init__ method.
-        
+        """String with album name.
+
+        This attribute can be protected from reseting in __init__ method.
+
         :type: str
         """
         return self._album
@@ -150,8 +158,9 @@ class ParserBase:
 
     @property
     def ALBUMARTIST(self) -> str:
-        """string with band name, this variable can be protected from reseting
-        in __init__ method.
+        """String with band name.
+
+        This attribute can be protected from reseting in __init__ method.
 
         :type: str
         """
@@ -186,15 +195,15 @@ class ParserBase:
         self._composers = value
 
     @property
-    def COVERART(self) -> bytearray:
-        """Holds coverart read into memory as a bytes object. 
+    def COVERART(self) -> bytes:
+        """Holds cover art read into memory as a bytes object.
 
-        :type: bytearray
+        :type: bytes
         """
         return self.cover_art
 
     @COVERART.setter
-    def COVERART(self, value: bytearray):
+    def COVERART(self, value: bytes):
         self.cover_art = value
 
     @property
@@ -223,7 +232,9 @@ class ParserBase:
 
     @property
     def GENRE(self) -> str:
-        """If :attr:`genres` is a list with one item, than it is that item,
+        """Holds the album genre selected automatically or by user.
+
+        If :attr:`genres` is a list with one item, than it is that item,
         otherwise user input is required to select from genres list.
 
         :type: str
@@ -276,11 +287,11 @@ class ParserBase:
 
         :type: List[str]
         """
-        return self.files
+        return [str(f) for f in self.files]
 
     @FILE.setter
     def FILE(self, value: SList):
-        self.files = value
+        self.files = [Path(v) for v in value]
 
     @property
     def TYPE(self) -> SList:

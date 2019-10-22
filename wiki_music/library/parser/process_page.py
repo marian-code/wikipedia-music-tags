@@ -1,4 +1,5 @@
-"""This module containns the whole parser with all the inherited subclasses.
+"""Module containing the whole parser with all the inherited subclasses.
+
 Class :class:`WikipediaParser` has complete functionallity but its methods need
 to be called in the correst order to give sensible results.
 """
@@ -13,14 +14,15 @@ import datefinder  # lazy loaded
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
 import fuzzywuzzy.process as process  # lazy loaded
 
-from wiki_music.constants import FILES_DIR
-from wiki_music.constants.parser_const import *
-from wiki_music.utilities import (NLTK, SharedVars, caseless_contains,
-                                  complete_N_dim, delete_N_dim, flatten_set,
-                                  for_all_methods, get_image, normalize,
-                                  normalize_caseless, replace_N_dim,
-                                  time_methods, warning)
-from wiki_music.utilities.exceptions import *
+from wiki_music.constants import (COMPOSER_HEADER, DEF_TYPES, DELIMITERS,
+                                  FILES_DIR, ORDER_NUMBER, PERSONNEL_SECTIONS,
+                                  TO_DELETE, UNWANTED, WIKI_GENRES)
+from wiki_music.utilities import (
+    NLTK, NltkUnavailableException, NoContentsException, NoCoverArtException,
+    NoGenreException, NoNames2ExtractException, NoPersonnelException,
+    NoReleaseDateException, NoTracklistException, caseless_contains,
+    complete_N_dim, delete_N_dim, flatten_set, for_all_methods, get_image,
+    normalize, normalize_caseless, replace_N_dim, time_methods, warning)
 
 from .base import ParserBase
 from .extractors import DataExtractors
@@ -30,8 +32,6 @@ from .preload import WikiCooker
 nc = normalize_caseless
 log = logging.getLogger(__name__)
 
-NLTK.run_import(log)  # imports nltk in separate thread
-
 log.debug("parser imports done")
 
 __all__ = ["WikipediaParser"]
@@ -39,7 +39,7 @@ __all__ = ["WikipediaParser"]
 
 @for_all_methods(time_methods)
 class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
-    """Class for parsing the wikipedia page and extracting tags data from it.
+    r"""Class for parsing the wikipedia page and extracting tags data from it.
 
     Warnings
     --------
@@ -58,12 +58,16 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
     protected_vars: bool
         defines if certain variables should be initialized by __init__ method
         or not
+    GUI: bool
+        if True - assume app is running in GUI mode\n
+        if False - assume app is running in CLI mode
     """
 
-    def __init__(self, protected_vars: bool = True) -> None:
+    def __init__(self, protected_vars: bool = True, GUI: bool = False) -> None:
 
         log.debug("init parser")
 
+        NLTK.run_import(GUI=GUI)  # imports nltk in separate thread
         WikiCooker.__init__(self, protected_vars=protected_vars)
         ParserInOut.__init__(self, protected_vars=protected_vars)
 
@@ -71,8 +75,10 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     @warning(log)
     def get_release_date(self) -> str:
-        """Gets album release date from information box in the
-        top right corner of wikipedia page. Populates:attr:`wiki_music.DATE`
+        """Get album release date.
+
+        Extracts from information box in the top right corner of
+        wikipedia page. Populates:attr:`wiki_music.DATE`
 
         Raises
         ------
@@ -84,7 +90,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         str
             release year as a string
         """
-
         dates = self._sections["infobox"].find(class_="published")
 
         if dates:
@@ -99,9 +104,11 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     @warning(log)
     def get_genres(self) -> List[str]:
-        """Gets list of album genres from information box in the
-        top right corner of wikipedia page. If found genre if only one then
-        assigns is value to :attr:`GENRE`
+        """Get list of album genres.
+
+        Extracts from information box in the top right corner of
+        wikipedia page. If found genre if only one then assigns is value
+        to :attr:`GENRE`
 
         Raises
         ------
@@ -113,7 +120,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         List[str]
             list of found genres
         """
-
         genres = self._sections["infobox"].find(class_="category hlist")
 
         if genres:
@@ -131,30 +137,21 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     @warning(log)
     def get_cover_art(self):
-        """Gets album cover art information box in the top right corner
-        of wikipedia page. Runs in a separate thread because the cover art
-        data is not used by parser in any way, so it can be downloaded in
-        the background. Populates :attr:`COVERART`
+        """Get album cover art.
+
+        Extracts from information box in the top right corner of wikipedia
+        page. Runs in a separate thread because the cover art data is not used
+        by parser in any way, so it can be downloaded in the background.
+        Populates :attr:`COVERART`
 
         Raises
         ------
         :exc:`wiki_music.utilities.exceptions.NoCoverArtException`
             if cover art url could not be found
         """
-
         # self.cover_art is not protected by lock, parser should have
         # more than enough time to get it before GUI requests it
         def cover_art_getter():
-
-            """
-            for child in self._sections["infobox"].children:
-                if child.find("img") is not None:
-                    image = child.find("img")
-                    image_url = f"https:{image['src']}"
-
-                    self.cover_art = get_image(image_url)
-                    break
-            """
             for img in self._sections["infobox"].find_all("img", src=True,
                                                           alt=True):
                 if fuzz.token_set_ratio(img["alt"], self._album) > 90:
@@ -163,18 +160,19 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             if img:
                 self.cover_art = get_image(f"https:{img['src']}")
             else:
-                with open(path.join(FILES_DIR, "Na.jpg"), "rb") as f:
-                    self.cover_art = bytearray(f.read())
+                self.cover_art = (FILES_DIR / "Na.jpg").read_bytes()
                 raise NoCoverArtException("Couldn't extract cover art from "
                                           "wikipedia page")
 
         Thread(target=cover_art_getter, name="CoverArtGetter").start()
 
     def get_composers(self) -> List[List[str]]:
-        """Extracts composers from wikipedia page. Employs complex logic.
-        First Person named entities are extracted by nltk. Then merges them
-        with composers. After that uses this list of names to try to guess
-        composers and coresponding tracks from short text above the table.
+        """Extract composers from wikipedia page.
+
+        Employs complex logic. First Person named entities are extracted by
+        nltk. Then merges them with composers. After that uses this list of
+        names to try to guess composers and coresponding tracks from short
+        text above the table.
 
         See also
         --------
@@ -192,16 +190,15 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         List[List[str]]
             list of composers for every track
         """
-
         def check_name_complete(name, text):
-            """Checks if name retrieved fromm text is complete or only part by
-            checking the following words in text.
+            """Check if name retrieved fromm text is complete.
+
+            Check is done by analyzing the following words in text.
 
             Warnings
             --------
             This method is not really dependable, has quite poor results
             """
-
             # find out if next word starts with capital
             pos_1 = text.find(normalize(name)) + len(name) + 1
             # safety measure for when we hit the string end or
@@ -288,7 +285,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         List[str]
             page contents as a list
         """
-
         # the last element is infobox which was added manually
         self._contents = [s.replace("_", " ").capitalize()
                           for s in self._sections.keys()][:-1]
@@ -300,7 +296,9 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     @warning(log)
     def get_personnel(self) -> Tuple[List[str], List[List[int]]]:
-        """Extract personnel from wikipedia page sections defined by:
+        """Extract personnel from wikipedia page.
+
+        Sxtraction is done from following sections:
         :const:`wiki_music.constants.parser_const.PERSONNEL_SECTIONS` then
         parse these entries for additional data like apperences on tracks.
 
@@ -315,7 +313,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             two lists, first contains found personnel and the second has for
             each person list of tracks on which the person appeared
         """
-
         personnel = []
         appearences = []
 
@@ -405,7 +402,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         Tuple[List[str], List[List[str]]]
             list of tracks and for each track list of atrists
         """
-
         tables = []
         for html in self._sections["track_listing"]:
             # if the toplevel tag is the table itself
@@ -431,7 +427,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 msg = (f"No tracklist found!\nURL: {self.url}\nprobably "
                        f"doesn´t belong to album: {self._album} by "
                        f"{self._band}")
-                SharedVars.warning(msg)
                 raise NoTracklistException(msg)
             else:
                 data = []
@@ -442,15 +437,13 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
     def _process_tracks(self, data: List[List[str]]
                         ) -> Tuple[List[str], List[List[str]]]:
-        """Process raw extracted list of tables with trackists for
-        track details.
-        
+        """Process raw extracted list of album CD trackists for track details.
+
         Returns
         -------
         Tuple[List[str], List[List[str]]]
             list of tracks and for each track list of atrists
         """
-
         self._disk_sep.append(0)
 
         index = 1
@@ -485,7 +478,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                                 is_composer = process.extractOne(
                                     self._header[-1][i], COMPOSER_HEADER,
                                     score_cutoff=90, scorer=fuzz.ratio)
-                            except:
+                            except Exception:
                                 self._artists[-1].extend(a)
                             else:
                                 if is_composer:
@@ -524,7 +517,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         bonus track, featuring... . These informations are assumed to be
         enclosed in brackets behind the track name.
         """
-
         self._types = []
         self._subtypes = []
 
@@ -600,11 +592,12 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                                 self._subtracks[i][j] = sbtr
 
     def _complete(self):
-        """Recursively traverses: :attr:`_composers`, :attr:`artists` and
-        :attr:`_personnel` and checks each name with each if some is found to
-        be incomplete then it is replaced by longer version from other list.
-        """
+        """Recursively complete inforamtion in parser lists.
 
+        Traverses: :attr:`_composers`, :attr:`artists` and :attr:`_personnel`
+        and checks each name with each if some is found to be incomplete then
+        it is replaced by longer version from other list.
+        """
         to_complete = (self._composers, self._artists, self._personnel)
         delete: list = ["", " "]
 
@@ -633,8 +626,10 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                     tc[i] = sorted(list(set(t)))
 
     def _merge_artist_personnel(self):
-        """Assigns personnel which have appearences specified to coresponding
-        list of track artists.
+        """Assigns personnel to track artists.
+
+        The assignment is done base on :attr:`_appearences` which specify
+        tracks for each person of personnel.
         """
         self._log.debug("merge artists and personnel")
 
@@ -643,9 +638,10 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 self._artists[a].append(person)
 
     def merge_artist_composers(self):
-        """Move all artists to composers list. This is done or left out based
-        on user input"""
+        """Move all artists to composers list.
 
+        This is done or left out based on user input
+        """
         for i, (c, a) in enumerate(zip(self._composers, self._artists)):
             self._composers[i] = sorted(list(filter(None, set(c + a))))
 
@@ -654,8 +650,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
     @property
     @warning(log, show_GUI=False)
     def NLTK_names(self):
-        """Use nltk to extract person names from supplied sections of the
-        wikipedia page.
+        """Use nltk to extract person names from sections of wikipedia page.
 
         See also
         --------
@@ -671,7 +666,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             try extraction from others parts of tha page as they are too
             cluttered by hardly classifiable information.
         """
-
         if not self._NLTK_names:
 
             document = ""
@@ -723,7 +717,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             """
 
             # filter out already found tracks
-            filtered_names = [n for n in names
-                              if fuzz.token_set_ratio(n, self._tracks) < 90]
+            self._NLTK_names = [n for n in names
+                                if fuzz.token_set_ratio(n, self._tracks) < 90]
 
         return self._NLTK_names

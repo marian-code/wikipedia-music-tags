@@ -1,7 +1,6 @@
 """Fancy wrapper functions used in whole package."""
 
 import logging
-import os
 import time  # lazy loaded
 from functools import wraps
 from threading import current_thread
@@ -9,14 +8,15 @@ from typing import TYPE_CHECKING, Any, Callable, List, NoReturn, Union
 
 from wiki_music.constants import LOG_DIR
 
-from .exceptions import *
+from .exceptions import ExceptionBase
 from .sync import SharedVars
 
 logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from logging import Logger
-    from threading import Lock
+
+__all__ = ["exception", "warning", "time_methods", "for_all_methods"]
 
 
 def exception(logger: "Logger", show_GUI: bool = True) -> Callable:
@@ -56,39 +56,6 @@ def exception(logger: "Logger", show_GUI: bool = True) -> Callable:
     return real_wrapper
 
 
-def synchronized(lock: "Lock") -> Callable:
-    """Synchronization decorator.
-
-    Syncs all decorated callables which are passed the same lock.
-
-    Warnings
-    --------
-    Do not use on computationally heavy functions, as this could cause GUI
-    freezing. When dealing with such functions always lock only single
-    variables
-
-    Parameters
-    ----------
-    lock: threading.Lock
-        lock instance
-
-    Returns
-    -------
-    Callable
-        callable synchronized with passed lock
-    """
-    def real_wrapper(function: Callable) -> Callable:
-        @wraps(function)
-        def wrapper(*args, **kwargs):
-            lock.acquire()
-            try:
-                return function(*args, **kwargs)
-            finally:
-                lock.release()
-        return wrapper
-    return real_wrapper
-
-
 def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
     """Catch and inform user of module defined exceptions.
 
@@ -117,11 +84,7 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
         def wrapper(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
-            except (NoTracklistException, NoReleaseDateException,
-                    NoGenreException, NoCoverArtException,
-                    NoNames2ExtractException, NoContentsException,
-                    NoPersonnelException, Mp3tagNotFoundException,
-                    NltkUnavailableException) as e:
+            except ExceptionBase.registered_exceptions as e:
                 logger.warning(e)
                 if show_GUI:
                     SharedVars.warning(e)
@@ -130,7 +93,7 @@ def warning(logger: "Logger", show_GUI: bool = True) -> Callable:
     return real_wrapper
 
 
-class Timer:
+class SimpleTimer:
     """Timing context manager. measures execution time of a function.
 
     Parameters
@@ -153,14 +116,13 @@ class Timer:
 
     def __init__(self, function_name: str) -> None:
         self.function_name = function_name
-        self.path = os.path.join(LOG_DIR, "timing_stats.log")
+        self.path = LOG_DIR / "timing_stats.log"
         self.start = 0
         self.end = 0
 
-        if not os.path.isfile(self.path):
-            os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            with open(self.path, "w") as f:
-                f.write("")
+        if not self.path.is_file():
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.write_text("")
 
     def __enter__(self):
         self.start = time.perf_counter()
@@ -169,7 +131,50 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.perf_counter()
 
-        with open(self.path, "a") as f:
+        with self.path.open("w") as f:
+            f.write(f"{current_thread().name:15} --> {self.function_name:30}"
+                    f"{(self.end - self.start):8.4f}s\n")
+
+
+class _Timer:
+    """Timing context manager. measures execution time of a function.
+
+    Parameters
+    ----------
+    function_name: str
+        name of the timed function that will be visible in log
+
+    Attributes
+    ----------
+        start: float
+            execution start time
+        end: float
+            excecution end time
+        path: string
+            string contining path to file where results are logged
+    """
+
+    start: float
+    end: float
+
+    def __init__(self, function_name: str) -> None:
+        self.function_name = function_name
+        self.path = LOG_DIR / "timing_stats.log"
+        self.start = 0
+        self.end = 0
+
+        if not self.path.is_file():
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.write_text("")
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.perf_counter()
+
+        with self.path.open("a") as f:
             f.write(f"{current_thread().name:15} --> {self.function_name:30}"
                     f"{(self.end - self.start):8.4f}s\n")
 
@@ -183,7 +188,7 @@ def time_methods(function: Callable) -> Callable:
     """
     @wraps(function)
     def wrapper(*args, **kwargs) -> Callable:
-        with Timer(function.__name__):
+        with _Timer(function.__name__):
             return function(*args, **kwargs)
 
     return wrapper

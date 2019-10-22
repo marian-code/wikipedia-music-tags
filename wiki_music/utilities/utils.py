@@ -1,20 +1,14 @@
-"""Basic utilities used by the whole package"""
+"""Basic utilities used by the whole package."""
 
 import argparse  # lazy loaded
 import logging
-import os
 import re  # lazy loaded
 import sys
 import unicodedata
-import webbrowser  # lazy loaded
+from pathlib import Path
 from shutil import rmtree
 from time import sleep
 from typing import Any, List, Optional, Tuple, Union
-
-import yaml  # lazy loaded
-
-from wiki_music.constants import (API_KEY_FILE, API_KEY_MESSAGE,
-                                  DONT_BOTHER_API, GOOGLE_API_URL)
 
 from .sync import SharedVars
 
@@ -22,12 +16,13 @@ logging.getLogger(__name__)
 
 __all__ = ["list_files", "to_bool", "normalize", "we_are_frozen",
            "win_naming_convetion", "flatten_set", "input_parser", "MultiLog",
-           "read_google_api_key"]
+           "limited_input"]
 
 
 class MultiLog:
-    """Passes the messages to logger instance and to SharedVars sychronization
-    class where applicable as SharedVars does not implement whole Logger API
+    """Passes the messages to logger instance and to SharedVars.
+
+    Only where applicable as SharedVars does not implement whole Logger API
 
     See also
     --------
@@ -39,45 +34,45 @@ class MultiLog:
     logger: logging.Logger
         Logger instance
     """
+
     def __init__(self, logger):
         self._logger = logger
 
     def debug(self, message: Any):
-        """Issue a debug message"""
+        """Issue a debug message."""
         self._logger.debug(message)
 
     def info(self, message: Any):
-        """Issue a info message"""
+        """Issue a info message."""
         self._logger.info(message)
         SharedVars.info(message)
-        SharedVars.increment_progress()
 
     def warning(self, message: Any):
-        """Issue a warning message"""
+        """Issue a warning message."""
         self._logger.warning(message)
-        SharedVars.has_warning = message
+        SharedVars.warning(message)
 
     def error(self, message: Any):
-        """Issue a error message"""
+        """Issue a error message."""
         self._logger.error(message)
 
     def critical(self, message: Any):
-        """Issue a critical message"""
+        """Issue a critical message."""
         self._logger.critical(message)
 
     def exception(self, message: Any):
-        """Issue a exception message"""
+        """Issue a exception message."""
         self._logger.exception(message)
-        SharedVars.has_exception = message
+        SharedVars.exception(message)
 
 
-def list_files(work_dir: str, file_type: str = "music",
-               recurse: bool = True) -> List[str]:
+def list_files(work_dir: Path, file_type: str = "music",
+               recurse: bool = True) -> List[Path]:
     """List music files in directory.
 
     Parameters
     ----------
-    work_dir: str
+    work_dir: Path
         directory to search
     file_type: str
         type of files to search
@@ -98,33 +93,34 @@ def list_files(work_dir: str, file_type: str = "music",
     Returns
     -------
     list
-        returns list of files in folder with specified file_type
+        returns list of Path objects in folder with specified file_type
     """
-
-    found_files: List[str] = []
+    found_files: List[Path] = []
     allowed_types: Tuple[str, ...]
 
     if file_type == "music":
-        # TODO list of files we ail to support:
-        # (".m4a", ".mp3", ".flac", ".alac", ".wav", ".wma", ".ogg")
-        allowed_types = (".m4a", ".mp3", ".flac")
+        # TODO list of files we aim to support:
+        # ("m4a", "mp3", "flac", "alac", "wav", "wma", "ogg")
+        allowed_types = ("m4a", "mp3", "flac")
     elif file_type == "image":
         allowed_types = ("jpg", "png")
     else:
         raise NotImplementedError(f"file type {file_type} is not supported")
 
-    for root, _, files in os.walk(work_dir):
-        for f in files:
-            if f.endswith(allowed_types):
-                found_files.append(os.path.join(root, f))
-        if not recurse:
-            break
+    if recurse:
+        pattern = "**/*"  # glog recurse
+    else:
+        pattern = "*"
+
+    for f in work_dir.glob(pattern):
+        if f.suffix.endswith(allowed_types):
+            found_files.append(f)
 
     return found_files
 
 
 def to_bool(string: Union[str, bool]) -> bool:
-    """Coverts string (yes, no, y, n adn capitalized versions) to bool.\n
+    """Coverts string (yes, no, y, n adn capitalized versions) to bool.
 
     Parameters
     ----------
@@ -147,8 +143,38 @@ def to_bool(string: Union[str, bool]) -> bool:
         return string.casefold() in ("y", "yes", "t", "true", "")
 
 
+def limited_input(dont_bother: bool) -> Union[bool, str]:
+    """Prompt for cli input with limited options: y, n, d(dont bother me).
+
+    Returns
+    -------
+    Union[bool, str]
+        can be True, False or d for dont bother
+    """
+    while True:
+        if dont_bother:
+            inpt = input("Do you want to proceed? [y(yes), n(no), "
+                         "d(don't bother me again)]")
+        else:
+            inpt = input("Do you want to proceed? [y(yes), n(no)]: ")
+
+        inpt = str(inpt).strip().casefold()
+
+        if not inpt or inpt == "y":
+            return True
+        elif inpt == "n":
+            return False
+        elif inpt == "d" and dont_bother:
+            return "d"
+        else:
+            if dont_bother:
+                print("You must input 'y', 'n' or 'd'")
+            else:
+                print("You must input 'y' or 'n'")
+
+
 def normalize(text: str) -> str:
-    """NFKD string normalization
+    """NFKD string normalization.
 
     Parameters
     ----------
@@ -171,96 +197,15 @@ def we_are_frozen() -> bool:
     bool
         True if the code is frozen
     """
-
     # All of the modules are built-in to the interpreter
     return hasattr(sys, "frozen")
 
 
-def read_google_api_key(GUI) -> Optional[str]:
-    """Reads google api key needed by lyricsfinder in external libraries from
-    file.
-
-    Returns
-    -------
-    Optional[str]
-        google API key
-    """
-
-    # load google api key for lyrics search
-    try:
-        f = open(API_KEY_FILE, "r")
-        return f.read().strip()
-    except Exception:
-        if not os.path.isfile(DONT_BOTHER_API):
-            return _get_google_api_key(GUI)
-        else:
-            return None
-
-
-def _get_google_api_key(GUI: bool) -> Optional[str]:
-    """Prompt user to input google API key.
-
-    Asks user through GUI or CLI if he wants to get Google API key. Three
-    options are available: yes, no and don't bother me again.
-
-    Parameters
-    ----------
-    GUI: bool
-        if we are running in GUI or CLI mode
-
-    Returns
-    -------
-    Optional[str]
-        key in string format or none if key was not retrieved
-    """
-
-    # ask user if he wants to get the google API key
-    if GUI:
-        SharedVars.switch = "api_key"
-        SharedVars.wait = True
-        while SharedVars.wait:
-            sleep(0.1)
-
-        inpt = SharedVars.get_api_key
-    else:
-        print(API_KEY_MESSAGE)
-
-        inpt = input("Do you want to proceed? [y(yes), n(no), "
-                     "d(don't bother me again)]").lower().strip()
-
-    if inpt == "d":
-        with open(DONT_BOTHER_API, "w") as f:
-            f.write("Switch file to decide if prompt for getting google API "
-                    "key will be dispalyed.")
-        return None
-    elif to_bool(inpt):
-        # open page in browser
-        webbrowser.open_new_tab(GOOGLE_API_URL)
-
-        if GUI:
-            # GUI loads the key
-            SharedVars.switch = "load_api_key"
-            SharedVars.wait = True
-            while SharedVars.wait:
-                sleep(0.1)
-
-            api_key = SharedVars.get_api_key
-        else:
-            # wait for key input
-            api_key = str(input("Paste the key here: ")).strip()
-
-        # write the key to file
-        with open(API_KEY_FILE, "w") as f:
-            f.write(api_key)
-
-        return api_key
-    else:
-        return None
-
-
 def win_naming_convetion(string: str, dir_name=False) -> str:
-    """Returns Windows normalized path name with removed forbiden
-    characters. If platworm is not windows string is returned without changes.
+    """Returns Windows normalized path name.
+
+    Forbiden characters are removed. If platworm is not windows string is
+    returned without changes.
 
     Parameters
     ----------
@@ -274,8 +219,7 @@ def win_naming_convetion(string: str, dir_name=False) -> str:
     str
         normalized string for use in windows
     """
-
-    if sys.platform == "nt":
+    if sys.platform.startswith("win32"):
         if dir_name:  # windows doesn´t like folders with dots at the end
             string = re.sub(r"\.+$", "", string)
         return re.sub(r"\<|\>|\:|\"|\/|\\|\||\?|\*", "", string)
@@ -296,7 +240,6 @@ def flatten_set(array: List[list]) -> set:
     set
         1D set made of serialized lists
     """
-
     return set([item for sublist in array for item in sublist])
 
 
@@ -332,7 +275,6 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     bool
         true if logging level is debug
     """
-
     parser = argparse.ArgumentParser(description="Description of your program")
 
     parser.add_argument("-y",
@@ -360,7 +302,7 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
                         nargs="*")
     parser.add_argument("-w",
                         "--work_dir",
-                        default=os.getcwd(),
+                        default=Path(".").resolve(),
                         help="working directory",
                         type=str)
     parser.add_argument("-W",
@@ -387,12 +329,11 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
 
 
 def loading():
-    """CLI loading marker
+    """CLI loading marker.
 
     Warnings
     --------
     not implemented
     """
-
     # under construction
     pass

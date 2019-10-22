@@ -7,17 +7,18 @@ attributes should not be accesed directly in GUI.
 """
 
 import logging
+from pathlib import Path
 from typing import Iterable, List, Optional, Union
 
 from wiki_music.constants import GUI_HEADERS, SPLIT_HEADERS, STR_TAGS
 from wiki_music.gui_lib import (BaseGui, CustomQStandardItem,
                                 CustomQStandardItemModel, NumberSortModel,
                                 ResizablePixmap)
-from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QModelIndex,
-                                            QPixmap, QStandardItemModel,
-                                            QTimer, QMessageBox)
+from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QMessageBox,
+                                            QModelIndex, QPixmap,
+                                            QStandardItemModel, QTimer)
 from wiki_music.library.parser import WikipediaRunner
-from wiki_music.utilities import SharedVars, exception
+from wiki_music.utilities import exception, for_all_methods, time_methods
 
 log = logging.getLogger(__name__)
 log.debug("data model imports done")
@@ -146,20 +147,24 @@ class ParserInteract(BaseGui):
 
         :type: str
         """
-        return self._parser.url
+        return str(self._parser.url)
 
     @property
-    def genres(self) -> List[str]:
-        """List of genres found on wikipedia.
+    def offline_debug(self) -> bool:
+        """Toogle offline debugging mmode for parser.
 
         See also
         --------
-        :attr:`wiki_music.library.parser.base.ParserBase.genres`
+        :attr:`wiki_music.library.parser.preload.WikiCooker.offline_debug`
             parser attribute tied to this property
 
-        :type: str
+        :type: bool
         """
-        return self._parser.genres
+        return self._parser.offline_debug
+
+    @offline_debug.setter
+    def offline_debug(self, value: bool):
+        self._parser.offline_debug = value
 
     @property  # type: ignore
     def work_dir(self) -> str:  # type: ignore
@@ -172,11 +177,11 @@ class ParserInteract(BaseGui):
 
         :type: str
         """
-        return self._parser.work_dir
+        return str(self._parser.work_dir.resolve())
 
     @work_dir.setter
     def work_dir(self, value: str):
-        self._parser.work_dir = value
+        self._parser.work_dir = Path(value)
         if value:
             self.setWindowTitle(f"Wiki Music - {value}")
 
@@ -194,7 +199,7 @@ class ParserInteract(BaseGui):
         return self._parser.COVERART
 
     @COVERART.setter
-    def COVERART(self, value: bytearray):
+    def COVERART(self, value: bytes):
         self._parser.COVERART = value
 
     def stop_preload(self):
@@ -234,7 +239,7 @@ class ParserInteract(BaseGui):
         return self._parser.write_tags()
 
     def read_files(self):
-        """Rears tags from music files.
+        """Reads tags from music files.
 
         See also
         --------
@@ -262,16 +267,15 @@ class ParserInteract(BaseGui):
         return bool(self._parser)
 
     def reinit_parser(self):
-        """Sets parser and SharedVars attributes to their default values.
+        """Sets parser attributes to their default values.
 
-        Reinitializes parser and SharedVars attributes so a new search can be
-        performed.
+        Reinitializes parser attributes so a new search can be performed.
         """
         # TODO non-atomic
-        self._parser.__init__(protected_vars=False)
-        SharedVars.re_init()
+        self._parser.reinit(protected_vars=False)
 
 
+@for_all_methods(time_methods)
 class DataModel(ParserInteract):
     """Transfer data between GUI and parser and manage GUI data model.
 
@@ -331,7 +335,7 @@ class DataModel(ParserInteract):
                 alb = " album"
             if not self.ALBUMARTIST:
                 bnd = " band"
-            if not self.work_dir:
+            if str(self.work_dir) == ".":
                 wkd = " select working directory"
 
             if any([alb, bnd]):
@@ -377,7 +381,7 @@ class DataModel(ParserInteract):
 
             setattr(self._parser, h, col_data)
 
-    def _display_image(self, image: Optional[bytearray] = None):
+    def _display_image(self, image: Optional[bytes] = None):
         """Shows cover art image preview in main window.
 
         See also
@@ -386,7 +390,7 @@ class DataModel(ParserInteract):
 
         Parameters
         ----------
-        image: bytearray
+        image: bytes
             force displaying of the input image instead of the one contained in
             parser. Also the input image is saved to parser.
         """

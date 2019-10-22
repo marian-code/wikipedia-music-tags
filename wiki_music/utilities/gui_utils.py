@@ -2,11 +2,11 @@
 
 import io  # lazy loaded
 import logging
-import os
 import sys
 import urllib  # lazy loaded
 import winreg  # lazy loaded
-from typing import Optional, Tuple
+from pathlib import Path
+from typing import Optional, Tuple, Union
 
 import requests  # lazy loaded
 from PIL import Image, ImageFile  # lazy loaded
@@ -25,6 +25,7 @@ __all__ = ["get_music_path", "abstract_warning", "get_image", "get_sizes",
 
 def abstract_warning():
     """Raises error when abstract method is called directly.
+
     Raises
     ------
     NotImplementedError
@@ -41,14 +42,14 @@ def abstract_warning():
 # ! in the future it might be replaced by PyQt QClipboard
 # ! https://www.tutorialspoint.com/pyqt/pyqt_qclipboard.htm
 """
-def send_to_clipboard(data: bytearray, clip_type: Optional[int] = None):
+def send_to_clipboard(data: bytes, clip_type: Optional[int] = None):
      Pastes data to clipboard.
 
     Parameters
     ----------
     clip_type: int
         type of the clipboard
-    data: bytearray
+    data: bytes
         data to paste to clipboard
 
     Raises
@@ -81,16 +82,15 @@ def send_to_clipboard(data: bytearray, clip_type: Optional[int] = None):
 """
 
 
-def get_music_path() -> str:
-    """Returns the default music path for linux or windows
+def get_music_path() -> Path:
+    """Returns the default music path for linux or windows.
 
     Returns
     -------
     str
         string path pointing to music library location
     """
-
-    if os.name == "nt":
+    if sys.platform.startswith("win32"):
         sub_key = (r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
                    r"\Shell Folders")
         music_guid = "{4BD8D571-6D19-48D3-BE97-422220080E43}"
@@ -99,16 +99,17 @@ def get_music_path() -> str:
                 location = winreg.QueryValueEx(key, music_guid)[0]
             return location
         except Exception:
-            return "~"
+            return Path.home()
 
     else:
-        return os.path.join(os.path.expanduser("~"), "music")
+        return Path.home() / "music"
 
 
-def get_image(address: str) -> Optional[bytes]:
-    """Based on addres decides if the image is online or local. If address
-    has http prefix, image is downloaded from internet. If not then it is read
-    from disk.
+def get_image(address: Union["Path", str]) -> bytes:
+    """Based on addres decides if the image is online or local.
+
+    If address is string, image is downloaded from internet. If it is Path
+    object it is read from disk.
 
     Parameters
     ----------
@@ -121,28 +122,27 @@ def get_image(address: str) -> Optional[bytes]:
         bytes repesentation of image loaded to memory or None if address is
         not valid
     """
-
-    if address.startswith("http"):
+    if isinstance(address, str):
         return requests.get(address).content
     else:
         # this is for offline debug
         try:
-            with open(address, "rb") as f:
-                return bytearray(f.read())
+            return address.read_bytes()
         except Exception as e:
             print(f"Address: {address} could not be opened in "
                   f"online or offline mode. {e}")
-            return None
+            return bytes()
 
 
-def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
-    """Compress and/or change image resolution. If x and y dimension are
-    both specified than image is resized to these dimension otherwise it is
-    only compressed
+def comp_res(image: bytes, quality: int, x: int = 0, y: int = 0) -> bytes:
+    """Compress and/or change image resolution.
+
+    If x and y dimension are both specified than image is resized to these
+    dimension otherwise it is only compressed
 
     Parameters
     ----------
-    image: bytearray
+    image: bytes
         bytes representation of image loaded to memory
     quality: int
         target quality to which we wanto compress the limits are (1, 99)
@@ -156,7 +156,6 @@ def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
     bytes
         bytes image compressed and resized than reloaded to memory
     """
-
     FORMAT = Image.registered_extensions()[".jpg"]
 
     file_stream = io.BytesIO(image)
@@ -175,12 +174,12 @@ def comp_res(image: bytearray, quality: int, x: int = 0, y: int = 0) -> bytes:
     return file_stream.getvalue()
 
 
-def get_image_size(image: bytearray) -> str:
-    """get size of image in memory
+def get_image_size(image: bytes) -> str:
+    """Get size of image in memory.
 
     Parameters
     ----------
-    image: bytearray
+    image: bytes
         bytes image in loaded in memory
 
     Returns
@@ -188,12 +187,11 @@ def get_image_size(image: bytearray) -> str:
     str
         string with image size in Kb rounded to 2 decimal places
     """
-
     return f"{sys.getsizeof(image) / 1024:.2f}"
 
 
 def get_icon() -> str:
-    """returns application icon path
+    """Returns application icon path.
 
     Raises
     ------
@@ -205,17 +203,17 @@ def get_icon() -> str:
     str
         string with icon path
     """
-
-    icon = os.path.join(FILES_DIR, "icon.ico")
-    if not os.path.isfile(icon):
-        raise FileNotFoundError(f"There is no icon file in: {icon}")
+    icon = FILES_DIR / "icon.ico"
+    if icon.is_file():
+        return str(icon)
     else:
-        return icon
+        raise FileNotFoundError(f"There is no icon file in: {icon}")
 
 
 def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
-    """Get file size and image size (None if not known) of picture on the
-    internet without downloading it.
+    """Get file size and image size of internet picture.
+
+    Inforamtion is retrieved without downloading the whole picture.
 
     Parameters
     ----------
@@ -232,7 +230,6 @@ def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
         if the size can be obtained result is a tuple with picture size in Kb
         and dimensions tuple as a second element
     """
-
     try:
         fl = urllib.request.urlopen(uri)
         size = fl.headers.get("content-length")

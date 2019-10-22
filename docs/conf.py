@@ -10,9 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
+
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+from pathlib import Path
+sys.path.insert(0, str(Path('..').resolve()))
 
 
 # -- Project information -----------------------------------------------------
@@ -22,8 +23,7 @@ copyright = '2019, Marián Rynik'
 author = 'Marián Rynik'
 
 # The full version, including alpha/beta/rc tags
-with open(os.path.join(os.path.dirname(__file__),
-                       "..", "wiki_music", "version.py"), "r") as f:
+with (Path(__file__).parent / ".." / "wiki_music" / "version.py").open() as f:
     VERSION = f.read().split(" = ")[1].replace("\"", "")
 release = VERSION
 

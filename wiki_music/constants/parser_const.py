@@ -1,4 +1,5 @@
-"""Holds constants that are used in parser"""
+"""Holds constants that are used in parser."""
+
 import re  # lazy loaded
 from typing import Tuple, Pattern
 
@@ -11,7 +12,7 @@ DEF_TYPES: Tuple[str, ...] = ("Instrumental", "Acoustic", "Acoustic Version",
                               "Orchestral", "Live", "Piano Version",
                               "Acoustic Folk Medley")
 #: these tracks usually have no lyrics so no attempt to download them is made
-NO_LYRIS = ("Instrumental", "Orchestral")
+NO_LYRIS: Tuple[str, str] = ("Instrumental", "Orchestral")
 #: defines unwanted strings that will be deleted from track title, also helps
 #: in extracting artists in brackets from track title
 UNWANTED: Tuple[str, ...] = ("featuring", "feat.", "feat", "narration by",

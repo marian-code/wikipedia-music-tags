@@ -1,12 +1,21 @@
+"""Offline version of googleimages download for debugging."""
+
 import logging
-import os
-from typing import List, NoReturn, Tuple, Dict
 import queue
+from typing import Dict, List, NoReturn, Tuple, TYPE_CHECKING, TypeVar
 
 from PIL import Image
 
-from wiki_music.constants.paths import OFFLINE_DEBUG_IMAGES  # pylint: disable=import-error
+from wiki_music.constants.paths import OFFLINE_DEBUG_IMAGES
 from wiki_music.utilities.utils import list_files
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing_extensions import TypedDict
+
+    RespDict = TypedDict("RespDict", {"thumb": bytes,
+                                      "dim": Tuple[int, Tuple[int, int]],
+                                      "url": "Path"})
 
 log = logging.getLogger(__name__)
 
@@ -14,8 +23,9 @@ log.info("Loaded Offline google images download")
 
 
 class googleimagesdownload:
-    """Offline version imitating google images download. Main puprose is
-    offline testing.
+    """Offline version imitating google images download API.
+
+    Main puprose is offline testing.
 
     Attributes
     ----------
@@ -30,9 +40,9 @@ class googleimagesdownload:
     """
 
     def __init__(self) -> None:
-        self.stack = queue.Queue()
+        self.stack: "queue.Queue[RespDict]" = queue.Queue()
         self._exit: bool = False
-        self._files: List[str] = []
+        self._files: List["Path"] = []
 
     def download(self, arguments: dict):
         """Start reding images from files.
@@ -43,7 +53,6 @@ class googleimagesdownload:
             dictionary of arguments, essentialy it is not needed. It is
             included only to maintain simillarity with original version API
         """
-
         dim: Tuple[int, int]
         size: float
         thumb: bytes
@@ -57,11 +66,9 @@ class googleimagesdownload:
         for f in self.files:
 
             try:
-                dim = Image.open(f).size
-                size = os.path.getsize(f)
-
-                with open(f, "rb") as infile:
-                    thumb = infile.read()
+                dim = Image.open(str(f)).size
+                size = f.stat().st_size
+                thumb = f.read_bytes()
             except Exception as e:
                 print(e)
                 errorCount += 1
@@ -77,29 +84,26 @@ class googleimagesdownload:
         print(f"\nErrors: {errorCount}\n")
 
     def close(self):
-        """Stop downloading images"""
+        """Stop downloading images."""
         self._exit = True
 
     @property
     def max(self) -> int:
-        """Returns maximum number of loadable images. Needed to set progresbar
-        in GUI. The value is cached for later use.
+        """Maximum number of loadable images.
+
+        Needed to set progresbar in GUI. The value is cached for later use.
 
         See also
         --------
         :func:`wiki_music.utilities.utils.list_files`
             to see list of suported files
 
-        Returns
-        -------
-        int
-            number of image files
+        :type: int
         """
-
         return len(self.files)
 
     @property
-    def files(self) -> List[str]:
+    def files(self) -> List["Path"]:
         """List of image files to load in direstory.
 
         See also
@@ -114,7 +118,6 @@ class googleimagesdownload:
         List[str]
             list of paths to image files
         """
-
         if not self._files:
             self._files = list_files(OFFLINE_DEBUG_IMAGES, file_type="image",
                                      recurse=True)

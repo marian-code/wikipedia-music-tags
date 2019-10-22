@@ -1,24 +1,27 @@
 """Module containing Main GUI window class called by GUI entry point."""
 
 import logging
-import os
+import os  # lazy loaded
 import subprocess  # lazy loaded
 import sys
 import time  # lazy loaded
 import webbrowser  # lazy loaded
+from queue import Empty
 from threading import Thread
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 
 from wiki_music import __version__
-from wiki_music.constants import API_KEY_MESSAGE, LOG_DIR, MP3_TAG, ROOT_DIR
+from wiki_music.constants import LOG_DIR, ROOT_DIR
 from wiki_music.gui_lib import BaseGui, CoverArtSearch, DataModel, RememberDir
 from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QFileDialog,
                                             QInputDialog, QMessageBox,
                                             QProgressBar, QProgressDialog, Qt,
                                             QTimer)
-from wiki_music.utilities import (Mp3tagNotFoundException, SharedVars,
-                                  exception, synchronized, warning,
-                                  we_are_frozen)
+from wiki_music.utilities import (NLTK, GoogleApiKey, Mp3tagNotFoundException,
+                                  SharedVars, YmlSettings, exception, warning)
+
+if TYPE_CHECKING:
+    from wiki_music.utilities import Action, Progress, Control
 
 log = logging.getLogger(__name__)
 log.debug("finished gui imports")
@@ -65,7 +68,7 @@ class Checkers(BaseGui):
 
         self.conditions_timer = QTimer()
         self.conditions_timer.timeout.connect(self._conditions_check)
-        self.conditions_timer.setSingleShot(True)
+        self.conditions_timer.setInterval(200)
 
         self.threadpool_timer = QTimer()
         self.threadpool_timer.timeout.connect(self._threadpool_check)
@@ -83,6 +86,16 @@ class Checkers(BaseGui):
         self.exception_timer.start(500)
         self.conditions_timer.start(400)
 
+    @staticmethod
+    def _get_action(queue: str) -> Union["Action", "Progress", "Control"]:
+
+        try:
+            action = getattr(SharedVars, queue).get_nowait()
+        except Empty:
+            action = None
+        finally:
+            return action
+
     # periodically checking methods
     @exception(log)
     def _conditions_check(self):
@@ -96,51 +109,60 @@ class Checkers(BaseGui):
                 return True
             elif out == QMessageBox.No:
                 return False
-            else:
+            elif out == QMessageBox.Ignore:
                 return "d"
+            else:
+                raise Exception("Wrong messagebox option")
 
-        if SharedVars.wait:
+        def question(message: str, ignore_button=False) -> Union[str, bool]:
 
-            if SharedVars.switch == "genres":
+            if ignore_button:
+                buttons = QMessageBox.Yes | QMessageBox.No | QMessageBox.Ignore
+                msg_type = (QMessageBox.Information, "Information")
+            else:
+                buttons = QMessageBox.Yes | QMessageBox.No
+                msg_type = (QMessageBox.Question, "Question")
 
-                log.debug("initialize question window")
-                # TODO non-atomic
-                if not self.genres:
-                    text, ok = QInputDialog.getText(self, "Input genre",
+            msg = QMessageBox(*msg_type, message, buttons)
+
+            if ignore_button:
+                # change button text
+                dont_bother_button = msg.button(QMessageBox.Ignore)
+                dont_bother_button.setText("Don't bother me again")
+
+            return msg_process(msg.exec_())
+
+        action = self._get_action("a_queue")
+        if action:
+            self._log.debug(f"got action to carry out: {action.switch}")
+
+            # first load values to GUI from parser
+            if action.load:
+                self._log.debug("loading vaues to GUI first")
+                self._parser_to_gui()
+
+            if action.switch == "genres":
+
+                if not action.options:
+                    item, ok = QInputDialog.getText(self, action.message,
                                                     "Input genre:")
-                    if ok:
-                        self.GENRE = text
-                    else:
-                        self.GENRE = "N/A"
                 else:
-                    item, ok = QInputDialog.getItem(self, "Select genre",
+                    item, ok = QInputDialog.getItem(self, action.message,
                                                     "List of genres",
-                                                    self.genres, 0, False)
-                    if ok:
-                        self.GENRE = item
-                    else:
-                        self.GENRE = "N/A"
+                                                    action.options, 0, False)
+                if ok:
+                    action.response = item
+                else:
+                    action.response = "N/A"
 
-            if SharedVars.load:
-                QTimer.singleShot(0, self._parser_to_gui)
+            elif action.switch == "composers":
+                action.response = question(action.message)
 
-            if SharedVars.switch == "comp":
-                log.debug("ask to copy composers")
-                msg = QMessageBox(QMessageBox.Question, "Question",
-                                  "Do you want to copy artists to composers?",
-                                  QMessageBox.Yes | QMessageBox.No)
+            elif action.switch == "lyrics":
+                answer = question(action.message)
+                action.response = answer
 
-                SharedVars.assign_artists = msg_process(msg.exec_())
-
-            if SharedVars.switch == "lyrics":
-                log.debug("ask to find lyrics")
-                msg = QMessageBox(QMessageBox.Question, "Question",
-                                  "Do you want to find lyrics?",
-                                  QMessageBox.Yes | QMessageBox.No)
-
-                SharedVars.write_lyrics = msg_process(msg.exec_())
-
-                if SharedVars.write_lyrics:
+                if answer:
                     # show download progress
                     self.progressShow = QProgressDialog("Downloading lyrics",
                                                         "", 0,
@@ -149,45 +171,39 @@ class Checkers(BaseGui):
                     self.progressShow.setCancelButton(None)
                     self._threadpool_check()
 
-            if SharedVars.switch == "api_key":
-                log.debug("ask to get google api key")
-                msg = QMessageBox(QMessageBox.Information, "Warning",
-                                  API_KEY_MESSAGE.replace("\n", ""),
-                                  QMessageBox.Yes | QMessageBox.No |
-                                  QMessageBox.Ignore)
-                # change button text
-                dont_bother_button = msg.button(QMessageBox.Ignore)
-                dont_bother_button.setText("Don't bother me again")
+            elif action.switch == "api_key":
+                action.response = question(action.message, ignore_button=True)
 
-                SharedVars.get_api_key = msg_process(msg.exec_())
-
-            if SharedVars.switch == "load_api_key":
-                log.debug("ask to input google api key")
+            elif action.switch == "load_api_key":
                 dialog = QInputDialog(self)
                 dialog.setInputMode(QInputDialog.TextInput)
                 dialog.setLabelText("Key:")
-                dialog.setWindowTitle("Paste goole API key")
+                dialog.setWindowTitle("Paste goole API key here")
                 dialog.resize(350, 70)
 
                 if dialog.exec_():
-                    SharedVars.get_api_key = dialog.textValue()
+                    action.response = dialog.textValue()
                 else:
-                    SharedVars.get_api_key = None
+                    action.response = None
 
-            SharedVars.load = False
-            SharedVars.switch = ""
-            SharedVars.wait = False
+            elif action.switch == "nltk_data":
+                action.response = question(action.message, ignore_button=True)
 
-        if not SharedVars.done:
-            self.conditions_timer.start(200)
-        else:
-            # announce that gui has reached the barrier
-            log.debug("gui reached barrier")
-            # TODO barrier is a wrong thing to have in GUI
-            SharedVars.barrier.wait()
+            elif action.switch == "download_nltk_data":
+                folder = QFileDialog.getExistingDirectory(
+                    self, "Set directory for nltk data", action.message)
 
-            log.debug("start _parser_to_gui function")
-            QTimer.singleShot(0, self._parser_to_gui)
+                if folder:
+                    action.response = folder
+                else:
+                    action.response = action.message
+
+            else:
+                raise Exception(f"Requested unknown action: {action.switch}")
+
+            # runs esentially in loop calling itself until all data are gone
+            # from queue
+            self._conditions_check()
 
     def _exception_check(self):
         """Provides GUI displaying of exceptions.
@@ -196,62 +212,64 @@ class Checkers(BaseGui):
         displays message with information and if applicable option to exit the
         app
         """
-        if SharedVars.has_exception:
-            msg = QMessageBox(QMessageBox.Critical, "Exception",
-                              SharedVars.has_exception)
-            # TODO set right logging file
-            path = os.path.join(LOG_DIR, "wiki_music_library.log")
-            msg.setDetailedText(open(path, "r").read())
-            msg.exec_()
-            SharedVars.has_exception = ""
+        action = self._get_action("c_queue")
+        if action:
+            if action.switch == "exception":
+                msg = QMessageBox(QMessageBox.Critical, "Exception",
+                                  action.message)
+                path = LOG_DIR / "wiki_music_library.log"
+                msg.setDetailedText(path.read_text())
+                msg.exec_()
 
-        if SharedVars.has_warning:
-            QMessageBox(QMessageBox.Warning, "Warning",
-                        SharedVars.has_warning).exec_()
-            SharedVars.has_warning = ""
+            elif action.switch == "warning":
+                QMessageBox(QMessageBox.Warning, "Warning",
+                            action.message).exec_()
 
-        if SharedVars.ask_exit:
-            msg = QMessageBox(QMessageBox.Question, "Warning",
-                              "Do you want to stop the search?",
-                              QMessageBox.Yes | QMessageBox.No)
-            msg.setInformativeText(SharedVars.ask_exit)
-            terminate = msg.exec_()
+            elif action.switch == "ask_to_exit":
+                msg = QMessageBox(QMessageBox.Question, "Warning",
+                                  "Do you want to stop the search?",
+                                  QMessageBox.Yes | QMessageBox.No)
+                msg.setInformativeText(action.message)
 
-            if terminate == QMessageBox.Yes:
-                SharedVars.wait_exit = False
-                SharedVars.terminate_app = True
-
-                time.sleep(0.03)
-                # TODO not working
-                sys.exit(self.exec_())  # TODO untested
+                # might be tricky, parser is not guaranted to read the
+                # response before this GUI method pools the queue again
+                # but 500 ms should be enough time
+                action.response = msg.exec_()
+            # TODO unntested
+            elif action.switch == "deconstruct":
+                sys.exit(self.exec_())
             else:
-                SharedVars.wait_exit = False
-                SharedVars.ask_exit = ""
+                raise Exception(f"Requested unknown control handling: "
+                                f"{action.switch}")
 
-    # TODO this method should also update progessbar in status bar
-    # lock must be here because there are non atomic operations i.e. +=
     @exception(log)
-    @synchronized(SharedVars.lock)
     def _description_check(self):
         """Shows parser progress in the bottom status bar of main window.
 
         Runs periodically.
         """
-        for item in ("Done", "Preload"):
-            if item in SharedVars.describe:
-                self.progressBar.setValue(self.progressBar.maximum())
-                break
-        else:
-            self.progressBar.setValue(SharedVars.progress)
+        progress = self._get_action("p_queue")
+        if progress:
+            for item in ("Done", "Preload"):
+                if item in progress.description:
+                    self.progressBar.setValue(self.progressBar.maximum())
+                    break
+            else:
+                self.progressBar.setValue(progress.actual)
 
-        self.progressBar.setFormat(SharedVars.describe)
+            self.progressBar.setFormat(progress.description)
 
     def _threadpool_check(self):
 
-        self.progressShow.setValue(SharedVars.threadpool_prog)
+        progress = self._get_action("tp_queue")
+        if progress:
+            self.progressShow.setValue(progress.actual)
+            self.progressShow.setMaximum(progress.max)
 
-        if self.progressShow.maximum() != SharedVars.threadpool_prog:
-            self.threadpool_timer.start(50)
+            if progress.actual == progress.max:
+                return
+
+        self.threadpool_timer.start(50)
 
 
 class Buttons(BaseGui):
@@ -265,7 +283,7 @@ class Buttons(BaseGui):
     @exception(log)
     def _open_dir(self, folder: str = ""):
         """Opens the current search folder, or the one from input.
-        
+
         Parameters
         ----------
         folder: str
@@ -316,9 +334,9 @@ class Buttons(BaseGui):
         if url:
             webbrowser.open_new_tab(url)
         else:
-            if self.url and not SharedVars.offline_debbug:
+            if self.url and not self.offline_debug:
                 webbrowser.open_new_tab(self.url)
-            elif SharedVars.offline_debbug:
+            elif self.offline_debug:
                 self._log.warning("You are in offline debugging mode")
             else:
                 QMessageBox(QMessageBox.Information, "Message",
@@ -334,12 +352,11 @@ class Buttons(BaseGui):
         This action works only in Windods if Mp3tag is not installed in the
         right directory a dialog to set the path is displayed.
         """
-        global MP3_TAG
-        path_file = os.path.join(ROOT_DIR, "files", "MP3_TAG_PATH.txt")
+        if not sys.platform.startswith("win32"):
+            raise Mp3tagNotFoundException("Mp3tag is supported only on "
+                                          "Windows")
 
-        if os.path.isfile(path_file):
-            with open(path_file, "r") as f:
-                MP3_TAG = f.read().strip()
+        MP3_TAG = YmlSettings.read("Mp3tag_path", None)
 
         if not MP3_TAG:
             msg = QMessageBox(QMessageBox.Warning, "Unable to locate Mp3tag",
@@ -349,28 +366,22 @@ class Buttons(BaseGui):
             if msg.exec_() == QMessageBox.No:
                 return
 
-        if sys.platform == "win32":
-            if self.work_dir:
-                try:
-                    subprocess.Popen([MP3_TAG, f"/fp:{self.work_dir}"])
-                except (FileNotFoundError, OSError):
-                    # get loaction from user
-                    MP3_TAG = self._select_file(
-                        description="Mp3tag was not found, Select Mp3tag.exe "
-                                    "executable path",
-                        file_types="Executable files (*.exe)")
+        if self.work_dir:
+            try:
+                subprocess.Popen([MP3_TAG, f"/fp:{self.work_dir}"])
+            except (FileNotFoundError, OSError, TypeError):
+                # get loaction from user
+                MP3_TAG = self._select_file(
+                    description="Mp3tag was not found, Select Mp3tag.exe "
+                                "executable path",
+                    file_types="Executable files (*.exe)")
 
-                    # write to file for later uses
-                    with open(path_file, "w") as f:
-                        f.write(MP3_TAG)
-                    # run again
-                    self._run_Mp3tag()
-            else:
-                QMessageBox(QMessageBox.Information, "Message",
-                            "You must select directory first!").exec_()
+                YmlSettings.write("Mp3tag_path", MP3_TAG)
+                # run again
+                self._run_Mp3tag()
         else:
-            raise Mp3tagNotFoundException("Mp3tag is supported only on "
-                                          "Windows")
+            QMessageBox(QMessageBox.Information, "Message",
+                        "You must select directory first!").exec_()
 
     def _show_help(self, help_type):
 
@@ -386,7 +397,6 @@ class Buttons(BaseGui):
         elif help_type == "logs":
             self._open_dir(LOG_DIR)
 
-
     def _entry_band(self):
         """Connect to albumartist entry field."""
         self.ALBUMARTIST = self.band_entry_input.text()
@@ -395,9 +405,9 @@ class Buttons(BaseGui):
         """Connect to album entry field."""
         self.ALBUM = self.album_entry_input.text()
 
-    def _select_json(self):
-        """Connect to json checkbox."""
-        SharedVars.write_json = self.json_write_sw.isChecked()
+    def _select_(self):
+        """Connect to  checkbox."""
+        self.write_yaml = self.write_yaml_sw.isChecked()
 
     def _select_offline_debbug(self):
         """Connect to offline debug checkbox.
@@ -406,8 +416,8 @@ class Buttons(BaseGui):
         ----
         Restarts the preload with right settings.
         """
-        SharedVars.offline_debbug = self.offline_debbug_sw.isChecked()
-        if SharedVars.offline_debbug and self._input_is_present():
+        self.offline_debug = self.offline_debbug_sw.isChecked()
+        if self._input_is_present():
             self.start_preload()
 
 
@@ -478,6 +488,11 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         self.actionVersion.triggered.connect(
             lambda: self._show_help("version"))
 
+        # settings
+        self.actionNltkData.triggered.connect(
+            lambda: NLTK.download_data(in_thread=True))
+        self.actionGetApiKey.triggered.connect(lambda: GoogleApiKey.get(True))
+
         # search actons
         self.actionWikipedia.triggered.connect(lambda: self._run_search())
         self.actionLyrics.triggered.connect(lambda: self.cover_art_search())
@@ -502,12 +517,12 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
         if not self._DEBUG:
             self.offline_debbug_sw.hide()
-            self.json_write_sw.hide()
+            self.write_yaml_sw.hide()
         else:
             # connect switches to functions
             self.offline_debbug_sw.stateChanged.connect(
                 self._select_offline_debbug)
-            self.json_write_sw.stateChanged.connect(self._select_json)
+            self.write_yaml_sw.stateChanged.connect(self._select_)
 
     # methods that bind to gui elements
     @exception(log)
@@ -521,7 +536,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
             QMessageBox(QMessageBox.Information, "Info",
                         "You must run the search first!").exec_()
         else:
-            if self.work_dir == "":
+            if not self.work_dir:
                 QMessageBox(QMessageBox.Information, "Info",
                             "You must specify directory with files!").exec_()
                 return
@@ -611,8 +626,6 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         self._threadpool_check()
 
         log.info("starting lyrics search")
-
-        SharedVars.write_lyrics = True
 
         self._start_checkers()
         main_app = Thread(target=self._parser.run_lyrics, name="LyricsSearch")

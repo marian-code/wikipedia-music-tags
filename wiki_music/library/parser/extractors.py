@@ -5,8 +5,8 @@ import re  # lazy loaded
 from typing import TYPE_CHECKING, List, Tuple
 
 from wiki_music.constants import ORDER_NUMBER, TIME, TO_DELETE
-from wiki_music.utilities import (NoTracklistException, SharedVars,
-                                  normalize_caseless)
+from wiki_music.utilities import (NoTracklistException, normalize_caseless,
+                                  warning)
 
 logging.getLogger(__name__)
 
@@ -27,8 +27,7 @@ class DataExtractors:
     @classmethod
     def _from_table(cls, tables: List["BeautifulSoup"]
                     ) -> List[List[List[str]]]:
-        """Extract a classic wkikipedia html table composed of 'td' and 'th'
-        html tags.
+        """Extract wkikipedia html table composed of 'td' and 'th' html tags.
 
         Parameters
         ----------
@@ -41,7 +40,6 @@ class DataExtractors:
             each emement in list is one parsed table, each table is a 2D array
             of strings representing rows and columns
         """
-
         data_collect = []
         for table in tables:
 
@@ -106,7 +104,6 @@ class DataExtractors:
         list
             each element represents on row in html list
         """
-
         try:
             rows = [ch.get_text() for ch in table.find_all("li")
                     if ch.string != "\n"]
@@ -116,9 +113,9 @@ class DataExtractors:
             return rows
 
     @classmethod
+    @warning
     def _from_list(cls, table: "BeautifulSoup") -> List[List[str]]:
-        """Extract trackist formated as a html list with use of 'ol' and 'ul'
-        tags.
+        """Extract trackist formated as a html list with 'ol' and 'ul' tags.
 
         See also
         --------
@@ -134,13 +131,11 @@ class DataExtractors:
         List[List[str]]
             2D array representing table with rows and columns
         """
-
         rows = cls._html2python_list(table)
 
         if not rows:
             msg = ("No tracklist found!\n"
                    "It is probaly contained in some unknown format")
-            SharedVars.warning(msg)
             raise NoTracklistException(msg)
         else:
 
@@ -185,7 +180,6 @@ class DataExtractors:
         tuple
             first element is track name and second is a list of subtracks
         """
-
         # extract tracks and subtracks
         tracks = cell.split("\n")
         for j, t in enumerate(tracks):
@@ -206,7 +200,7 @@ class DataExtractors:
 
     @classmethod
     def _get_artist(cls, cell: str) -> List[str]:
-        """Splits list of artists in tracklist table cell separated by , or &
+        """Splits list of artists in tracklist table cell separated by , or &.
 
         Parameters
         ----------
@@ -218,7 +212,6 @@ class DataExtractors:
         List[str]
             list of artists
         """
-
         return [c.replace(",", "").strip() for c in re.split(",|&", cell)]
 
     @classmethod

@@ -2,15 +2,26 @@
 import json
 from datetime import datetime
 from io import TextIOBase
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, TYPE_CHECKING, Optional
 
 from .. import utils
+
+if TYPE_CHECKING:
+    from typing_extensions import TypedDict
+
+    OrignDict = TypedDict("OrignDict", {"query": Optional[str], "url": str,
+                                        "source_name": str, "source_url": str})
+
+    LyricsDict = TypedDict("LyricsDict", {"title": str, "release_date": Any,
+                                          "artist": Optional[str],
+                                          "lyrics": str, "origin": OrignDict})
 
 
 class LyricsOrigin:
     """Represents a place where lyrics come from."""
 
-    def __init__(self, url: str, source_name: str, source_url: str, *, query: str = None):
+    def __init__(self, url: str, source_name: str, source_url: str, *,
+                 query: str = None):
         """Create new origin."""
         self.url = url
         self.source_name = source_name
@@ -26,7 +37,7 @@ class LyricsOrigin:
         """Load from dict."""
         return cls(**data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> "OrignDict":
         """Convert to dict."""
         return {
             "query": self.query,
@@ -39,7 +50,9 @@ class LyricsOrigin:
 class Lyrics:
     """Represents lyrics for a song."""
 
-    def __init__(self, title: str, lyrics: str, artist: str = None, release_date: datetime = None, *, origin: LyricsOrigin = None):
+    def __init__(self, title: str, lyrics: str, artist: str = None,
+                 release_date: datetime = None, *,
+                 origin: LyricsOrigin = None):
         """Create lyrics."""
         self.title = title
         self.artist = artist
@@ -64,17 +77,17 @@ class Lyrics:
             data["release_date"] = datetime.fromtimestamp(data["release_date"])
         return cls(**data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> "LyricsDict":
         """Convert to dict."""
         return {
             "title": self.title,
             "artist": self.artist,
             "release_date": self.release_date.timestamp() if self.release_date else None,
-            "lyrics": self.lyrics,
+            "lyrics": self.lyrics.replace("\r", "").replace("\n", "\r\n"),
             "origin": self.origin.to_dict()
         }
 
-    def save(self, f: Union[str, TextIOBase]=None) -> TextIOBase:
+    def save(self, f: Union[str, TextIOBase] = None) -> TextIOBase:
         """Save the lyrics."""
         if isinstance(f, TextIOBase):
             d = f

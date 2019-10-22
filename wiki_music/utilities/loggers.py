@@ -1,7 +1,6 @@
 """Logger initialization for package."""
 
 import logging
-from os import makedirs, path
 from typing import Set
 
 from wiki_music.constants.paths import LOG_DIR
@@ -20,7 +19,7 @@ FORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
                               datefmt="%H:%M:%S")
 
 # create dir to store logs
-makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _compile_log_path(name: str) -> str:
@@ -37,7 +36,7 @@ def _compile_log_path(name: str) -> str:
         compiled logger path name
     """
 
-    return path.join(LOG_DIR, f"wiki_music_{name}.log")
+    return str(LOG_DIR / f"wiki_music_{name}.log")
 
 
 def set_log_handles(level: int):

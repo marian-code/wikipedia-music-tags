@@ -326,7 +326,7 @@
        <enum>QLayout::SetMinimumSize</enum>
       </property>
       <item>
-       <widget class="QCheckBox" name="json_write_sw">
+       <widget class="QCheckBox" name="write_yaml_sw">
         <property name="maximumSize">
          <size>
           <width>109</width>
@@ -334,7 +334,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Write json?</string>
+         <string>Write yaml?</string>
         </property>
        </widget>
       </item>
@@ -409,11 +409,19 @@
     <addaction name="actionLyrics"/>
     <addaction name="actionCoverArt"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionGetApiKey"/>
+    <addaction name="actionNltkData"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOpen"/>
    <addaction name="menuSave"/>
    <addaction name="menuHelp"/>
    <addaction name="menuSearch"/>
+   <addaction name="menuSettings"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
@@ -504,6 +512,16 @@
   <action name="actionLogs">
    <property name="text">
     <string>Logs</string>
+   </property>
+  </action>
+  <action name="actionGetApiKey">
+   <property name="text">
+    <string>Get Google API key</string>
+   </property>
+  </action>
+  <action name="actionNltkData">
+   <property name="text">
+    <string>Download nltk data</string>
    </property>
   </action>
  </widget>

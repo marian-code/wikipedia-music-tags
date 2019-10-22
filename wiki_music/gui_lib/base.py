@@ -1,8 +1,10 @@
 """The base module for Qt frontend."""
 
-import ctypes
+import ctypes  # lazy loaded
 import logging
 from abc import abstractmethod
+from pathlib import Path
+import sys
 
 from wiki_music.constants import MAIN_WINDOW_UI
 from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QIcon,
@@ -57,7 +59,8 @@ class BaseGui(QMainWindow):
         """Load and set window tray icon and set application name."""
         self.setWindowTitle("Wiki Music")
         myappid = "WikiMusic"
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        if sys.platform.startswith("win32"):
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
         _icon = get_icon()
         self.setWindowIcon(QIcon(_icon))
         tray_icon = QSystemTrayIcon(QIcon(_icon))

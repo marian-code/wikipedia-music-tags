@@ -1,12 +1,113 @@
-"""Module for variable synchronization between application and GUI """
+"""Module for variable synchronization between application and GUI."""
 
 import logging
-from threading import Barrier, Lock
-from typing import ClassVar, Union
+from queue import Queue
+from threading import Barrier, RLock
+from typing import Any, ClassVar, Dict, Hashable, Tuple, Union, Optional
 
-logging.getLogger(__name__)
+import yaml  # lazy loaded
 
-__all__ = ["SharedVars"]
+from wiki_music.constants import SETTINGS_YML
+
+log = logging.getLogger(__name__)
+
+__all__ = ["SharedVars", "YmlSettings", "Action", "Control", "Progress"]
+
+
+class Action:
+    """Represents action that should be taken by GUI.
+
+    Attributes
+    ----------
+    switch: str
+        type of action
+    message: Optional[str]
+        message to show in GUI
+    load: bool
+        whether to load data to GUI from parser prior to any action
+    options: list
+        list of options to display in GUI for user to choose
+    response
+
+    Warning
+    -------
+    Action may be used only once, the response is cached and GUI will not be
+    asked for new response on each call of :attr:`response`
+    """
+
+    def __init__(self, switch: str, message: Optional[str] = None,
+                 load: bool = False, options: list = []) -> None:
+
+        self.switch = switch
+        self.message = message
+        self._response: Any = None
+        self.load = load
+        self.options = options
+
+    @property
+    def response(self) -> Any:
+        """Pass `Action` to GUI, wait for response than return it.
+
+        :type: Any
+        """
+        SharedVars.a_queue.put(self)
+        return SharedVars.r_queue.get()._response
+
+    @response.setter
+    def response(self, value: Any):
+        self._response = value
+        SharedVars.r_queue.put(self)
+
+
+# TODO should probably have its own queue and not reuse r_queue
+class Control(Action):
+    """Passes flow control actions to GUI."""
+
+    @property
+    def response(self) -> Any:
+        """Pass `Control` to GUI, wait for response than return it.
+
+        :type: Any
+        """
+        SharedVars.a_queue.put(self)
+        return SharedVars.r_queue.get()._response
+
+    @response.setter
+    def response(self, value: Any):
+        self._response = value
+        SharedVars.r_queue.put(self)
+
+
+class Progress:
+    """Class that informs GUI of parser progress.
+
+    Attributes
+    ----------
+    desctiption: str
+        desctiption of the ongoing action
+    actual_progress: int
+        actual progress value
+    max_progress: int
+        max progress value
+    finished: bool
+        flag indicating that the background process has finished work
+    """
+
+    def __init__(self, description: str = "", actual: int = 0,
+                 maximum: int = 0, finished: bool = False,
+                 busy: bool = False) -> None:
+
+        self.description = description
+        self.actual = actual
+        self.max = maximum
+        self.finished = finished
+
+        if busy:
+            self.max = self.actual
+
+    def __str__(self):
+        return (f"<Progres: actual={self.actual}, max={self.max}, "
+                f"desc={self.description}>")
 
 
 class SharedVars:
@@ -20,121 +121,32 @@ class SharedVars:
 
     Attributes
     ----------
-    describe : str
-        describes the current progress in parser
-    ask_exit : str
-        initialize dialog to exit app, works only in GUI mode
-    switch : str
-        decides which dialog should be displayed in GUI - lyrics, genres,
-        or lyrics
-    write_json : bool
-        write yaml file contining tags for all tracks
-    offline_debbug : bool
-        switch to offline debugging mode. Instead of online page a local
-        pickle version is used of wikipedia.Page object and cover art
-        is loaded from file on local PC. Currently doesn't work for lyrics
-    write_lyrics : bool
-        write lyrics to tags
-    assign_artists : bool
-        switch telling if  we should assign artist to composers
-    has_warning : str
-        atttribute set by warning() method
-    has_exception : str
-        attribute set ba exception() method
-    wait_exit : bool
-        GUI wait for parser termination
-    terminate_app : bool
-        switch to trigger parser termination
-    wait : bool
-        blocks parser thread execution if true until GUI get answer from
-        user
-    done : bool
-        anounce parser is done
-    load : bool
-        switch for gui to update model
-    lock : Lock
-        threading.Lock to sync GUI and parser thread
-    barrier : Barrier
-        threading.Barried  to sync GUI and parser thread
+    progress: int
+        controlls main gui progressbar
+    a_queue: Queue[Action]
+        queue with actions gui should take
+    r_queue: Queue[Action]
+        GUI response to actions taken
+    c_queue: Queue[Action]
+        queue containing flow control actions
+    p_queue: Queue[Progress]
+        informs main GUI progresbar of parser progress
+    tp_queue: Queue[Progress]
+        informas gui of threadpool progress
     """
 
-    # action description
+    # thread safe attributes, defined by properties in metaclass
     progress: ClassVar[int] = 0
-    threadpool_prog: ClassVar[int] = 0
-    describe: ClassVar[str] = ""
-    ask_exit: ClassVar[str] = ""
-    switch: ClassVar[str] = ""
 
-    # switches
-    write_json: ClassVar[bool] = False
-    offline_debbug: ClassVar[bool] = False
-    write_lyrics: ClassVar[bool] = False
-    assign_artists: ClassVar[bool] = False
-    get_api_key: ClassVar[Union[str, bool]] = True
-
-    # exceptions
-    has_warning: ClassVar[str] = ""
-    has_exception: ClassVar[str] = ""
-
-    # control
-    wait_exit: ClassVar[bool] = False
-    terminate_app: ClassVar[bool] = False
-    wait: ClassVar[bool] = False
-    done: ClassVar[bool] = False
-    load: ClassVar[bool] = False
-    lock: ClassVar[Lock] = Lock()
-    barrier: ClassVar[Barrier] = Barrier(2)
+    # control queues
+    a_queue: "Queue[Action]" = Queue()
+    r_queue: "Queue[Action]" = Queue()
+    c_queue: "Queue[Action]" = Queue()
+    p_queue: "Queue[Progress]" = Queue()
+    tp_queue: "Queue[Progress]" = Queue()
 
     @classmethod
-    def re_init(cls):
-        """Initializes class variables to default values."""
-
-        cls.write_lyrics = None
-        cls.select_genre = None
-        cls.assign_artists = None
-        cls.write_tags = None
-        cls.wait = None
-        cls.switch = None
-        cls.done = False
-        cls.load = False
-
-        # progressbars
-        cls.progress = 0
-        cls.threadpool_prog = 0
-
-        # action description
-        cls.describe = ""
-
-        # caught exceptions
-        cls.ask_exit = None
-
-        # switches
-        cls.wait_exit = False
-        cls.terminate_app = False
-
-        # threads
-        cls.preload = None
-        cls.parser_running = False
-
-        # exceptions
-        cls.has_warning = None
-        cls.has_exception = None
-
-    @classmethod
-    def increment_progress(cls):
-        """Increments progress read by GUI main progressbar.
-
-        See also
-        --------
-        :meth:`wiki_music.gui_lib.main_window.Checkers._description_check`
-            periodically running method that displays progress in GUI.
-        """
-        cls.lock.acquire()
-        cls.progress += 1
-        cls.lock.release()
-
-    @classmethod
-    def set_threadpool_prog(cls, count):
+    def set_threadpool_prog(cls, actual: int, maximum: int):
         """Increments progress read by GUI threadpool progressbar dialog.
 
         See also
@@ -142,7 +154,7 @@ class SharedVars:
         :meth:`wiki_music.gui_lib.main_window.Checkers._threadpool_check`
             periodically running method that displays progress in GUI.
         """
-        cls.threadpool_prog = count
+        cls.tp_queue.put(Progress(actual=actual, maximum=maximum))
 
     @classmethod
     def info(cls, msg: str):
@@ -153,11 +165,12 @@ class SharedVars:
         msg: str
             message text
         """
+        cls.progress += 1
+
         if len(msg) > 100 and ":" in msg:
             msg = msg.split(": ", 1)[1]
-        cls.lock.acquire()
-        cls.describe = str(msg).strip()
-        cls.lock.release()
+
+        cls.p_queue.put(Progress(str(msg).strip(), cls.progress))
 
     @classmethod
     def warning(cls, msg: Union[Exception, str]):
@@ -170,7 +183,7 @@ class SharedVars:
         msg: str
             message text
         """
-        cls.has_warning = str(msg)
+        cls.c_queue.put(Control("warning", str(msg)))
 
     @classmethod
     def exception(cls, msg: Union[Exception, str]):
@@ -183,4 +196,68 @@ class SharedVars:
         msg: str
             message text
         """
-        cls.has_exception = str(msg)
+        cls.c_queue.put(Control("exception", str(msg)))
+
+
+class YmlSettings:
+    """Holds all package settings. All new settings are witten to disc.
+
+    All methods are thraed safe.
+
+    Attribures
+    ----------
+    _settings_dict: dict
+        dictionary holding all settings
+    """
+
+    _settings_dict: Dict[Hashable, Any]
+    _lock: RLock = RLock()
+
+    if SETTINGS_YML.is_file():
+        with SETTINGS_YML.open("r") as f:
+            _settings_dict = yaml.full_load(f)
+    else:
+        log.warning("Couldn't open settings yaml file")
+        _settings_dict = dict()
+
+    # TODO might be an encoding problem
+    @classmethod
+    def write(cls, key: Hashable, value: Any):
+        """Write new value to settings dictionary and to disk.
+
+        Parameters
+        ----------
+        key: Hashable
+            dictionary key
+        value:
+            value to write under key
+        """
+        with cls._lock:
+            cls._settings_dict[key] = value
+            with SETTINGS_YML.open("w") as f:
+                _settings_dict = yaml.dump(cls._settings_dict, f,
+                                           default_flow_style=False,
+                                           allow_unicode=True)
+
+    @classmethod
+    def read(cls, key: Hashable, default: Any) -> Any:
+        """Get value from settings dictionary.
+
+        Parameters
+        ----------
+        key: Hashable
+            dictionary key
+        default: Any
+            default value to return if key is not present
+
+        Returns
+        -------
+        Any
+            value found under key if it was found or default
+        """
+        with cls._lock:
+            try:
+                return cls._settings_dict[key]
+            except KeyError:
+                log.debug("Accesing non-existent setting")
+                return default

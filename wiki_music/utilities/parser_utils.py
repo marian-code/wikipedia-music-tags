@@ -2,36 +2,36 @@
 
 import collections  # lazy loaded
 import logging
-import os
 import sys
 import time  # lazy loaded
-from threading import Lock, Thread
+from threading import Thread, Lock
+from time import sleep
 from typing import (TYPE_CHECKING, Any, Callable, Dict, Generator, List,
-                    Optional, Tuple, Union)
+                    Optional, Tuple, Union, Generator)
 
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
 import yaml  # lazy loaded
 
-from wiki_music.constants.colors import GREEN, RESET
+from wiki_music.constants import GREEN, RESET
 
-from .utils import normalize
 from .sync import SharedVars
+from .utils import normalize
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    from logging import Logger
-
-__all__ = ["ThreadWithTrace", "NLTK", "bracket", "write_roman",
-           "normalize", "normalize_caseless", "caseless_equal",
-           "caseless_contains", "count_spaces", "yaml_dump",
-           "complete_N_dim", "replace_N_dim", "delete_N_dim",
-           "ThreadPool", "yaml_load", "ThreadWithReturn"]
+__all__ = ["ThreadWithTrace", "bracket", "write_roman", "normalize",
+           "normalize_caseless", "caseless_equal", "caseless_contains",
+           "count_spaces", "yaml_dump", "complete_N_dim", "replace_N_dim",
+           "delete_N_dim", "ThreadPool", "yaml_load", "ThreadWithReturn"]
 
 
 class ThreadWithTrace(Thread):
-    """Subclass of threading.thread, sets trace to thread by means of which
-    it can be later killed from outside
+    """Subclass of threading.thread, which can be killed from main thread.
+
+    Sets trace to thread by means of which it can be later killed from outside
 
     Parameters
     ----------
@@ -75,70 +75,10 @@ class ThreadWithTrace(Thread):
         self.killed = True
 
 
-class _NltkMeta(type):
-    """Metaclass which defines thread safe nltk property. Only for use in
-    NLTK class.
-
-    See Also
-    --------
-    :class:`NLTK`
-    """
-
-    @property
-    def nltk(cls):
-        """Thread safe property which holds reference to nltk lib.
-
-        :type: nltk
-        """
-        with cls._lock:
-            return cls._nltk
-
-
-class NLTK(metaclass=_NltkMeta):
-    """A thread safe nltk importer.
-
-    Will make other threads wait if they want to access nltk
-    until it is imported.
-    """
-
-    _import_running: bool = False
-    # nltk class attribute is provided by metaclass
-    _nltk = None
-    _lock: Lock = Lock()
-
-    @classmethod
-    def run_import(cls, logger: "Logger"):
-        """Import nltk in separate thread and assign it to class attribute.
-
-        Parameters
-        ----------
-        logger: logging.Logger
-            instance of a logger to log import messages
-        """
-        def imp():
-            with cls._lock:
-                logger.debug("import nltk")
-                try:
-                    import nltk
-                    cls._nltk = nltk
-                except ImportError as e:
-                    logger.debug(f"failed to import nltk: {e}")
-                else:
-                    logger.debug("import nltk done")
-
-        if not cls._import_running:
-
-            cls._import_running = True
-            # load NLTK in separate thread
-            Thread(target=imp, name="ImportNLTK").start()
-        else:
-            log.debug("nltk import already running")
-
-
 class ThreadWithReturn(Thread):
-    """Subclass of python threading.Thread which can return result of
-    running function. The result is return by calling the Thread.join()
-    method.
+    """Subclass of threading.Thread which caches result of running function.
+    
+    The result is returned by calling the Thread.join() method.
 
     Parameters
     ----------
@@ -162,27 +102,27 @@ class ThreadWithReturn(Thread):
         self._return: Any = None
 
     def run(self):
-        """Override standard threading.Thread.run() method to store
-        running function return value.
-        """
-
+        """Override threading.Thread.run() method to store return value."""
         if self._target is not None:
             self._return = self._target(*self._args, **self._kwargs)
 
     def join(self, timeout: Optional[float] = None) -> Any:
-        """Override standard threading.Thread.join() method to return
-        running function return value.
-        """
+        """Return thread running function return value.
 
+        First superclass(threading.Thread.join) method is called to properly
+        close running thread.
+        """
         super(ThreadWithReturn, self).join(timeout=timeout)
 
         return self._return
 
 
 class ThreadPool:
-    """Spawns pool of threads to excecute function. If the list of arguments
-    contains only one tuple, run the function in the calling thread to
-    avoid unnecessary overhead as a result of spawning a new thread.
+    """Spawns pool of threads to excecute function.
+
+    If the list of arguments contains only one tuple, run the function
+    in the calling thread to avoid unnecessary overhead as a result of
+    spawning a new thread.
 
     Parameters
     ----------
@@ -202,9 +142,34 @@ class ThreadPool:
         self._args = args
         self._target = target
 
+        # progress inform variables
+        self._completed = 0
+        self._maximum = len(self._args)
+        self._lock = Lock()
+
+    def _progress_tracker(self, *args, **kwargs):
+        """Wrap the passed in callable and report progress to GUI.
+
+        Parameters
+        ----------
+        args: tuple
+            arguments needed by callable
+        kwargs: dict
+            keyword arguments needed by callable
+        """
+        response = self._target(*args, **kwargs)
+
+        with self._lock:
+            self._completed += 1
+
+        SharedVars.set_threadpool_prog(self._completed, self._maximum)
+
+        return response
+
     def run(self, timeout: Optional[float] = 60) -> list:
-        """Starts the execution of threads in pool. returns after all threads
-        join() metod has returned.
+        """Starts the execution of threads in pool.
+
+        Returns after all threads join() metod has returned.
 
         See also
         --------
@@ -221,9 +186,60 @@ class ThreadPool:
         list
             list of returned values from the functions run by the ThreadPool
         """
+        N_threads = len(self._args)
 
-        if len(self._args) == 1:
-            return self._target(*self._args)
+        if N_threads == 1:
+            SharedVars.set_threadpool_prog(1, 1)
+            return self._target(*self._args[0])
+        else:
+            threads: List[ThreadWithReturn] = []
+
+            for i, a in enumerate(self._args):
+                threads.append(ThreadWithReturn(target=self._progress_tracker,
+                                                args=a,
+                                                name=f"ThreadPoolWorker-{i}"))
+                threads[-1].daemon = True
+                threads[-1].start()
+
+            for i, l in enumerate(threads):
+                threads[i] = l.join(timeout=timeout)
+
+            return threads
+
+    def run_async(self, timeout: Optional[float] = 60
+                  ) -> Generator[Any, None, None]:
+        """Starts the execution of threads in pool. Returns asynchronously.
+
+        This method yields resuls in order threds finish execution. Suitable
+        for long running tasks. Results can be processed in main thread until
+        other threads finish.
+
+        Note
+        ----
+        For this method to make sense, tasks need to be longer running,
+        and each should take at least slightly different time to complete and
+        the folowwing processing of the results must take some time too.
+
+        See also
+        --------
+        :meth:`wiki_music.utilities.sync.SharedVars.set_threadpool_prog`
+            inform GUI of threadpool progress
+
+        Parameters
+        ----------
+        timeout: Optional[float]
+            timeout after which waiting for results will be abandoned
+
+        Yields
+        ------
+        list
+            list of returned values from the functions run by the ThreadPool
+        """
+        N_threads = len(self._args)
+
+        if N_threads == 1:
+            SharedVars.set_threadpool_prog(1, 1)
+            yield self._target(*self._args[0])
         else:
             threads: List[ThreadWithReturn] = []
 
@@ -233,19 +249,25 @@ class ThreadPool:
                 threads[-1].daemon = True
                 threads[-1].start()
 
-            # report progress to gui
-            while True:
-                count = [t.is_alive() for t in threads].count(False)
-                SharedVars.set_threadpool_prog(count)
-                if count == len(threads):
-                    break
+            # report progress to gui and yield values
+            count = 0
+            returned: set = set()
+            for _ in range(N_threads):
 
-                time.sleep(0.05)
+                outer_break = False
+                while True:
+                    for i, t in enumerate(threads):
+                        if not t.is_alive() and i not in returned:
+                            count += 1
+                            returned.add(i)
+                            SharedVars.set_threadpool_prog(count, N_threads)
+                            outer_break = True
+                            break
+                    if outer_break:
+                        break
+                    sleep(0.001)
 
-            for i, l in enumerate(threads):
-                threads[i] = l.join(timeout=timeout)
-
-            return threads
+                yield threads[i].join(timeout=timeout)
 
 
 def bracket(data: List[str]) -> List[str]:
@@ -261,7 +283,6 @@ def bracket(data: List[str]) -> List[str]:
     List[str]
         list of strings with brackets at the ends
     """
-
     data_tmp = []
     for d in data:
         if d:
@@ -289,8 +310,7 @@ def write_roman(num: Union[int, str]):
     str
         roman number converted from integer
     """
-
-    roman = collections.OrderedDict()
+    roman: Dict[int, str] = collections.OrderedDict()
     roman[1000] = "M"
     roman[900] = "CM"
     roman[500] = "D"
@@ -307,7 +327,7 @@ def write_roman(num: Union[int, str]):
 
     def roman_num(num):
         for r in roman.keys():
-            x, y = divmod(num, r)
+            x, _ = divmod(num, r)
             yield roman[r] * x
             num -= (r * x)
             if num <= 0:
@@ -410,7 +430,7 @@ def count_spaces(*lists: Tuple[List[str], ...]) -> Tuple[List[str], int]:
     return spaces, max_length
 
 
-def yaml_dump(dict_data: List[Dict[str, str]], save_dir: str):
+def yaml_dump(dict_data: List[Dict[str, str]], save_dir: "Path"):
     """Save yaml tracklist file to disk.
 
     Parameters
@@ -418,21 +438,21 @@ def yaml_dump(dict_data: List[Dict[str, str]], save_dir: str):
     dict_data: List[Dict[str, str]]
         list of dictionarie to save to disk, each dictionary in list contains
         tags of one album track
-    save_dir: str
+    save_dir: Path
         directory to save to
     """
-    path = os.path.join(save_dir, "database.yaml")
-    print(GREEN + "\nSaving YAML file: " + RESET + path + "\n")
-    with open(path, "w") as f:
+    path = save_dir / "database.yaml"
+    print(GREEN + "\nSaving YAML file: " + RESET + str(path) + "\n")
+    with path.open("w") as f:
         yaml.dump(dict_data, f, default_flow_style=False)
 
 
-def yaml_load(yml_file: str) -> List[dict]:
+def yaml_load(yml_file: "Path") -> List[dict]:
     """Loads yaml format file to dictionary.
-    
+
     Parameters
     ----------
-    yml_file: str
+    yml_file: Path
         path to yml file
 
     Returns
@@ -440,15 +460,16 @@ def yaml_load(yml_file: str) -> List[dict]:
     List[dict]
         list of loaded dictionaries
     """
-    with open(yml_file, "r") as infile:
-        return yaml.full_load(infile)
+    with yml_file.open("r") as f:
+        return yaml.full_load(f)
 
 
 def _find_N_dim(array: Union[list, str], template: str
                 ) -> Optional[Union[list, str]]:
-    """Recursive helper function with two nested list as input. array is
-    traversed and its elements are fuzzy tested if they match expresion in 
-    template
+    """Recursive fuzzy searching strings in list elements.
+
+    Helper function with two nested list as input. array is traversed and its
+    elements are fuzzy tested if they match expresion in `template`
 
     Parameters
     ----------
@@ -476,7 +497,9 @@ def _find_N_dim(array: Union[list, str], template: str
 
 
 def complete_N_dim(to_complete: list, to_find: list):
-    """Recursive function with two list as input, one list contains incomplete
+    """Compares all elements fromm both lists and leaves the longer version.
+
+    Recursive function with two list as input, one list contains incomplete
     versions of strings and the other has full versions. Lists can be nested.
     both are then traversed and the strings in the first list are completed
     with strings from the second list. Changes are made in place.
@@ -505,7 +528,9 @@ def complete_N_dim(to_complete: list, to_find: list):
 
 
 def replace_N_dim(to_replace: list, to_find: str):
-    """Recursive function with nested list as input. The nested list elements
+    """Replaces to_find items in to_replace list by empty string.
+
+    Recursive function with nested list as input. The nested list elements
     are traversed and defined expresion is replaced by empty string in each
     element. Changes are made in place.
 
@@ -530,9 +555,11 @@ def replace_N_dim(to_replace: list, to_find: str):
 
 
 def delete_N_dim(to_delete: list, to_find: list) -> list:  # type: ignore
-    """Recursive function with nested list as input. The nested list elements
-    are traversed and each that is equal to one of the elements in to_find list
-    is deleted. Changes are made in place.
+    """Deletes any items from to find in to_delete.
+
+    Recursive function with nested lists as input. The nested list elements
+    are traversed and each that is equal to one of the elements in `to_find`
+    list is deleted. Changes are made in place.
 
     Parameters
     ----------

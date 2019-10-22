@@ -8,6 +8,15 @@
 from wiki_music.utilities.gui_utils import get_sizes
 import logging
 import queue
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import TypedDict
+
+    RespDict = TypedDict("RespDict", {"thumb": bytes,
+                                      "dim": Tuple[int, Tuple[int, int]],
+                                      "url": str})
+
 # ! added for wiki_music ##################################################
 
 # Import Libraries
@@ -134,9 +143,9 @@ class googleimagesdownload:
 
     # ! added for wiki_music ##################################################
     def __init__(self):
-        self.stack = queue.Queue()
-        self._exit = False
-        self.max = 100
+        self.stack: "queue.Queue[RespDict]" = queue.Queue()
+        self._exit: bool = False
+        self.max: int  = 100
     
     def close(self):
         self._exit = True

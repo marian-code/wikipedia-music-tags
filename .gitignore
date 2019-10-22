@@ -22,6 +22,7 @@ freeze/upx/
 freeze/wiki_music.spec
 freeze/unnecessary_dependencies.txt
 freeze/numpy-1.16.5+vanilla-cp37-cp37m-win_amd64.whl
+freeze/*.zip
 
 # dir for file output, profiling, logs
 wiki_music/logs/

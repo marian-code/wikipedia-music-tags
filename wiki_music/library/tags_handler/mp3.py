@@ -3,19 +3,25 @@
 import logging
 from ast import literal_eval
 from collections import OrderedDict
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 from mutagen.id3 import (APIC, COMM, ID3, TALB, TCOM, TCON, TDRC, TIT2, TPE1,
                          TPE2, TPOS, TRCK, USLT, ID3NoHeaderError, PictureType)
 
 from .tag_base import TagBase
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 log = logging.getLogger(__name__)
 log.debug("loading mp3 module")
 
+__all__ = ["TagMp3"]
+
 
 class TagMp3(TagBase):
-    """A low level implementation of tag handling for mp3 files"""
+    """A low level implementation of tag handling for mp3 files."""
+
     __doc__ += TagBase.__doc__  # type: ignore
 
     _map_keys = OrderedDict([
@@ -33,36 +39,16 @@ class TagMp3(TagBase):
         (APIC, "COVERART")]
     )
 
-    def _open(self, filename: str):
-        """Function reading mp3 file to mutagen.id3.ID3 class"""
-
+    def _open(self, filename: "Path"):
+        """Function reading mp3 file to mutagen.id3.ID3 class."""
         try:
             self._song = ID3(filename=filename)
         except ID3NoHeaderError:
-            print("Cannot read Mp3 tags")
-
-    def _find_variable_key(self, tag: str) -> str:
-        """Sometimes the key in tags is appended with some string like
-        USTL::eng this functions finds the specific key if supliedd with the
-        common prefix.
-
-        Returns
-        -------
-        str
-            mutagen.ID3 tag name
-        """
-
-        tag = self.reverse_map[tag]
-
-        for k in self._song.keys():
-            if tag in k:
-                return self._key2str(k)
-
-        return ""
+            log.warning("Cannot read Mp3 tags")
 
     @staticmethod
     def _key2str(key):
-        """get from string like <class 'mutagen.id3.TCOM'> the name TCOM.
+        """From string like <class 'mutagen.id3.TCOM'> get the name TCOM.
 
         Returns
         -------
@@ -71,41 +57,44 @@ class TagMp3(TagBase):
         """
         return str(key).rsplit(".", 1)[1][:-2]
 
-    def _read(self) -> Dict[str, Union[str, bytearray]]:
+    def _read(self) -> Dict[str, Union[str, bytes]]:
 
         tags = dict()
         for key, value in self._map_keys.items():  # pylint: disable=no-member
-            key = self._key2str(key)
+            frame = self._song.getall(self._key2str(key))
             try:
-                # lyrics key is formated like: USLT::xxx
-                # where xxx designates language
-                if value == "LYRICS":
-                    key = self._find_variable_key(value)
-                    # lyrics tag field returns literal string
-                    tag = literal_eval(self._song[key].text)
-                elif value == "COVERART":
-                    key = self._find_variable_key(value)
-                    tag = self._song[key].data
-                    continue
+                if value == "COVERART":
+                    tag = frame[0].data
                 else:
-                    tag = self._song[key].text
+                    tag = frame[0].text
+                    if value == "LYRICS":
+                        tag = literal_eval(tag)
 
-                if isinstance(tag, list):
-                    tag = tag[0]
-                tag = str(tag).strip()
-
-            except KeyError:
-                tag = ""
+            except IndexError:
+                tag = self._get_default_tag(value)
             finally:
-                tags[value] = tag
+                tags[value] = self._process_tag(tag)
 
         return tags
 
-    def _write(self, tag: str, value: Union[str, bytearray]):
+    def _write(self, tag: str, value: Union[str, bytes]):
 
         if tag == "COVERART":
-            self._song[self.reverse_map[tag]](
-                mime=u"image/jpeg", type=PictureType.COVER_FRONT,
-                desc=u"Cover", data=value, encoding=3)
+            try:
+                self._song[self.reverse_map[tag]](
+                    mime=u"image/jpeg", type=PictureType.COVER_FRONT,
+                    desc=u"Cover", data=value, encoding=3)
+            except KeyError:
+                self._song.add(self.reverse_map[tag](
+                    mime=u"image/jpeg", type=PictureType.COVER_FRONT,
+                    desc=u"Cover", data=value, encoding=3))
+                log.warning(f"Couldn't find tag {tag}: "
+                            f"{self.reverse_map[tag]}")
         else:
-            self._song[self.reverse_map[tag]](encoding=3, text=value)
+            # if tag is not present add it
+            try:
+                self._song[self.reverse_map[tag]](encoding=3, text=value)
+            except KeyError:
+                self._song.add(self.reverse_map[tag](encoding=3, text=value))
+                log.warning(f"Couldn't find tag {tag}: "
+                            f"{self.reverse_map[tag]}")

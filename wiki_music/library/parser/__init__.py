@@ -1,10 +1,12 @@
 """Toplevel parser script that can run wikipedia search."""
 
 import logging
+from pathlib import Path
 from time import sleep
+from typing import Union
 
 from wiki_music.constants.colors import CYAN, GREEN, RESET
-from wiki_music.utilities import (SharedVars, exception, flatten_set, to_bool,
+from wiki_music.utilities import (Action, exception, flatten_set, to_bool,
                                   we_are_frozen)
 
 from .process_page import WikipediaParser
@@ -13,9 +15,11 @@ log = logging.getLogger(__name__)
 
 
 class WikipediaRunner(WikipediaParser):
-    """Toplevel Wikipedia Parser class which inherits all other parser
-    subclasses. This is the class that is intended for user interaction. Its
-    methods know how to run the parser in order to produce meaningfull results.
+    r"""Toplevel Wikipedia Parser class.
+
+    Inherits all other parser subclasses. This is the class that is intended
+    for user interaction. Its methods know how to run the parser in order to
+    produce meaningfull results.
 
     Warnings
     --------
@@ -24,41 +28,52 @@ class WikipediaRunner(WikipediaParser):
 
     Parameters
     ----------
+    album: str
+        album name
+    albumartist: str
+        band name
+    work_dir: str
+        directory with music files
+    with_log: bool
+        If parser should output its progress to logger, only for CLI mode
     GUI: bool
         if True - assume app is running in GUI mode\n
         if False - assume app is running in CLI mode
     protected_vars: bool
         whether to initialize protected variables or not
     """
-    def __init__(self, GUI: bool = True, protected_vars: bool = True) -> None:
+
+    def __init__(self, album: str = "", albumartist: str = "",
+                 work_dir: Union[str, Path] = "", with_log: bool = False,
+                 GUI: bool = True, protected_vars: bool = True,
+                 offline_debug: bool = False,
+                 write_yaml: bool = False) -> None:
 
         log.debug("init parser runner")
 
-        super().__init__(protected_vars=protected_vars)
+        super().__init__(protected_vars=protected_vars, GUI=GUI)
         self._GUI = GUI
-        self.with_log = False
+        self.with_log = with_log
+        self.ALBUM = album
+        self.ALBUMARTIST = albumartist
+        self.work_dir = Path(work_dir)
+        self.offline_debug = offline_debug
+        self.write_yaml = write_yaml
 
         log.debug("init parser runner done")
 
     @exception(log)
     def run_wiki(self):
-        """Runs the whole wikipedia search, together with lyrics finding"""
-
+        """Runs the whole wikipedia search, together with lyrics finding."""
         if self._GUI:
             self._run_wiki_gui()
         else:
             self._run_wiki_nogui()
 
     def _run_wiki_gui(self):
-        """Runs wikipedia search with specifics of the GUI mode"""
-        def wait_select(switch: str):
-            SharedVars.switch = switch
-            SharedVars.wait = True
-            while SharedVars.wait:
-                sleep(0.1)
-
+        """Runs wikipedia search with specifics of the GUI mode."""
         # download wikipedia page
-        if not SharedVars.offline_debbug:
+        if not self.offline_debug:
             self._log.info(f"Searching for: {self.ALBUM} by "
                            f"{self.ALBUMARTIST}")
         else:
@@ -96,7 +111,8 @@ class WikipediaRunner(WikipediaParser):
             self.basic_out()
 
         # print out page contents
-        self._log.info(f"Found page contents: {', '.join(self.get_contents())}")
+        self._log.info(f"Found page contents: "
+                       f"{', '.join(self.get_contents())}")
 
         # extract track list
         self._log.info("Extracting tracks")
@@ -118,39 +134,32 @@ class WikipediaRunner(WikipediaParser):
         # select genre
         self._log.info("Select genre")
         if not self.GENRE:
-            wait_select("genres")
+            if len(self.genres) == 1:
+                msg = "Input genre"
+            else:
+                msg = "Select genre"
+            a = Action("genres", msg, options=self.genres)
+            self.GENRE = a.response
 
         # decide what to do with artists
         self._log.info("Assign artists to composers")
 
-        # first load already known values to GUI
-        # wait must be set before load,
-        # otherwise if statement in gui wont be entered
-        SharedVars.wait = True
-        SharedVars.load = True
-        while SharedVars.wait:
-            sleep(0.1)
-
-        wait_select("comp")
-        if SharedVars.assign_artists:
+        a = Action("composers", "Do you want to copy artists to composers?",
+                   load=True)
+        if a.response:
             self.merge_artist_composers()
 
         # decide if you want to find lyrics
         self._log.info("Searching for Lyrics")
-        wait_select("lyrics")
-        self.save_lyrics()
-
-        SharedVars.done = True
-        # announce that main app thread has reached the barrier
-        SharedVars.barrier.wait()
+        a = Action("lyrics", "Do you want to find lyrics?")
+        self.save_lyrics(a.response)
 
         self._log.info("Done")
 
     def _run_wiki_nogui(self):
-        """Runs wikipedia search with specifics of the CLI mode"""
-
+        """Runs wikipedia search with specifics of the CLI mode."""
         # download wikipedia page
-        if not SharedVars.offline_debbug:
+        if not self.offline_debug:
 
             self._log_print(msg_WHITE="Accessing Wikipedia...")
 
@@ -244,19 +253,16 @@ class WikipediaRunner(WikipediaParser):
 
         # decide what to do with artists
         print(CYAN + "Do you want to assign artists to composers? ([y]/n)",
-              RESET,
-              end=" ")
+              RESET, end=" ")
         if to_bool(input()):
             self.merge_artist_composers()
 
         # decide if you want to find lyrics
         print(CYAN + "\nDo you want to find and save lyrics? ([y]/n): " +
-              RESET,
-              end="")
-        SharedVars.write_lyrics = to_bool(input())
+              RESET, end="")
 
         # download lyrics
-        self.save_lyrics()
+        self.save_lyrics(to_bool(input()))
 
         print(CYAN + "Write data to ID3 tags? ([y]/n): " + RESET, end="")
         if to_bool(input()):
@@ -269,30 +275,22 @@ class WikipediaRunner(WikipediaParser):
 
     @exception(log)
     def run_lyrics(self):
-        """Runs only the lyrics search"""
-
+        """Runs only the lyrics search."""
         if self._GUI:
             self._run_lyrics_gui()
         else:
             self._run_lyrics_nogui()
 
     def _run_lyrics_gui(self):
-        """Runs only lyrics search with specifics of the GUI mode"""
-
+        """Runs only lyrics search with specifics of the GUI mode."""
         self._log.info("Searching for lyrics")
 
-        self.save_lyrics()
+        self.save_lyrics(find=True)
 
         self._log.info("Done")
-        SharedVars.done = True
-        self._log.debug("wait barrier")
-
-        # announce that main app thread has reached the barrier
-        SharedVars.barrier.wait()
 
     def _run_lyrics_nogui(self):
-        """Runs only lyrics search with specifics of the CLI mode"""
-
+        """Runs only lyrics search with specifics of the CLI mode."""
         self.read_files()
 
         # find lyrics
@@ -321,7 +319,6 @@ class WikipediaRunner(WikipediaParser):
         level: str
             logger level for output message
         """
-
         if msg_GREEN != "":
             print(GREEN + "\n" + msg_GREEN)
         if msg_WHITE != "":

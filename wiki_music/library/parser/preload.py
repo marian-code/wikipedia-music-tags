@@ -7,20 +7,26 @@ import queue
 import re  # lazy loaded
 import sys
 import time  # lazy loaded
-from os import path
 from threading import Lock
-from typing import Dict, Optional, Type
+from typing import TYPE_CHECKING, Dict, Optional, Type, Union
 
 import bs4  # lazy loaded
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
-
 import wikipedia as wiki  # lazy loaded
+
 from wiki_music.constants import OUTPUT_FOLDER
-from wiki_music.utilities import (
-    SharedVars, ThreadWithTrace, for_all_methods, normalize_caseless,
-    time_methods)
+from wiki_music.utilities import (Control, ThreadWithTrace, for_all_methods,
+                                  normalize_caseless, time_methods)
 
 from .base import ParserBase
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from wikipedia import WikipediaPage
+    from bs4 import BeautifulSoup
+
+    Bs4Soup = Optional["BeautifulSoup"]
+    WikiPage = Optional["WikipediaPage"]
 
 log = logging.getLogger(__name__)
 nc = normalize_caseless
@@ -60,6 +66,9 @@ class WikiCooker(ParserBase):
         the :attr:`_soup` split to page sections indexed by their titles
     """
 
+    _page: "WikiPage"
+    _soup: "Bs4Soup"
+
     def __init__(self, protected_vars: bool) -> None:
 
         super().__init__(protected_vars=protected_vars)
@@ -80,7 +89,7 @@ class WikiCooker(ParserBase):
         self.getter_lock: Lock = Lock()
         self.error_msg: Optional[str] = None
 
-        self._url = ""
+        self._url: Union["Path", str] = ""
 
         # pass reference of current class instance to subclass
         self.Preload.outer_instance = self
@@ -156,7 +165,7 @@ class WikiCooker(ParserBase):
                 cls.outer_instance.preload_running = False
 
     @property
-    def url(self) -> str:
+    def url(self) -> Union["Path", str]:
         """Holds url of the wikipedia page from which the data was downloaded.
 
         When offline debugging is enabled, this property holds path to the
@@ -171,12 +180,10 @@ class WikiCooker(ParserBase):
         :meth:`_from_disk`
             method for loading the pickle page from disk
         """
-        if not self._url:
-            if SharedVars.offline_debbug:
-                self._url = path.abspath(path.join(OUTPUT_FOLDER, self._album,
-                                                   "page.pkl"))
-            else:
-                self._url = str(self._page.url)  # type: ignore
+        if self.offline_debug:
+            self._url = (OUTPUT_FOLDER / self._album / "page.pkl").resolve()
+        else:
+            self._url = str(self._page.url)
 
         return self._url
 
@@ -198,17 +205,12 @@ class WikiCooker(ParserBase):
         message: str
             message to show user when asking if app should terminate
         """
-        SharedVars.ask_exit = message
-        SharedVars.wait_exit = True
-
-        while SharedVars.wait_exit:
-            time.sleep(0.05)
-
-        if SharedVars.terminate_app:
+        if Control("ask_to_exit", message).response:
             # TODO this is not enough need to del all references to the class
             self.Preload.stop()
             del self
-            sys.exit()
+            if Control("deconstruct").response:
+                sys.exit()
 
     # TODO if the propper page cannot be found we could show a dialog with a
     # list of possible matches for user to choose from
@@ -263,10 +265,11 @@ class WikiCooker(ParserBase):
 
             if not self.error_msg:
                 # file path can be too long to show in GUI
-                if "pkl" in self.url:
-                    url = "..." + self.url.rsplit("wiki_music", 1)[1]
-                else:
+                if isinstance(self.url, str):
                     url = self.url
+                else:
+                    url = "..." + str(self.url).rsplit("wiki_music", 1)[1]
+
                 self._log.info(f"Found: {url}")
 
         if self.error_msg:
@@ -284,7 +287,7 @@ class WikiCooker(ParserBase):
 
         See also
         --------
-        :attr:`wiki_music.utilities.sync.SharedVars.offline_debbug`
+        :attr:`wiki_music.utilities.sync.self.offline_debug`
             defines if online version is downloaded or offline pickle version
         :meth:`_from_disk`
             fetches the offline version of page
@@ -307,7 +310,7 @@ class WikiCooker(ParserBase):
 
         self._log.debug("getting wiki")
 
-        if SharedVars.offline_debbug:
+        if self.offline_debug:
             return self._from_disk()
         else:
             return self._from_web()
@@ -375,8 +378,8 @@ class WikiCooker(ParserBase):
         """
         # TODO pickle probably cannot handle some complex pages
         self._log.debug(f"loading pickle file {self.url}")
-        if path.isfile(self.url):
-            with open(self.url, 'rb') as f:
+        if self.url.is_file():
+            with self.url.open('rb') as f:
                 self._log.debug("loading ...")
                 self._page = pickle.load(f)
             self._log.debug("done")

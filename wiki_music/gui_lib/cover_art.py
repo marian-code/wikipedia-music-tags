@@ -1,12 +1,10 @@
-"""This module houses classes that are responsible for search and retrieval
-of cover art picture.
-"""
+"""Module with classes for cover art picture search and download."""
 
 import logging
 import queue
-from os import path
+from pathlib import Path
 from threading import Thread
-from typing import Dict, Iterable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple, Union
 
 from wiki_music.constants import (ASPECT_RATIOS, COVER_ART_EDIT_UI,
                                   COVER_ART_SEARCH_UI)
@@ -16,18 +14,26 @@ from wiki_music.gui_lib import BaseGui, ImageTable, SelectablePixmap
 from wiki_music.gui_lib.qt_importer import (QDialog, QHBoxLayout, QIcon,
                                             QMessageBox, QSize, Qt, QTimer,
                                             QWidget, Signal, uic)
-from wiki_music.utilities import (MultiLog, SharedVars, comp_res, exception,
-                                  get_icon, get_image, get_image_size)
-                                  # , send_to_clipboard)
+from wiki_music.utilities import (MultiLog, comp_res, exception, get_icon,
+                                  get_image, get_image_size)
+
+if TYPE_CHECKING:
+    from typing_extensions import TypedDict
+
+    RespDict = TypedDict("RespDict", {"thumb": bytes,
+                                      "dim": Tuple[int, Tuple[int, int]],
+                                      "url": Union[Path, str]})
+
 
 log = logging.getLogger(__name__)
 log.debug("coverart imports done")
 
 
 class PictureContainer(SelectablePixmap):
-    """Holds the selected picture that is being edited. The raw picture is
-    stored in bytes data. Which are the loaded by `PIL` for manipulation
-    or by GUI to display.
+    """Holds the selected picture that is being edited.
+
+    The raw picture is stored in bytes data. Which are the loaded by `PIL`
+    for manipulation or by GUI to display.
 
     Warnings
     --------
@@ -36,20 +42,20 @@ class PictureContainer(SelectablePixmap):
 
     Parameters
     ----------
-    bytes_image: bytearray
+    bytes_image: bytes
         the picture that will be edited in bytes format
     log: :class:`wiki_music.utilities.util.MultiLog`
         logger instance of creating class
 
     Attributes
     ----------
-    bytes_image_orig: bytearray
+    bytes_image_orig: bytes
         original image in byres format
-    bytes_image_edit: bytearray
+    bytes_image_edit: bytes
         original image with applied compession
-    bytes_image_crop: Optional[bytearray]
+    bytes_image_crop: Optional[bytes]
         cropped version of original image without compression
-    bytes_image_resz: Optional[bytearray]
+    bytes_image_resz: Optional[bytes]
         resized version of original image without compression
     log: :class:`wiki_music.utilities.util.MultiLog`
         class logger
@@ -65,16 +71,16 @@ class PictureContainer(SelectablePixmap):
         inhereted class which implements the ability to select with rubberband
     """
 
-    bytes_image_orig: bytearray
-    bytes_image_edit: bytearray
-    bytes_image_crop: Optional[bytearray]
-    bytes_image_resz: Optional[bytearray]
+    bytes_image_orig: bytes
+    bytes_image_edit: bytes
+    bytes_image_crop: Optional[bytes]
+    bytes_image_resz: Optional[bytes]
     log: MultiLog
 
     disksizeChanged: Signal = Signal(str)
     dimensionsChanged: Signal = Signal(int, int)
 
-    def __init__(self, bytes_image: bytearray, log: MultiLog) -> None:
+    def __init__(self, bytes_image: bytes, log: MultiLog) -> None:
 
         super().__init__(bytes_image)
 
@@ -87,15 +93,14 @@ class PictureContainer(SelectablePixmap):
         self._log = log
 
     @property
-    def current_image_c(self) -> bytearray:
+    def current_image_c(self) -> bytes:
         """Get image to compress.
 
         Returns
         -------
-        bytearray
+        bytes
             the appropriate image version
         """
-
         # if we have cropped image, use that
         if self.bytes_image_crop:
             return self.bytes_image_crop
@@ -107,15 +112,14 @@ class PictureContainer(SelectablePixmap):
             return self.bytes_image_orig
 
     @property
-    def current_image_r(self) -> bytearray:
-        """get image to resize.
-        
+    def current_image_r(self) -> bytes:
+        """Get image to resize.
+
         Returns
         -------
-        bytearray
+        bytes
             the appropriate image version
         """
-
         # if some resized version is present use that, otherwise use original
         if self.bytes_image_crop:
             return self.bytes_image_crop
@@ -135,7 +139,6 @@ class PictureContainer(SelectablePixmap):
         :func:`wiki_music.utilitie.gui_utils.comp_res`
             compresses image using PIL
         """
-
         self.bytes_image_edit = comp_res(self.current_image_c, quality)
         self.update_pixmap(self.bytes_image_edit)
 
@@ -145,8 +148,7 @@ class PictureContainer(SelectablePixmap):
         self._log.info(f"Compressed cover art  to: {size}Kb")
 
     def resize_image(self, x: int, y: int, quality: int):
-        """Resize image to set dimensions, then apply defined compresion and
-        show result.
+        """Resize image to set dimensions, apply defined compresion.
 
         Parameters
         ----------
@@ -162,7 +164,6 @@ class PictureContainer(SelectablePixmap):
         :func:`wiki_music.utilitie.gui_utils.comp_res`
             compresses and resizes image using PIL
         """
-
         self.bytes_image_edit = comp_res(self.current_image_r, quality, x, y)
         self.bytes_image_resz = self.bytes_image_edit
         self.update_pixmap(self.bytes_image_resz)
@@ -171,8 +172,9 @@ class PictureContainer(SelectablePixmap):
         self.disksizeChanged.emit(get_image_size(self.bytes_image_edit))
 
     def crop_image(self, quality: int):
-        """Crops image to part selected by rubberband, then applies set level
-        of compresin and shows image in GUI.
+        """Crops image to part selected by rubberband.
+
+        After cropping appliy set level of compresin and shows image in GUI.
 
         Parameters
         ----------
@@ -184,25 +186,25 @@ class PictureContainer(SelectablePixmap):
         :func:`wiki_music.utilitie.gui_utils.comp_res`
             compresses image using PIL
         """
-
         # TODO wrong image part displayed after crop
-        crop_pixmap = self.pixmap().copy(self.currentQRubberBand.geometry())
-        self.bytes_image_crop = self._pixmap2bytes(crop_pixmap)
-        self.compress_image(quality)
-        self.cancel_selection()
-        self.update_pixmap(self.bytes_image_crop)
+        # TODO image dimensions are not updated
+        if self.currentQRubberBand:
+            crop_pix = self.pixmap().copy(self.currentQRubberBand.geometry())
+            self.bytes_image_crop = self._pixmap2bytes(crop_pix)
+            self.compress_image(quality)
+            self.cancel_selection()
+            self.update_pixmap(self.bytes_image_crop)
 
-        self.dimensionsChanged.emit(*self.image_dims)
+            self.dimensionsChanged.emit(*self.image_dims)
 
-        self._log.info("Cover art cropped to: {}x{}".format(*self.image_dims))
+            self._log.info("Cover art cropped to: "
+                           "{}x{}".format(*self.image_dims))
+        else:
+            self._log.warning("No selection to crop.")
 
-    def save_image(self, path: str):
-        """Saves the most current version of the image to file with name
-        Folder.jpg
-        """
-
-        with open(path, 'wb') as f:
-            f.write(self.bytes_image_edit)
+    def save_image(self, path: Path):
+        """Save current version of the image to file with name Folder.jpg."""
+        path.write_bytes(self.bytes_image_edit)
 
     # TODO currently not used
     # def send2clipboard(self):
@@ -211,8 +213,9 @@ class PictureContainer(SelectablePixmap):
 
 
 class SearchDialog(QDialog):
-    """Manages the search dialog window, displays found picture thumbnails and
-    houses some basic search controls.
+    """Manages the search dialog window.
+
+    Displays found picture thumbnails and houses some basic search controls.
 
     Parameters
     ----------
@@ -236,7 +239,6 @@ class SearchDialog(QDialog):
     """
 
     table: ImageTable
-
     pictureClicked: Signal = Signal(int)
 
     def __init__(self, query: str) -> None:
@@ -265,8 +267,9 @@ class SearchDialog(QDialog):
         self.cancel_button.clicked.connect(self.done)
 
     def table_cell_clicked(self, row: int, col: int):
-        """Emits signal when cell in table is clicked. From the row and
-        column position calculates the picture position in the list.
+        """Emits signal when cell in table is clicked with picture list index.
+
+        Position index in list is calculated from rom the row and column.
 
         Parameters
         ----------
@@ -288,28 +291,29 @@ class SearchDialog(QDialog):
         """
         return self.table.MAX_COLUMNS
 
-    def add_pic(self, dimension: str, thumbnail: bytearray):
+    def add_pic(self, dimension: str, thumbnail: bytes):
         """Add new picture to the table.
-        
+
         Parameters
         ----------
         dimension: str
             formated string with image dimension and size in Kb
-        thumbnail: bytearray
-            raw image thumbnail in bytes format 
+        thumbnail: bytes
+            raw image thumbnail in bytes format
         """
         self.table.add_pic(dimension, thumbnail)
 
 
 class PictureEdit(QDialog):
-    """Manages picture editor window, with cropping, resizing and compressing
-    abilities.
+    """Manages picture editor window.
+
+    Takes care of cropping, resizing and compressing abilities.
 
     Parameters
     ----------
     dimensions: Tuple[int, int]
         dimensions of the image being edited
-    clicked_image: bytearray
+    clicked_image: bytes
         the image to edit in bytes format
     log: :class:`wiki_music.utilities.utils.MultiLog`
         main GUI class logger
@@ -327,13 +331,12 @@ class PictureEdit(QDialog):
         signal to emit the edited picture when choice is accepted
     """
 
-    log: MultiLog
     picture: PictureContainer
     original_ratio: float
 
-    editingFinished: Signal = Signal(bytearray)
+    editingFinished: Signal = Signal(bytes)
 
-    def __init__(self, dimensions: Tuple[int, int], clicked_image: bytearray,
+    def __init__(self, dimensions: Tuple[int, int], clicked_image: bytes,
                  log: MultiLog, save_dir: str) -> None:
 
         # QDialog init
@@ -365,8 +368,7 @@ class PictureEdit(QDialog):
         self._setup_overlay()
 
     def _setup_overlay(self):
-        """Connect all the dialog elements to coresponding signals"""
-
+        """Connect all the dialog elements to coresponding signals."""
         # editor signals
         self.picture.selectionActive.connect(self.cancel_crop.setEnabled)
         self.picture.disksizeChanged.connect(self.size_box.setText)
@@ -407,7 +409,7 @@ class PictureEdit(QDialog):
         return self.size_spinbox_X.value(), self.size_spinbox_Y.value()
 
     def set_image_dims(self, x: int, y: int):
-        """passes current image dimension to spinboxes.
+        """Passes current image dimension to spinboxes.
 
         Parameters
         ----------
@@ -416,7 +418,6 @@ class PictureEdit(QDialog):
         y: int
             vertical dimension in pixels
         """
-
         self.size_spinbox_X.setValue(x)
         self.size_spinbox_Y.setValue(y)
 
@@ -454,7 +455,7 @@ class PictureEdit(QDialog):
 
     @exception(log)
     def _get_crop_ratio(self, value: str):
-        """Sets the desired aspect ratio for cropping
+        """Sets the desired aspect ratio for cropping.
 
         See also
         --------
@@ -472,24 +473,24 @@ class PictureEdit(QDialog):
         ValueError
             if the passed `value` is not a valid ratio format
         """
-
-        crop_ratio: Optional[Iterable[float]]
+        crop_ratio: Optional[float]
 
         if value.lower() == "preserve":
-            crop_ratio = (self.original_ratio, 1)
+            crop_ratio = self.original_ratio
         elif value.lower() == "free":
             crop_ratio = None
         else:
             try:
-                crop_ratio = [int(i) for i in value.split(":")]
+                ar = [int(i) for i in value.split(":")]
             except ValueError:
                 raise ValueError(f"{value} is not a valid ratio format")
+            else:
+                crop_ratio = ar[1] / ar[2]
 
         self.picture.set_aspect_ratio(crop_ratio)
 
     def _aspect_ratio_sync(self, dim: int, activated: str):
-        """Synchronize the aspect ratio spinboxes. Employs complex logic to
-        avoid recursion.
+        """Synchronize the aspect ratio spinboxes.
 
         Parameters
         ----------
@@ -497,9 +498,7 @@ class PictureEdit(QDialog):
             the current value in spinbox which activated this method
         activated: str
             x or y the spinbox which activated this methos
-
         """
-
         x, y = self.image_dims
 
         if self.preserve_ratio:
@@ -532,7 +531,6 @@ class PictureEdit(QDialog):
         :meth:`PictureContainer.compress_image`
             method activated to apply the compression to picture
         """
-
         if activated == "spinbox":
             self.compresion_slider.setValue(comp_value)
         elif activated == "slider":
@@ -541,8 +539,7 @@ class PictureEdit(QDialog):
         self.picture.compress_image(comp_value)
 
     def picture_save(self):
-        """Saves picture to Folder.jpg in directory with
-        currently edited files.
+        """Saves picture to Folder.jpg in directory with edited music files.
 
         Warnings
         --------
@@ -555,10 +552,9 @@ class PictureEdit(QDialog):
         :meth:`PictureContainer.send2clipboard`
             method activated to paste picture to clipboard
         """
-
         if self.save_file:
             self._log.info("Cover art saved to file")
-            self.picture.save_image(path.join(self.save_dir, "Folder.jpg"))
+            self.picture.save_image(self.save_dir / "Folder.jpg")
         if self.clipboard:
             self._log.info("Cover art copied to clipboard")
             # TODO this is not used for now see discussion in gui_utils module
@@ -566,10 +562,11 @@ class PictureEdit(QDialog):
 
 
 class CoverArtSearch(BaseGui):
-    """Main class that handles cover art search, calls all the apropriate
-    methods. First initialize google_images_download in a separate thread,
-    then initializes Search dialog window. After that it reads downloaded image
-    thumbnails and displays them inn the dialog.
+    """Main class that handles cover art search.
+
+    Calls all the apropriate methods. First initialize google_images_download
+    in a separate thread, then initializes Search dialog window. After that it
+    reads downloaded image thumbnails and displays them inn the dialog.
 
     Attributes
     ----------
@@ -592,7 +589,7 @@ class CoverArtSearch(BaseGui):
     """
 
     _max_count: int
-    images: Dict[str, Union[bytes, str, tuple]]
+    images: List["RespDict"]
     image_search_thread: Thread
     search_dialog: SearchDialog
     picture_editor: PictureEdit
@@ -610,7 +607,7 @@ class CoverArtSearch(BaseGui):
         """
         self.images = []
 
-        if SharedVars.offline_debbug:
+        if self.offline_debug:
             self.gimd = google_images_download_offline.googleimagesdownload()
             self._max_count = 5
         else:
@@ -661,10 +658,7 @@ class CoverArtSearch(BaseGui):
         self._log.info("Searching for Cover Art")
 
     def _load_more(self):
-        """Method that raises the maximum number of images to download and
-        then continues the search.
-        """
-
+        """Method that raises the maximum number of images to download."""
         # raise the limit of max downloaded images
         self._max_count += 20
 
@@ -684,9 +678,10 @@ class CoverArtSearch(BaseGui):
 
     @exception(log)
     def _async_loader(self):
-        """Periodically checks background thread (every 50 ms) for new
-        downloaded images. When a new image is found it is loaded and passed to
-        GUI dialog to display.
+        """Periodically checks background thread for new downloaded images.
+
+        When a new image is found it is loaded and passed to GUI dialog to
+        display. Chceck is scheduled every 50ms.
 
         See also
         --------
@@ -704,9 +699,9 @@ class CoverArtSearch(BaseGui):
                 first coresponds to ImageSearch window being visible and the
                 other reports if enough images has been loaded
             """
-
             if flip:
-                return [not c for c in continue_load()]
+                cl1, cl2 = continue_load()
+                return not cl1, not cl2
             else:
                 return (self.search_dialog.isVisible(),
                         len(self.images) < self._max_count)
@@ -749,18 +744,16 @@ class CoverArtSearch(BaseGui):
 
     @exception(log)
     def _select_picture(self, index: int):
-        """Method that initializes necessary classes for selected picture
-        editing.
+        """Method that initializes classes for selected picture editing.
 
         Parameters
         ----------
         index: int
             position of the picture in downloade pictures list
         """
-
         # 0-th position is size in KB, and 1-st position is tuple of dimensions
         dimensions: Tuple[int, int] = self.images[index]["dim"][1]
-        url: str = self.images[index]["url"]
+        url: Union[Path, str] = self.images[index]["url"]
 
         self._log.info(f"Downloading full size cover art from: {url}")
 
