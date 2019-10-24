@@ -66,6 +66,29 @@ def set_loggers():
             log.addHandler(fh)
 
 
+def clear_path():
+    if input_parser() == "GUI":
+
+        try:
+            shutil.rmtree("gdist")
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            print(e)
+            sys.exit()
+    else:
+        try:
+            shutil.rmtree("cdist")
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            print(e)
+            sys.exit()
+
+
+# clear build paths
+clear_path()
+
 # setup loggers
 set_loggers()
 
@@ -101,25 +124,25 @@ exclude_libs = [
 
 # common installer options
 installer_opt = [
-    # constnts build options
+    # ? constnts build options
     "--clean",
     "--noconfirm",
     # "--version-file=<FILE>",
 
-    # debbugging options
-    "--debug=bootloader",
-    "--debug=all",
-    "--debug=noarchive",
+    # ? debbugging options
+    # "--debug=bootloader",
+    # "--debug=all",
+    #"--debug=noarchive",
 
-    # upx options
-    #"--noupx",
+    # ? upx options
+    "--noupx",
     "--upx-exclude=vcruntime140.dll",
     "--upx-exclude=msvcp140.dll",
     "--upx-exclude=qwindows.dll",
     "--upx-exclude=qwindowsvistastyle.dll",
     f"--upx-dir={path.join(WORK_DIR, 'upx')}",
 
-    # pyinstaller data paths and hooks
+    # ? pyinstaller data paths and hooks
     f"--paths={PACKAGE_PATH}",
     f"--add-data={path.join(PACKAGE_PATH, 'wiki_music', 'files')};files",
     f"--icon={path.join(PACKAGE_PATH, 'wiki_music', 'files', 'icon.ico')}",
@@ -127,7 +150,7 @@ installer_opt = [
     "--additional-hooks-dir=hooks",
     f"--runtime-hook={path.join(WORK_DIR, 'rhooks', 'pyi_rth_nltk.py')}",
 
-    # what to build
+    # ? what to build
     "--onedir",
     # "--onefile",
     "--name=wiki_music",
@@ -136,30 +159,14 @@ installer_opt = [
 # installer options specific to gui or cli
 if input_parser() == "GUI":
 
-    try:
-        shutil.rmtree("gdist")
-    except FileNotFoundError:
-        pass
-    except OSError as e:
-        print(e)
-        sys.exit()
-
     installer_opt.extend([
         "--distpath=gdist",
-        #"--windowed",
+        "--windowed",
         f"--add-data={path.join(PACKAGE_PATH, 'wiki_music', 'data')};data",
         f"--add-data={path.join(PACKAGE_PATH, 'wiki_music', 'ui')};ui",
         f"{path.join(PACKAGE_PATH, 'wiki_music', 'app_gui.py')}"
     ])
 else:
-
-    try:
-        shutil.rmtree("cdist")
-    except FileNotFoundError:
-        pass
-    except OSError as e:
-        print(e)
-        sys.exit()
 
     installer_opt.extend([
         "--distpath=cdist",

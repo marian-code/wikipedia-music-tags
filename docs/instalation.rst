@@ -123,13 +123,14 @@ for your python version, install it by:
     pip install <package-name>.whl
 
 Other than that you can use `UPX <https://upx.github.io>`_ to compress the app
-to a smaller size. It prooves to be quite effective reducing app size..
+to a smaller size. It proves to be quite effective reducing app size.
 If you want to use it go to the provided link and download apropriate
 version for your system. Then unpack it in upx folder under wiki_music/freeze.
 
 .. warning::
     This is not recomended in debugging stage as it adds another layer of
-    complexity.
+    complexity. UPX compression is still under development, for instance it
+    messes some GUI elements!
 
 Now you are ready to go:
 
@@ -143,9 +144,9 @@ To build the CLI app:
 
     python freeze.py cli
 
-When building in virtual env the frozen app should have ~75MB.
-With UPX compression and vanilla Numpy ~56MB
-With OPENBLAS numpy and UPX compression ~105MB.
+When building in virtual env the frozen app should have ~65MB.
+With UPX compression and vanilla Numpy ~??MB
+With OPENBLAS numpy and UPX compression ~95MB.
 
 To build the GUI app:
 
@@ -153,9 +154,9 @@ To build the GUI app:
 
     python freeze.py gui
 
-When building in virtual env the frozen app should have ~120MB.
-With UPX compression and vanilla Numpy ~75MB
-With OPENBLAS numpy and UPX compression ~150MB.
+When building in virtual env the frozen app should have ~110MB.
+With UPX compression and vanilla Numpy ~??MB
+With OPENBLAS numpy and UPX compression ~140MB.
 
 This will generate list three directories under setup/ folder: gdist/ cdist/
 and build/. Build contains just pyinstaller help files and **(g/c)dist/wiki_music**

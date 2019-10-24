@@ -11,8 +11,8 @@ PKG_ROOT = Path(__file__).parent
 
 # Read package constants
 README = (PKG_ROOT / "README.md").read_text()
-VERSION = (PKG_ROOT / "wiki_music" / "version.py").read_text()
-    .split(" = ")[1].replace("\"", "")
+VERSION = ((PKG_ROOT / "wiki_music" / "version.py")
+           .read_text().split(" = ")[1].replace("\"", ""))
 REQUIREMENTS = (PKG_ROOT / "requirements.txt").read_text().split("\n")
 
 

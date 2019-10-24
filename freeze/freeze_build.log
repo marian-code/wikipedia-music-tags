@@ -20,23 +20,17 @@ INFO - build_main - running Analysis Analysis-00.toc
 INFO - bindepend - Adding Microsoft.Windows.Common-Controls to dependent assemblies of final executable
   required by C:\miniconda\envs\wikimusic37\python.exe
 INFO - build_main - Caching module hooks...
-INFO - build_main - Analyzing C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\wiki_music\app_gui.py
+INFO - build_main - Analyzing C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\wiki_music\app_cli.py
 INFO - analysis - Processing pre-safe import module hook   six.moves
 INFO - analysis - Processing pre-safe import module hook   win32com
-INFO - analysis - Processing pre-find module path hook   distutils
-INFO - analysis - Processing pre-find module path hook   PyQt5.uic.port_v3
-INFO - analysis - Processing pre-find module path hook   PyQt5.uic.port_v2
 INFO - analysis - Processing pre-safe import module hook   urllib3.packages.six.moves
-INFO - analysis - Processing pre-find module path hook   site
-INFO - hook-site - site: retargeting to fake-dir 'C:\\miniconda\\envs\\wikimusic37\\lib\\site-packages\\PyInstaller\\fake-modules'
 INFO - build_main - Loading module hooks...
 INFO - imphook - Loading module hook "hook-appdirs.py"...
 INFO - imphook - Excluding import 'win32com'
 INFO - imphook -   Removing import of win32com.shell.shell from module appdirs
-INFO - imphook -   Removing import of win32com.shell from module appdirs
 INFO - imphook -   Removing import of win32com.shell.shellcon from module appdirs
+INFO - imphook -   Removing import of win32com.shell from module appdirs
 INFO - imphook - Loading module hook "hook-certifi.py"...
-INFO - imphook - Loading module hook "hook-distutils.py"...
 INFO - imphook - Loading module hook "hook-encodings.py"...
 INFO - imphook - Loading module hook "hook-lxml.etree.py"...
 INFO - imphook - Loading module hook "hook-nltk.py"...
@@ -44,23 +38,18 @@ INFO - imphook - Loading module hook "hook-numpy.core.py"...
 INFO - imphook - Loading module hook "hook-numpy.py"...
 INFO - imphook - Loading module hook "hook-PIL.Image.py"...
 INFO - imphook - Loading module hook "hook-PIL.py"...
-INFO - imphook - Excluding import 'PyQt5'
-INFO - imphook -   Removing import of PyQt5.QtGui from module PIL.ImageQt
-INFO - imphook -   Removing import of PyQt5.QtCore from module PIL.ImageQt
-INFO - imphook - Import to be excluded not found: 'FixTk'
+INFO - imphook - Excluding import 'PySide'
+INFO - imphook -   Removing import of PySide from module PIL.ImageQt
 INFO - imphook - Excluding import 'tkinter'
 INFO - imphook -   Removing import of tkinter from module PIL.ImageTk
-INFO - imphook - Excluding import 'PyQt4'
-INFO - imphook - Excluding import 'PySide'
-INFO - imphook - Loading module hook "hook-PIL.SpiderImagePlugin.py"...
-INFO - imphook - Excluding import 'tkinter'
 INFO - imphook - Import to be excluded not found: 'FixTk'
+INFO - imphook - Excluding import 'PyQt4'
+INFO - imphook -   Removing import of PyQt4 from module PIL.ImageQt
+INFO - imphook - Excluding import 'PyQt5'
+INFO - imphook - Loading module hook "hook-PIL.SpiderImagePlugin.py"...
+INFO - imphook - Import to be excluded not found: 'FixTk'
+INFO - imphook - Excluding import 'tkinter'
 INFO - imphook - Loading module hook "hook-pydoc.py"...
-INFO - imphook - Loading module hook "hook-PyQt5.py"...
-INFO - imphook - Loading module hook "hook-PyQt5.QtCore.py"...
-INFO - imphook - Loading module hook "hook-PyQt5.QtGui.py"...
-INFO - imphook - Loading module hook "hook-PyQt5.QtWidgets.py"...
-INFO - imphook - Loading module hook "hook-PyQt5.uic.py"...
 INFO - imphook - Loading module hook "hook-pythoncom.py"...
 INFO - imphook - Loading module hook "hook-pywintypes.py"...
 INFO - imphook - Loading module hook "hook-regex.py"...
@@ -75,7 +64,6 @@ INFO - analysis - Analyzing run-time hooks ...
 INFO - analysis - Including custom run-time hook 'C:\\Users\\Marián Rynik\\OneDrive\\Dokumenty\\Visual Studio 2019\\Projects\\Python\\wiki_music\\freeze\\rhooks\\pyi_rth_nltk.py'
 INFO - analysis - Including run-time hook 'pyi_rth_certifi.py'
 INFO - analysis - Including run-time hook 'pyi_rth_nltk.py'
-INFO - analysis - Including run-time hook 'pyi_rth_pyqt5.py'
 INFO - build_main - Looking for dynamic libraries
 INFO - build_main - Looking for eggs
 INFO - build_main - Using Python library C:\miniconda\envs\wikimusic37\python37.dll
@@ -92,7 +80,7 @@ INFO - datastruct - checking PKG
 INFO - datastruct - Building PKG because PKG-00.toc is non existent
 INFO - api - Building PKG (CArchive) PKG-00.pkg
 INFO - api - Building PKG (CArchive) PKG-00.pkg completed successfully.
-INFO - api - Bootloader C:\miniconda\envs\wikimusic37\lib\site-packages\PyInstaller\bootloader\Windows-64bit\run_d.exe
+INFO - api - Bootloader C:\miniconda\envs\wikimusic37\lib\site-packages\PyInstaller\bootloader\Windows-64bit\run.exe
 INFO - datastruct - checking EXE
 INFO - datastruct - Building EXE because EXE-00.toc is non existent
 INFO - api - Building EXE from EXE-00.toc
@@ -106,105 +94,4 @@ INFO - api - Building EXE from EXE-00.toc completed successfully.
 INFO - datastruct - checking COLLECT
 INFO - datastruct - Building COLLECT because COLLECT-00.toc is non existent
 INFO - api - Building COLLECT COLLECT-00.toc
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\python37.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-heap-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-stdio-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-math-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-runtime-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-locale-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-convert-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-string-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-environment-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-time-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-process-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-filesystem-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-conio-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\ucrtbase.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-debug-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-profile-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-namedpipe-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-datetime-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-timezone-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-errorhandling-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-sysinfo-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-synch-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-interlocked-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-processthreads-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-memory-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-file-l2-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-processenvironment-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-libraryloader-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-processthreads-l1-1-1.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-rtlsupport-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-util-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-localization-l1-2-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-heap-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-synch-l1-2-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-console-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-handle-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-file-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-file-l1-2-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-core-string-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qwbmp.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qtiff.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qwebp.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qico.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\platformthemes\qxdgdesktopportal.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qtga.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\iconengines\qsvgicon.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\platforms\qwebgl.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qgif.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qjpeg.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\platforms\qoffscreen.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qicns.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\imageformats\qsvg.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qt\plugins\platforms\qminimal.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_elementtree.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_yaml.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_sqlite3.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\win32api.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_ctypes.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\numpy\core\_multiarray_tests.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\numpy\core\_multiarray_umath.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\win32pdh.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\numpy\random\mtrand.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\numpy\fft\fftpack_lite.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\numpy\linalg\_umath_linalg.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\numpy\linalg\lapack_lite.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_decimal.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_queue.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\regex\_regex.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_ssl.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyexpat.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\unicodedata.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_hashlib.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_bz2.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_lzma.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\_socket.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\select.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\lxml\etree.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\lxml\_elementpath.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\levenshtein\_levenshtein.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pil\_webp.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pil\_imagingtk.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pil\_imaging.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qtgui.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qtwidgets.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\sip.cp37-win_amd64.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pyqt5\qtcore.pyd
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5gui.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5core.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5widgets.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\api-ms-win-crt-utility-l1-1-0.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5dbus.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5svg.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5network.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5quick.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5websockets.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\sqlite3.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\pywintypes37.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\libssl-1_1-x64.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\libcrypto-1_1-x64.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\python3.dll
-INFO - utils - Executing - C:\Users\Marián Rynik\OneDrive\Dokumenty\Visual Studio 2019\Projects\Python\wiki_music\freeze\upx\upx --lzma -q C:\Users\Marián Rynik\AppData\Roaming\pyinstaller\bincache01_py37_64bit\qt5qml.dll
 INFO - api - Building COLLECT COLLECT-00.toc completed successfully.

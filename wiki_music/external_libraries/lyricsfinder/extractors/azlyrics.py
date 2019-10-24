@@ -17,14 +17,17 @@ class AZLyrics(LyricsExtractor):
     url = "https://www.azlyrics.com/"
     display_url = "azlyrics.com"
 
-    @staticmethod
-    def extract_lyrics(url_data, song, artist):
+    @classmethod
+    def extract_lyrics(cls, url_data, song, artist):
         """Extract lyrics."""
-        url_data.headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
+        url_data.headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; "
+                                          "Win64; x64; rv:59.0) "
+                                          "Gecko/20100101 Firefox/59.0"}
         bs = url_data.bs
 
-        center = bs.body.find("div", {"class": "col-xs-12 col-lg-8 text-center"})
-        
+        center = bs.body.find("div",
+                              {"class": "col-xs-12 col-lg-8 text-center"})
+
         if not center:
             # 503 Service Temporarily Unavailable
             if re.search(r"50[0-9]", bs.find("title").text):
@@ -40,7 +43,7 @@ class AZLyrics(LyricsExtractor):
                 url_data.url = tracklist.find("a", text=song.title())["href"]
                 # call method again
                 return AZLyrics.extract_lyrics(url_data, song, artist)
-        
+
         lyrics = center.find("div", {"class": None}).text
 
         lyrics = re.sub(r"<br>", " ", lyrics)

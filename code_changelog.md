@@ -4,7 +4,7 @@
 - 0.6a0
   - delete do not bother setting when api key or nltk data are manually
     downloaded
-  - fix manual google api search key running even if NO selcted
+  - fix manual google api search key running even if NO selected
   - fix extraction for endless forms most beautiful
   - fix as many bugs as possible
   - make parallel freezing, and package for release
@@ -64,7 +64,12 @@
 
 # Change Log
 
-### 21.10.2019 - 0.5a0
+### 24.10.2019 - 0.5a0
+- some changes to lyricsfinder to speed things up
+- made test music files a lot smaller, for git push and pull to be faster
+- last opened file is now not included in dist wheel
+
+### 21.10.2019
 - finnished and tested new implementation of parser - GUI comunication, it is
   a lot cleaner and less error prone
 - SharedVars class ha been simplified a lot

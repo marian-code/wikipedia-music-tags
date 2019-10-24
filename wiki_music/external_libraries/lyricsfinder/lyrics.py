@@ -27,6 +27,7 @@ class LyricsManager:
 
     @classmethod
     def setup(cls):
+        """Initialize class."""
         log.debug("setting up")
         # ! dissabled because of pyinstaller
         # extractors.load_extractors()
@@ -34,18 +35,17 @@ class LyricsManager:
         cls.extractors = LyricsExtractor.extractors
         log.info("loaded {} extractors".format(len(cls.extractors)))
 
-    def extract_lyrics(self, url: str, song: str, artist: str) -> Lyrics:
+    @classmethod
+    def extract_lyrics(cls, url: str, song: str, artist: str) -> Lyrics:
         """Extract lyrics from url."""
         log.info("extracting lyrics from url \"{}\"".format(url))
         url_data = UrlData(url)
-        for ext in self.extractors:
+        for extractor in cls.extractors:
 
-            if not ext.can_handle(url_data):
+            if not extractor.can_handle(url_data):
                 continue
 
-            extractor = ext()
-
-            log.debug("using {} for {}".format(ext, url_data))
+            log.debug("using {} for {}".format(extractor, url_data))
 
             try:
                 lyrics = extractor.extract_lyrics(url_data, song, artist)
@@ -56,8 +56,6 @@ class LyricsManager:
                 log.warning(f"{extractor} couldn't access lyrics at {url}")
                 continue
             except Exception:
-                # switch of so it doesn´t clutter console
-                # when not debugging
                 log.exception(f"Something went wrong when {extractor} "
                               f"handled {url}")
                 continue
@@ -68,7 +66,8 @@ class LyricsManager:
                 return lyrics
         raise exceptions.NoExtractorError(url)
 
-    def search_lyrics(self, song: str, album: str, artist: str, *,
+    @classmethod
+    def search_lyrics(cls, song: str, album: str, artist: str, *,
                       google_api_key: str) -> Iterator[Lyrics]:
         """Search the net for lyrics."""
         query = artist + " " + song
@@ -76,7 +75,8 @@ class LyricsManager:
 
         log.debug("got {} results fom google search".format(len(results)))
 
-        #google search does not return any results sometimes
+        # google search does not return any results after daily limit
+        # of 100 searches is exceeded
         if not results:
             log.warning("Google custom search returned no results! "
                         "---> Switching to url generation")
@@ -86,7 +86,7 @@ class LyricsManager:
             url = result["link"]
 
             try:
-                lyrics = self.extract_lyrics(url, song, artist)
+                lyrics = cls.extract_lyrics(url, song, artist)
             except exceptions.NoExtractorError:
                 log.warning("No extractor for url {}".format(url))
                 continue

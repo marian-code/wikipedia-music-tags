@@ -17,7 +17,6 @@ class LyricsExtractorMount(type):
 
     def __init__(cls, name, bases, attrs):
         """Add base class to list of extractors."""
-
         if not hasattr(cls, "extractors"):
             cls.extractors = []
             log.debug("Created Extractor Meta Class")
@@ -43,7 +42,8 @@ class LyricsExtractor(metaclass=LyricsExtractorMount):
         return cls.display_url in url_data.url
 
     @abc.abstractmethod
-    def extract_lyrics(self, url_data: UrlData) -> "Lyrics":
+    def extract_lyrics(self, url_data: UrlData, song: str, artist: str
+                       ) -> "Lyrics":
         """Return a Lyrics object for the given url, html or bs."""
         raise NotImplementedError
 

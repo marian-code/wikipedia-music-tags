@@ -21,15 +21,16 @@ class Animelyrics(LyricsExtractor):
     url = "http://www.animelyrics.com/"
     display_url = "animelyrics.com"
 
-    @staticmethod
-    def extract_lyrics(url_data, song, artist):
+    @classmethod
+    def extract_lyrics(cls, url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
         title = bs.select_one("div ~ h1").string
         artist = bs.find(text=ARTIST_MATCHER)
         artist = ARTIST_MATCHER.match(artist).group(1)
 
-        lyrics_window = bs.find("table", attrs={"cellspacing": "0", "border": "0"})
+        lyrics_window = bs.find("table", attrs={"cellspacing": "0",
+                                                "border": "0"})
 
         if lyrics_window:  # shit's been translated
             log.info("these lyrics have been translated... sighs...")
@@ -46,7 +47,8 @@ class Animelyrics(LyricsExtractor):
                     lyrics += p.span.text
             lyrics = lyrics.strip()
         else:
-            raw = requests.get(re.sub(r"\.html?", ".txt", url_data.url), allow_redirects=False)
+            raw = requests.get(re.sub(r"\.html?", ".txt", url_data.url),
+                               allow_redirects=False)
             content = raw.text.strip()
             match = re.search(r"-{10,}(.+?)-{10,}", content, flags=re.DOTALL)
             if match:

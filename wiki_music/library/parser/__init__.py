@@ -209,17 +209,12 @@ class WikipediaRunner(WikipediaParser):
         self.get_tracks()
 
         # extract personel names
-        self._log_print(msg_GREEN="Extracting additional personnel")
-        self.get_personnel()
-
-        # print out additional personnel
         self._log_print(msg_GREEN="Found aditional personel")
+        self.get_personnel()
         if not we_are_frozen():
             print(self.personnel_2_str())
 
         # extract writers, composers
-        self._log_print(msg_GREEN="Extracting composers")
-
         self._log_print(msg_GREEN="Found composers",
                         msg_WHITE="\n".join(flatten_set(self.get_composers())))
 

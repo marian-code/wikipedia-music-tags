@@ -18,9 +18,9 @@ class Darklyrics(LyricsExtractor):
     url = "http://www.darklyrics.com/"
     display_url = "darklyrics.com"
 
-    def extract_lyrics(self, url_data, song, artist):
+    @classmethod
+    def extract_lyrics(cls, url_data, song, artist):
         """Extract lyrics."""
-
         bs = url_data.bs
 
         # get list of album tracks
@@ -65,15 +65,16 @@ class Darklyrics(LyricsExtractor):
             lyrics_div = bs.find('div', class_='lyrics')
             # split into separate lyrics
             lyrics = lyrics_div.prettify().split('</h3>')
-            lyric = self.process_lyric(lyrics[song_number])
+            lyric = cls.process_lyric(lyrics[song_number])
         except Exception as e:
             log.exception(e)
 
         return Lyrics(title, lyric, artist=artist.title(),
                       release_date=release_date)
 
-    @staticmethod
-    def process_lyric(lyric):
+    @classmethod
+    def process_lyric(cls, lyric):
+        """Process and format lyrics."""
         lyric = lyric[:lyric.find('<h3>')]  # remove tail
         # Set linebreaks
         lyric = lyric.replace('<br/>', '')
@@ -93,4 +94,3 @@ class Darklyrics(LyricsExtractor):
                                   last_line is not ''):
                 result = result + '\n' + line
         return result.strip()
-

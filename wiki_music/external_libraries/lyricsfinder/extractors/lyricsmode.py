@@ -16,8 +16,8 @@ class Lyricsmode(LyricsExtractor):
     url = "http://www.lyricsmode.com/"
     display_url = "lyricsmode.com"
 
-    @staticmethod
-    def extract_lyrics(url_data, song, artist):
+    @classmethod
+    def extract_lyrics(cls, url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
 

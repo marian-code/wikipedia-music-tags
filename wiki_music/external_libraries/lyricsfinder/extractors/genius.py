@@ -17,8 +17,8 @@ class Genius(LyricsExtractor):
     url = "https://genius.com/"
     display_url = "genius.com"
 
-    @staticmethod
-    def extract_lyrics(url_data, song, artist):
+    @classmethod
+    def extract_lyrics(cls, url_data, song, artist):
         """Extract lyrics."""
         bs = url_data.bs
 
@@ -40,10 +40,14 @@ class Genius(LyricsExtractor):
 
         lyrics = lyrics_window.text.strip()
 
-        title = bs.find("h1", attrs={"class": "header_with_cover_art-primary_info-title"}).text
-        artist = bs.select_one("a.header_with_cover_art-primary_info-primary_artist").string
+        title = bs.find("h1", attrs={"class":
+                                     "header_with_cover_art-"
+                                     "primary_info-title"}).text
+        artist = bs.select_one(
+            "a.header_with_cover_art-primary_info-primary_artist").string
         try:
-            date_str = bs.find(text="Release Date").parent.find_next_sibling("span").string
+            date_str = bs.find(text="Release Date")
+            date_str = date_str.parent.find_next_sibling("span").string
         except AttributeError:
             date_str = "January 1, 2000"
         release_date = datetime.strptime(date_str, "%B %d, %Y")
