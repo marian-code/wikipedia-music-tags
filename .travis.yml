@@ -52,7 +52,7 @@ before_install:
   - pip install -U pytest
   - pip install codecov
 install:
-  - pip install ".[test]"
+  - pip install .
 script: python3 -m unittest discover
 after_success:
   - codecov # submit coverage
