@@ -2,11 +2,12 @@ import logging
 import sys
 from copy import deepcopy
 from pathlib import Path
-from random import shuffle, seed
-from unittest import TestCase, mock, main
+from random import seed, shuffle
+from unittest import TestCase, main, mock
 
-import setup_tests
 from wiki_music.library.parser import in_out
+
+from . import setup_tests
 
 logging.basicConfig(stream=sys.stderr)
 log = logging.getLogger(__name__)

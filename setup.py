@@ -25,7 +25,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/marian-code/wikipedia-music-tags",
     author="Marián Rynik",
-    keywords=" tagging music tags wikipedia",
+    keywords="tagging music tags wikipedia",
     author_email="marian.rynik@outlook.sk",
     license="MIT",
     classifiers=[

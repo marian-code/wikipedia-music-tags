@@ -1,14 +1,17 @@
+"""Test documentation build."""
+
 import unittest
 import subprocess
 import logging
 from pathlib import Path
 
-import setup_tests
+from . import setup_tests
 
-DOCS_ROOT = str(Path("./docs").resolve())
+DOCS_ROOT = str((Path(__file__).parent / ".." / "docs").resolve())
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
+
 
 class TestDocsBuild(unittest.TestCase):
     """Check for docs build warnings."""

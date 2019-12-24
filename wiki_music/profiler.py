@@ -6,7 +6,6 @@ __all__ = ["finish_yappi", "ContextProfiler", "init_yappi"]
 
 def finish_yappi():
     """Stop profiler, collect stats and write them to disc."""
-
     import yappi
     from pathlib import Path
 
@@ -73,7 +72,7 @@ def init_yappi(write_at_exit: bool = True):
     import atexit
 
     print('[YAPPI START]')
-    yappi.set_clock_type("cpu")# 'wall')
+    yappi.set_clock_type("cpu")  # 'wall')
     yappi.start()
 
     if write_at_exit:

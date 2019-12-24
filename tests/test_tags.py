@@ -1,6 +1,6 @@
 import unittest
 
-import setup_tests
+from . import setup_tests
 from wiki_music.constants.tags import TAGS, EXTENDED_TAGS
 from wiki_music.library.tags_handler.flac import TagFlac
 from wiki_music.library.tags_handler.m4a import TagM4a
