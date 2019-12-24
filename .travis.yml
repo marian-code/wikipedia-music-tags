@@ -3,21 +3,21 @@ jobs:
   include:
     # ===== Linux ======
     - name: "Python 3.6 on Ubuntu 18.04 (Bionic Beaver)"
-      os: bionic
+      dist: bionic
       python: 3.6
       before_install:
       - python --version
       - pip install -U pip
       - pip install codecov
     - name: "Python 3.7 on Ubuntu 18.04 (Bionic Beaver)"
-      os: bionic
+      dist: bionic
       python: 3.7
       before_install:
       - python --version
       - pip install -U pip
       - pip install codecov
     - name: "Python 3.8 on Ubuntu 18.04 (Bionic Beaver)"
-      os: bionic
+      dist: bionic
       python: 3.8
       before_install:
       - python --version

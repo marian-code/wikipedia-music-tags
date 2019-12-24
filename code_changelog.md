@@ -1,7 +1,7 @@
 # To-Do
 
 ### Main problems ordered by targeted release
-- 0.6a0
+- 0.7a0
   - cannot handle french lyrics! for Alcest - Spiritual guide
   - gender prompt is sometimes displayed twice
   - treadpool progressbar is not showing or showing late
@@ -72,7 +72,7 @@
 
 # Change Log
 
-### 24.12.2019
+### 24.12.2019 - 0.6a0
 - drag&drop is implemented and working
 - fixed bug  when NLTK import would delay start of the whole app
 - moved last opened dir to settings
@@ -81,6 +81,9 @@
 - last opened dir is now cached in YmlSettings
 - cleaned profiling methods, stats are now saved to own directory
 - started monitoring dependencies with https://requires.io
+- implemented Travis CI system, testing for Windows, Linux and MacOS with
+  python versions 3.6 - 3.8. Except MacOs does not have 3.8
+- added more badges to README
 
 ### 23.12.2019
 - started to implement drag and drop for folders into table to easilly
