@@ -21,8 +21,7 @@ log = logging.getLogger(__name__)
 __all__ = ["File"]
 
 
-@exception(log)
-def File(filename: Union[str, Path]) -> Type["TagBase"]:
+def File(filename: Union[str, Path]) -> "TagBase":
     """Class factory which returns coresponding class based on file type.
 
     Note

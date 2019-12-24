@@ -14,7 +14,7 @@ import yaml  # lazy loaded
 
 from wiki_music.constants import GREEN, RESET
 
-from .sync import SharedVars
+from .sync import ThreadPoolProgress
 from .utils import normalize
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 __all__ = ["ThreadWithTrace", "bracket", "write_roman", "normalize",
            "normalize_caseless", "caseless_equal", "caseless_contains",
-           "count_spaces", "yaml_dump", "complete_N_dim", "replace_N_dim",
+           "count_spaces", "yaml_dump", "complete_N_dim",
            "delete_N_dim", "ThreadPool", "yaml_load", "ThreadWithReturn"]
 
 
@@ -162,7 +162,7 @@ class ThreadPool:
         with self._lock:
             self._completed += 1
 
-        SharedVars.set_threadpool_prog(self._completed, self._maximum)
+        ThreadPoolProgress(actual=self._completed, maximum=self._maximum)
 
         return response
 
@@ -173,7 +173,7 @@ class ThreadPool:
 
         See also
         --------
-        :meth:`wiki_music.utilities.sync.SharedVars.set_threadpool_prog`
+        :class:`wiki_music.utilities.sync.ThreadPoolProgress`
             inform GUI of threadpool progress
 
         Parameters
@@ -189,22 +189,35 @@ class ThreadPool:
         N_threads = len(self._args)
 
         if N_threads == 1:
-            SharedVars.set_threadpool_prog(1, 1)
-            return self._target(*self._args[0])
+            return self.run_serial()
         else:
             threads: List[ThreadWithReturn] = []
 
             for i, a in enumerate(self._args):
                 threads.append(ThreadWithReturn(target=self._progress_tracker,
-                                                args=a,
+                                                args=a, daemon=True,
                                                 name=f"ThreadPoolWorker-{i}"))
-                threads[-1].daemon = True
                 threads[-1].start()
 
             for i, l in enumerate(threads):
                 threads[i] = l.join(timeout=timeout)
 
             return threads
+
+    def run_serial(self) -> list:
+        """Starts the execution of threads in pool in serial fasion.
+
+        See also
+        --------
+        :class:`wiki_music.utilities.sync.ThreadPoolProgress`
+            inform GUI of threadpool progress
+
+        Returns
+        -------
+        list
+            list of returned values from the functions run by the ThreadPool
+        """
+        return [self._progress_tracker(*a) for a in self._args]
 
     def run_async(self, timeout: Optional[float] = 60
                   ) -> Generator[Any, None, None]:
@@ -222,7 +235,7 @@ class ThreadPool:
 
         See also
         --------
-        :meth:`wiki_music.utilities.sync.SharedVars.set_threadpool_prog`
+        :class:`wiki_music.utilities.sync.ThreadPoolProgress`
             inform GUI of threadpool progress
 
         Parameters
@@ -238,7 +251,7 @@ class ThreadPool:
         N_threads = len(self._args)
 
         if N_threads == 1:
-            SharedVars.set_threadpool_prog(1, 1)
+            ThreadPoolProgress(actual=1, maximum=1)
             yield self._target(*self._args[0])
         else:
             threads: List[ThreadWithReturn] = []
@@ -260,7 +273,7 @@ class ThreadPool:
                         if not t.is_alive() and i not in returned:
                             count += 1
                             returned.add(i)
-                            SharedVars.set_threadpool_prog(count, N_threads)
+                            ThreadPoolProgress(actual=count, maximum=N_threads)
                             outer_break = True
                             break
                     if outer_break:
@@ -525,33 +538,6 @@ def complete_N_dim(to_complete: list, to_find: list):
                 to_complete[i] = ret
     else:
         return _find_N_dim(to_find, to_complete)
-
-
-def replace_N_dim(to_replace: list, to_find: str):
-    """Replaces to_find items in to_replace list by empty string.
-
-    Recursive function with nested list as input. The nested list elements
-    are traversed and defined expresion is replaced by empty string in each
-    element. Changes are made in place.
-
-    Parameters
-    ----------
-    to_replace: list
-        argument is a list which elements are not contain unwanted string.
-    to_find: str
-       the unwanted string to find in nested list
-
-    See also
-    --------
-    :func:`_find_N_dim`
-    """
-    if isinstance(to_replace, list):
-        for i, _ in enumerate(to_replace):
-            ret = replace_N_dim(to_replace[i], to_find)
-            if ret is not None:
-                to_replace[i] = ret
-    else:
-        return to_replace.replace(to_find, "").strip()
 
 
 def delete_N_dim(to_delete: list, to_find: list) -> list:  # type: ignore

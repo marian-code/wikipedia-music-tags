@@ -10,7 +10,7 @@ from shutil import rmtree
 from time import sleep
 from typing import Any, List, Optional, Tuple, Union
 
-from .sync import SharedVars
+from .sync import GuiLoggger
 
 logging.getLogger(__name__)
 
@@ -20,13 +20,13 @@ __all__ = ["list_files", "to_bool", "normalize", "we_are_frozen",
 
 
 class MultiLog:
-    """Passes the messages to logger instance and to SharedVars.
+    """Passes the messages to logger instance and to GuiLoggger.
 
-    Only where applicable as SharedVars does not implement whole Logger API
+    Only where applicable as GuiLoggger does not implement whole Logger API
 
     See also
     --------
-    :class:`wiki_music.utilities.sync.SharedVars`
+    :class:`wiki_music.utilities.sync.GuiLoggger`
         class passing the messages to GUI
 
     Parameters
@@ -45,12 +45,12 @@ class MultiLog:
     def info(self, message: Any):
         """Issue a info message."""
         self._logger.info(message)
-        SharedVars.info(message)
+        GuiLoggger.info(message)
 
     def warning(self, message: Any):
         """Issue a warning message."""
         self._logger.warning(message)
-        SharedVars.warning(message)
+        GuiLoggger.warning(message)
 
     def error(self, message: Any):
         """Issue a error message."""
@@ -63,7 +63,7 @@ class MultiLog:
     def exception(self, message: Any):
         """Issue a exception message."""
         self._logger.exception(message)
-        SharedVars.exception(message)
+        GuiLoggger.exception(message)
 
 
 def list_files(work_dir: Path, file_type: str = "music",
@@ -275,44 +275,39 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     bool
         true if logging level is debug
     """
-    parser = argparse.ArgumentParser(description="Description of your program")
+    parser = argparse.ArgumentParser(description="Description of your program",
+                                     epilog="Only --debug option is read in "
+                                            "GUI mode, others work only with"
+                                            "CLI app.")
 
-    parser.add_argument("-y",
-                        "--yaml",
+    parser.add_argument("-y", "--yaml",
                         action="store_true",
                         help="Write yaml save file?")
-    parser.add_argument("-o",
-                        "--offline_debbug",
+    parser.add_argument("-o", "--offline_debbug",
                         action="store_true",
                         help="Use offline pickle debbug file instead of "
                         "web page?")
-    parser.add_argument("-l",
-                        "--lyrics_only",
+    parser.add_argument("-l", "--lyrics_only",
                         action="store_true",
                         help="Download only lyrics?")
-    parser.add_argument("-a",
-                        "--album",
+    parser.add_argument("-a", "--album",
                         default=None,
                         help="Album name",
                         nargs="*")
-    parser.add_argument("-b",
-                        "--band",
+    parser.add_argument("-b", "--band",
                         default=None,
                         help="Band name",
                         nargs="*")
-    parser.add_argument("-w",
-                        "--work_dir",
+    parser.add_argument("-w", "--work_dir",
                         default=Path(".").resolve(),
                         help="working directory",
                         type=str)
-    parser.add_argument("-W",
-                        "--With_log",
+    parser.add_argument("-W", "--With_log",
                         default=False,
                         action="store_false",
                         help="Print loggning output, "
                         "applies only to console app")
-    parser.add_argument("-d",
-                        "--debug",
+    parser.add_argument("-d", "--debug",
                         default=False,
                         action="store_true",
                         help="Run in debugging mode")

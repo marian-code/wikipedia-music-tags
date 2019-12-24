@@ -5,9 +5,9 @@ from pathlib import Path
 
 from appdirs import user_data_dir, user_log_dir
 
-__all__ = ["ROOT_DIR", "DIR_FILE", "LOG_DIR", "OUTPUT_FOLDER",
-           "OFFLINE_DEBUG_IMAGES", "FILES_DIR", "GOOGLE_API_URL",
-           "API_KEY_FILE", "module_path", "SETTINGS_YML"]
+__all__ = ["ROOT_DIR", "LOG_DIR", "OUTPUT_FOLDER", "OFFLINE_DEBUG_IMAGES",
+           "FILES_DIR", "GOOGLE_API_URL", "API_KEY_FILE", "module_path",
+           "SETTINGS_YML"]
 
 
 def _dir_writable(dir_name: Path) -> bool:
@@ -74,8 +74,6 @@ if not _dir_writable(ROOT_DIR):
     ROOT_DIR.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-#: file containing record of last openede directory in gui
-DIR_FILE: Path = Path(ROOT_DIR, "data", "last_opened.txt")
 #: folder containing human readable text output, of processed wiki page
 #: and also pickled version of wikipedia.WikipediaPage
 OUTPUT_FOLDER: Path = Path(LOG_DIR, "output")

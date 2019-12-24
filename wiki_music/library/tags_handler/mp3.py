@@ -68,7 +68,7 @@ class TagMp3(TagBase):
                 else:
                     tag = frame[0].text
                     if value == "LYRICS":
-                        tag = literal_eval(tag)
+                        tag = [tag]
 
             except IndexError:
                 tag = self._get_default_tag(value)

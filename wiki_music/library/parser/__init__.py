@@ -72,43 +72,29 @@ class WikipediaRunner(WikipediaParser):
 
     def _run_wiki_gui(self):
         """Runs wikipedia search with specifics of the GUI mode."""
-        # download wikipedia page
-        if not self.offline_debug:
-            self._log.info(f"Searching for: {self.ALBUM} by "
-                           f"{self.ALBUMARTIST}")
-        else:
-            self._log.info("Using offline cached page insted of web page")
+        # download wikipedia page and track progress
+        for message in self._get_preload_progress():
+            self._log.info(message)
 
+        # get error messages
         error_msg = self.get_wiki()
         if error_msg:
             self._log.exception(error_msg)
             return
 
-        else:
-            self._log.info(f"Found at: {self.url}")
-            self._log.info("Cooking Soup")
-
-            error_msg = self.cook_soup()
-            if error_msg:
-                self._log.exception(error_msg)
-                return
-            else:
-                self._log.info("Soup ready")
+        if not we_are_frozen():
+            # basic html textout for debug
+            self.basic_out()
 
         # find release date
         self._log.info(f"Found release date: {self.get_release_date()}")
 
         # find list of genres
-        self.get_genres()
-        self._log.info(f"Found genre(s): {', '.join(self.genres)}")
+        self._log.info(f"Found genre(s): {', '.join(self.get_genres())}")
 
         # download cover art from wikipedia
         self._log.info("Downloading cover art")
-        self.get_cover_art()
-
-        if not we_are_frozen():
-            # basic html textout for debug
-            self.basic_out()
+        self.get_cover_art(in_thread=True)
 
         # print out page contents
         self._log.info(f"Found page contents: "
@@ -138,8 +124,8 @@ class WikipediaRunner(WikipediaParser):
                 msg = "Input genre"
             else:
                 msg = "Select genre"
-            a = Action("genres", msg, options=self.genres)
-            self.GENRE = a.response
+
+            self.GENRE = Action("genres", msg, options=self.genres).response
 
         # decide what to do with artists
         self._log.info("Assign artists to composers")
@@ -154,52 +140,45 @@ class WikipediaRunner(WikipediaParser):
         a = Action("lyrics", "Do you want to find lyrics?")
         self.save_lyrics(a.response)
 
+        Action("load", load=True)
+
         self._log.info("Done")
 
     def _run_wiki_nogui(self):
         """Runs wikipedia search with specifics of the CLI mode."""
-        # download wikipedia page
-        if not self.offline_debug:
+        # start wikipedia page download
+        self._log_print(msg_WHITE="Accessing Wikipedia...")
 
-            self._log_print(msg_WHITE="Accessing Wikipedia...")
+        # download wikipedia page and track progress
+        for message in self._get_preload_progress():
+            if "Searching for" in message:
+                print(f"Searching for: {GREEN}{self.ALBUM}{RESET} by "
+                      f"{GREEN}{self.ALBUMARTIST}")
+            elif "Using offline" in message:
+                self._log_print(msg_GREEN="Using offline cached page insted "
+                                "of web page")
+            elif "Found at" in message:
+                self._log_print(msg_GREEN="Found at: ", msg_WHITE=self.url)
+            else:
+                self._log_print(msg_WHITE=message)
 
-            print("Searching for: " + GREEN + self.ALBUM + RESET + " by " +
-                  GREEN + self.ALBUMARTIST)
-
-        else:
-            self._log_print(msg_GREEN="Using offline cached page insted "
-                            "of web page")
-
+        # get error messages
         error_msg = self.get_wiki()
         if error_msg:
-            self._log_print(msg_GREEN=error_msg, level="WARN")
+            self._log_print(msg_GREEN=error_msg)
             return
 
-        else:
-            self._log_print(msg_GREEN="Found at: ", msg_WHITE=self.url)
-
-            self._log_print(msg_WHITE="Cooking Soup")
-
-            error_msg = self.cook_soup()
-            if error_msg:
-                self._log_print(msg_GREEN=error_msg, level="WARN")
-
-                return
-            else:
-                self._log_print(msg_WHITE="Soup ready")
+        if not we_are_frozen():
+            # basic html textout for debug
+            self.basic_out()
 
         # find release date
         self._log_print(msg_GREEN="Found release date:",
                         msg_WHITE=self.get_release_date())
 
         # find list of genres
-        self.get_genres()
         self._log_print(msg_GREEN="Found genre(s)",
-                        msg_WHITE="\n".join(self.genres))
-
-        if not we_are_frozen():
-            # basic html textout for debug
-            self.basic_out()
+                        msg_WHITE="\n".join(self.get_genres()))
 
         # get and print out page contents
         self._log_print(msg_GREEN="Found page contents",
@@ -281,6 +260,7 @@ class WikipediaRunner(WikipediaParser):
         self._log.info("Searching for lyrics")
 
         self.save_lyrics(find=True)
+        Action("load", load=True)
 
         self._log.info("Done")
 
@@ -299,9 +279,7 @@ class WikipediaRunner(WikipediaParser):
         else:
             self._log_print(msg_GREEN="Done")
 
-    def _log_print(self,
-                   msg_GREEN: str = "",
-                   msg_WHITE: str = "",
+    def _log_print(self, msg_GREEN: str = "", msg_WHITE: str = "",
                    level: str = "INFO"):
         """Redirects the input to sandard print function and to logger.
 

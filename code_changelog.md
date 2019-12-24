@@ -2,15 +2,13 @@
 
 ### Main problems ordered by targeted release
 - 0.6a0
-  - delete do not bother setting when api key or nltk data are manually
-    downloaded
-  - fix manual google api search key running even if NO selected
-  - fix extraction for endless forms most beautiful
+  - cannot handle french lyrics! for Alcest - Spiritual guide
+  - gender prompt is sometimes displayed twice
+  - treadpool progressbar is not showing or showing late
+  - cover art rectangle size is fixed to size of first shown picture
+    if some larger one is displayed it is not resized
   - fix as many bugs as possible
-  - make parallel freezing, and package for release
   - fix gui startup and show file speed, too slow, maybe big cover art?
-  - preload needs a complete rewrite the logic is horribly complex, too many
-    classes manipulate preload related variables
 - 0.xb0
   - make proper progressbar indicators
   - fix gui scaling and elements moving around
@@ -18,31 +16,39 @@
   - try to setup some CI system
   - cells with dropdowns for subtracks
   - make parser iterable
-  - implement pathlib
+  - implement image search controls
+  - support more music formats
 - 1.0.0
   - write automated tests
   - use https://coveralls.io for code test coverage stats
-- x.0.0
-  - impement image search controls
-  - support more music formats
+
 
 ### Freezing problems
 - upx probably messes some dll, PIXmap does not work, pictures are blank
 
 ### Ideas
-- parser probably should have its own lock? - access to its mutable variables should be guarded  see 13.1.2019 entry in changelog
+- parser probably should have its own lock? - access to its mutable variables
+  should be guarded  see 13.1.2019 entry in changelog
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
-- parser should probably include one API channel to comunicate with "outer" world. Now communication is becoming messy and it is not clear how changes in parser API are affecting other classes that are using it.
-- add cue spliting and audion conversions
-- change SharedVars class for Qt signals, would need to migrate to QThreads, Qsignals dont work with threading module
+- add cue spliting and audio conversions
+- migrate to QThreads, Qsignals don't work with threading module
 - include different backends than wikipedia
 - represent each song with its own class
-- we could support multiple preload instances running at once
 - research PIL interface to PyQt, and what about Pyside?
-- cover art search could anounce new downloaded images by signals if we were using QThreads
-- use custom widgets to simplify GUI https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/ e.g. tableWiew
-- parser locks could be implemented easilly by getattr and set attr only for public attributes.
+- cover art search could anounce new downloaded images by signals
+  if we were using QThreads
+- parser locks could be implemented easilly by getattr and setattr
+  only for public attributes.
 - keep reference of all running threads and gui elements and cleanup on exit
+  use atexit module
+- use themes https://github.com/ColinDuquesnoy/QDarkStyleSheet ,
+  https://github.com/seanwu1105/pyqt5-qtquick2-example
+- enable to open files from more dirs at once, when files are spread
+- implement a threadsafe dict alternative to queue for control queues
+- https://github.com/beetbox/beets
+- https://picard.musicbrainz.org
+- http://docs.puddletag.net/about.html
+- https://acoustid.org/chromaprint
 
 
 ###  Individual problem cases 
@@ -50,6 +56,8 @@
 - load composer fails for https://en.wikipedia.org/wiki/Pursuit_of_the_Sun_%26_Allure_of_the_Earth
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
+- non existent name appearing here https://en.wikipedia.org/wiki/Queen_of_Time
+- 
 
 # Release checklist
 - update version
@@ -63,6 +71,107 @@
 - create a github release
 
 # Change Log
+
+### 24.12.2019
+- drag&drop is implemented and working
+- fixed bug  when NLTK import would delay start of the whole app
+- moved last opened dir to settings
+- significant startup speedups from NLTK fix and delayed preload
+- got rid of timing methods in favour of yappi
+- last opened dir is now cached in YmlSettings
+- cleaned profiling methods, stats are now saved to own directory
+- started monitoring dependencies with https://requires.io
+
+### 23.12.2019
+- started to implement drag and drop for folders into table to easilly
+  import album dirs
+- implemented CustomQTableView class. It is replaced by QTableView placeholder
+  in QtDesigner
+- preliminary implementation is complete. Have to reimplement: dragEnterEvent,
+  dragMoveEvent and dropEvent
+
+### 18.12.2019
+- slow file load speed is finally resolved, added Qtimer to delay preload start
+  by 0.5 seconds.
+- python 3.5 has typing too, but no f-strings so it will not be supported
+
+### 17.12.2019
+- found the source of slow file loading - preload is slowing us down - maybe too
+  many instances are running
+- changes to yappi implementation
+
+### 16.12.2019
+- started implemented yappi profiling thanks to:
+  https://github.com/pantsbuild/pants/wiki/Debugging-Tips:-multi-threaded-profiling-with-yappi
+
+### 13.12.2019
+- fixed personnel extraction for endless forms most beautiful
+- artist is split to letters sometimes when writing tags, probablly happening
+  when gui send data back to parser. Should be fixed now.
+- Simplified handling of classes in utilities.sync module. Newly created
+  instances of control classes are automatically put in queue
+- simplified SharedVars and renames to GuiLogger
+- significantlly reduced threadpool progressbar check rate
+
+### 2.12.2019
+- minor fixes
+- moved most of the code from SharedVars class to Action and Progress,
+  respective queues are now encapsulated by their controling classs
+- perspectively move all code to these classes and destroy SharedVars class
+
+### 29.11.2019
+- some minor typing fixes
+- cleaned up and rewritten freezing script, added parallel build for CLI and
+  GUI and zip packaging for release
+
+### 17.11.2019
+- fully rewritten info tracks method, extraction code is cleaner and should be
+  more robust
+
+### 13.11.2019
+- fix lyricfinding for songs with numbers like:
+  Iced Earth: Clear The Way (December 13th, 1862)
+- fixed file assingnmet bug when track name was same as album name, than mapping
+  was ambigous
+- fixed bug NoCoverArt exception was not being caught because it was in
+  separate thread, moved decorator to inner function
+- fixed bug: manual google api search key was running even if NO was selected
+
+### 8.11.2019
+- return back to lazy loaded tag handlers, exceptions were caused by
+  inactive virtual environment
+- fixed extract Feat. not only feat.
+- added own response queue for Control action, otherwise when action and
+  control message woulb be displayed at the same time answer order
+  could not be guaranted
+- new, more robust method for file-track matching
+
+### 7.11.2019
+- implemented saving tags only to selected files
+- fixed bug when info of non-existent file is loast in passing info to GUI
+  and back
+- fixed: sometimes darklyrics has empty lyris field but everything passes
+  only the lyrics is an empty string, in this case throw NoLyrics exception
+- fixed lyrics reading bug for mp3 files, literal_eval is probably not needed
+- fixed comma appearing before artist name in reading and also writing
+
+### 6.11.2019
+- fixed comment tag writing and track number writing in m4a
+- fixed lyrics not loading to GUI
+- fixed cover art save to file
+- fixed messed up lyrics order
+
+### 2.11.2019
+- delete do not bother setting when api key or nltk data are manualy
+  downloaded
+
+### 26.10.2019
+- new preload implementation is finished and tested, fixed few bugs
+
+### 25.10.2019
+- preload has been completelly reworked, better encapsulation, multiple
+  preload instances, can be paused, instances are separated in threads
+- threads doesn't seem to want to wake up from pause??
 
 ### 24.10.2019 - 0.5a0
 - some changes to lyricsfinder to speed things up

@@ -8,7 +8,7 @@ import logging
 import re  # lazy loaded
 from os import path
 from threading import Thread
-from typing import List, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import datefinder  # lazy loaded
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
@@ -21,13 +21,16 @@ from wiki_music.utilities import (
     NLTK, NltkUnavailableException, NoContentsException, NoCoverArtException,
     NoGenreException, NoNames2ExtractException, NoPersonnelException,
     NoReleaseDateException, NoTracklistException, caseless_contains,
-    complete_N_dim, delete_N_dim, flatten_set, for_all_methods, get_image,
-    normalize, normalize_caseless, replace_N_dim, time_methods, warning)
+    complete_N_dim, delete_N_dim, flatten_set, get_image, normalize,
+    normalize_caseless, warning)
 
 from .base import ParserBase
 from .extractors import DataExtractors
 from .in_out import ParserInOut
 from .preload import WikiCooker
+
+if TYPE_CHECKING:
+    from bs4.element import Tag
 
 nc = normalize_caseless
 log = logging.getLogger(__name__)
@@ -37,7 +40,6 @@ log.debug("parser imports done")
 __all__ = ["WikipediaParser"]
 
 
-@for_all_methods(time_methods)
 class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
     r"""Class for parsing the wikipedia page and extracting tags data from it.
 
@@ -67,7 +69,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         log.debug("init parser")
 
-        NLTK.run_import(GUI=GUI)  # imports nltk in separate thread
+        NLTK.run_import(GUI=GUI, delay=1)  # imports nltk in separate thread
         WikiCooker.__init__(self, protected_vars=protected_vars)
         ParserInOut.__init__(self, protected_vars=protected_vars)
 
@@ -90,7 +92,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         str
             release year as a string
         """
-        dates = self._sections["infobox"].find(class_="published")
+        dates = self._sections["infobox"][0].find(class_="published")
 
         if dates:
             dates = datefinder.find_dates(dates.get_text())
@@ -120,7 +122,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         List[str]
             list of found genres
         """
-        genres = self._sections["infobox"].find(class_="category hlist")
+        genres = self._sections["infobox"][0].find(class_="category hlist")
 
         if genres:
             self.genres = [g.string for g in genres.find_all(href=WIKI_GENRES,
@@ -129,20 +131,27 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             self.genres = []
             raise NoGenreException
 
+        self.genres = [g.title() for g in self.genres]
+
         # auto select genre if only one was found
         if len(self.genres) == 1:
             self._selected_genre = self.genres[0]
 
         return self.genres
 
-    @warning(log)
-    def get_cover_art(self):
+    def get_cover_art(self, in_thread: bool = False) -> Optional[bytes]:
         """Get album cover art.
 
         Extracts from information box in the top right corner of wikipedia
-        page. Runs in a separate thread because the cover art data is not used
-        by parser in any way, so it can be downloaded in the background.
+        page. For app use it runs in a separate thread because the cover art
+        data is not used by parser in any way, so it can be downloaded in the
+        background.
         Populates :attr:`COVERART`
+
+        Parameters
+        ----------
+        in_thread: bool
+            if false, doesn't run in thread and blocks until cover art is found
 
         Raises
         ------
@@ -151,20 +160,31 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         """
         # self.cover_art is not protected by lock, parser should have
         # more than enough time to get it before GUI requests it
+        @warning(log)
         def cover_art_getter():
-            for img in self._sections["infobox"].find_all("img", src=True,
-                                                          alt=True):
+            for img in self._sections["infobox"][0].find_all("img", src=True,
+                                                             alt=True):
                 if fuzz.token_set_ratio(img["alt"], self._album) > 90:
                     break
+            else:
+                img = None
 
             if img:
-                self.cover_art = get_image(f"https:{img['src']}")
+                self._cover_art = get_image(f"https:{img['src']}")
             else:
-                self.cover_art = (FILES_DIR / "Na.jpg").read_bytes()
+                self._cover_art = (FILES_DIR / "Na.jpg").read_bytes()
                 raise NoCoverArtException("Couldn't extract cover art from "
                                           "wikipedia page")
 
-        Thread(target=cover_art_getter, name="CoverArtGetter").start()
+            if not in_thread:
+                return self._cover_art
+
+        if not in_thread:
+            return cover_art_getter()
+        else:
+            Thread(target=cover_art_getter, name="CoverArtGetter",
+                   daemon=True).start()
+            return None
 
     def get_composers(self) -> List[List[str]]:
         """Extract composers from wikipedia page.
@@ -294,7 +314,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         return self._contents
 
-    @warning(log)
+    @warning(log, show_GUI=False)
     def get_personnel(self) -> Tuple[List[str], List[List[int]]]:
         """Extract personnel from wikipedia page.
 
@@ -314,7 +334,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             each person list of tracks on which the person appeared
         """
         personnel = []
-        appearences = []
+        filtered_personnel: List[str] = []
+        appearences: List[List[int]] = []
 
         for s in PERSONNEL_SECTIONS:
 
@@ -332,9 +353,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         for i, person in enumerate(personnel):
 
-            # make space in appearences
-            appearences.append([])
-
             # remove reference
             person = re.sub(r"\[ *\d+ *\]", "", person)
 
@@ -350,23 +368,22 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 # when we find 3-6
                 if "-" in app:
                     start, stop = [int(a) for a in app.split("-")]
-                    a = [r for r in range(start, stop + 1)]
-                    appearences[i].extend(a)
+                    appearences.append([r for r in range(start, stop + 1)])
                 # simple number
                 else:
-                    appearences[i].append(int(app))
+                    appearences.append([int(app)])
 
             # find references to song names
             for j, t in enumerate(self._tracks):
                 if re.match(t, appear, re.I):
-                    appearences[i].append(j)
+                    appearences[-1].append(j)
 
             # ensure no duplicates
-            appearences[i] = list(set(appearences[i]))
-            appearences[i] = [a - 1 for a in appearences[i]]
-            personnel[i] = person
+            appearences[-1] = list(set(appearences[-1]))
+            appearences[-1] = [a - 1 for a in appearences[-1]]
+            filtered_personnel.append(person)
 
-        self._personnel = personnel
+        self._personnel = filtered_personnel
         self._appearences = appearences
 
         self._complete()
@@ -402,7 +419,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         Tuple[List[str], List[List[str]]]
             list of tracks and for each track list of atrists
         """
-        tables = []
+        tables: List["Tag"] = []
         for html in self._sections["track_listing"]:
             # if the toplevel tag is the table itself
             if html.name == "table":
@@ -435,9 +452,15 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         return self._process_tracks(data)
 
-    def _process_tracks(self, data: List[List[str]]
+    def _process_tracks(self, data: List[List[List[str]]]
                         ) -> Tuple[List[str], List[List[str]]]:
         """Process raw extracted list of album CD trackists for track details.
+
+        Parameters
+        ----------
+        data: List[List[List[str]]]
+            list of trackists each for one cd, tracklists, consist of list,
+            each representing one row, and each row has cells
 
         Returns
         -------
@@ -520,7 +543,13 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         self._types = []
         self._subtypes = []
 
+        # options list for fuzzywuzzy process must have length at least == 1
         comp_flat = flatten_set(self._composers)
+        if not comp_flat:
+            comp_flat = [""]
+        personnel = self._personnel
+        if not personnel:
+            personnel = [""]
 
         # hladanie umelcov ked su v zatvorke za skladbou
         # + zbavovanie sa bonus track a pod.
@@ -529,67 +558,74 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             self._types.append("")
             self._subtypes.append([])
 
-            start_list = [m.start() for m in re.finditer(r'\(', tr)]
-            end_list = [m.start() for m in re.finditer(r'\)', tr)]
+            self._tracks[i] = re.sub(TO_DELETE, "", tr)
 
-            for start, end in zip(start_list, end_list):
+            for in_brackets in re.findall(r'\((.*?)\)', tr):
 
-                self._tracks[i] = re.sub(TO_DELETE, "", tr, re.I)
+                repl_str = re.compile(r" ?\({}\) ?".format(in_brackets))
 
-                artist = re.sub("[,:]", "", tr[start + 1:end])
-                artist = re.split(r",|\/|\\", artist)
+                # check against additional personnel
+                artists = re.sub(UNWANTED["artist"], "", in_brackets)
+                persons = self._fuzzy_extract(artists, personnel)
 
-                for art in artist:
-                    for un in UNWANTED:
-                        art = re.sub(un, "", art, flags=re.IGNORECASE)
+                if persons:
+                    self._artists[i].extend(persons)
+                elif len(artists) < len(in_brackets):
+                    self._artists[i].extend(re.split(r",|\/|\\", artists))
 
-                    # TODO all these maybe should be in the UNWANTED loop??
-                    # check against additional personnel
-                    for person in self._personnel:
-                        if fuzz.token_set_ratio(art, person) > 90:
-                            self._artists[i].append(person)
-                            self._tracks[i] = self._cut_out(tr, start, end)
+                if persons or len(artists) < len(in_brackets):
+                    self._tracks[i] = re.sub(repl_str, "", tr)
+                    continue
 
-                    # check agains composers
-                    for comp in comp_flat:
-                        if fuzz.token_set_ratio(art, comp) > 90:
-                            self._artists[i].append(comp)
-                            self._tracks[i] = self._cut_out(tr, start, end)
+                # check against composers
+                artists = re.sub(UNWANTED["composer"], "", in_brackets)
+                composers = self._fuzzy_extract(artists, comp_flat)
 
-                    # check if instrumental, ...
-                    _type, score = process.extractOne(
-                        art, DEF_TYPES, scorer=fuzz.token_sort_ratio)
-                    if score > 90:
-                        self._types[i] = art  # _type
-                        self._tracks[i] = self._cut_out(tr, start, end)
+                if composers:
+                    self._composers[i].extend(composers)
+                elif len(artists) < len(in_brackets):
+                    self._composers[i].extend(re.split(r",|\/|\\", artists))
+
+                if composers or len(artists) < len(in_brackets):
+                    self._tracks[i] = re.sub(repl_str, "", tr)
+                    continue
+
+                # check if instrumental, acoustic orchestral ...
+                artists = re.sub(r" ?version", "", in_brackets, flags=re.I)
+                _type = self._fuzzy_extract(artists, DEF_TYPES, limit=1)
+
+                if _type:
+                    if _type[0] == "Piano":
+                        _type[0] = "Piano Version"
+                    self._types[i] = _type[0]
+                    self._tracks[i] = re.sub(repl_str, "", tr)
 
             if self._subtracks:
                 for j, sbtr in enumerate(self._subtracks[i]):
 
                     self._subtypes[i] = [""] * len(sbtr)
 
-                    start_list = [m.start() for m in re.finditer(r'\(', sbtr)]
-                    end_list = [m.start() for m in re.finditer(r'\)', sbtr)]
+                    for in_brackets in re.findall(r'\((.*?)\)', tr):
 
-                    for start, end in zip(start_list, end_list):
+                        rs = re.compile(r" ?\({}\) ?".format(in_brackets))
 
-                        art = re.sub("[,:]", "", sbtr[start + 1:end]).split()
-
-                        for a in art:
+                        for a in re.sub("[,:]", "", in_brackets).split():
                             # check against additional personnel
-                            for person in self._personnel:
-                                if fuzz.token_set_ratio(a, person) > 90:
-                                    self._artists[i].append(person)
-                                    sbtr = self._cut_out(sbtr, start, end)
-                                    self._subtracks[i][j] = sbtr
+                            persons = self._fuzzy_extract(a, personnel)
+                            if persons:
+                                self._artists[i].extend(persons)
+                                self._subtracks[i][j] = re.sub(rs, "", sbtr)
 
-                            # check if instrumental, ...
-                            _type, score = process.extractOne(
-                                a, DEF_TYPES, scorer=fuzz.token_sort_ratio)
-                            if score > 90:
+                            # check if instrumental, acoustic orchestral ...
+                            a = re.sub(r" ?version", "", a, flags=re.I)
+                            _type = self._fuzzy_extract(a, DEF_TYPES, limit=1)
+
+                            if _type[0]:
+                                if _type[0] == "Piano":
+                                    _type[0] = "Piano Version"
+
                                 self._subtypes[i][j] = _type
-                                sbtr = self._cut_out(sbtr, start, end)
-                                self._subtracks[i][j] = sbtr
+                                self._subtracks[i][j] = re.sub(rs, "", sbtr)
 
     def _complete(self):
         """Recursively complete inforamtion in parser lists.
@@ -613,11 +649,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         for tc in to_complete:
             delete_N_dim(tc, delete)
-
-        # get rid of feat., faeturing ...
-        for tc in to_complete:
-            for un in UNWANTED:
-                replace_N_dim(tc, un)
 
         # get rid of artists duplicates
         for tc in to_complete:
@@ -647,7 +678,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         self._artists = [""] * len(self._composers)
 
-    @property
+    @property  # type: ignore
     @warning(log, show_GUI=False)
     def NLTK_names(self):
         """Use nltk to extract person names from sections of wikipedia page.

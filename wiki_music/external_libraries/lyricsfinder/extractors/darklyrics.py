@@ -69,6 +69,9 @@ class Darklyrics(LyricsExtractor):
         except Exception as e:
             log.exception(e)
 
+        if not lyric.strip():
+            raise exceptions.NoLyrics
+
         return Lyrics(title, lyric, artist=artist.title(),
                       release_date=release_date)
 

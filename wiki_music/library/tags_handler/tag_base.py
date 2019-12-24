@@ -2,8 +2,10 @@
 
 import collections
 import logging
+import re
 from abc import ABC, abstractmethod
-from typing import ClassVar, Dict, Optional, Union, List
+from typing import ClassVar, Dict, List, Optional, Union, Callable
+from wiki_music.constants.tags import LIST_TAGS
 
 logging.getLogger(__name__)
 
@@ -55,6 +57,16 @@ class SelectiveDict(dict):
             if key in self.writable:
                 yield key, val
 
+    def to_dict(self):
+        """Cast contents of selective dict to dict.
+
+        Returns
+        -------
+        dict
+            tags dictionary
+        """
+        return dict(self)
+
 
 class TagBase(ABC):
     """
@@ -86,10 +98,8 @@ class TagBase(ABC):
 
     __doc__: Optional[str]
     _map_keys: ClassVar[Dict[str, str]]
-    reverse_map: Dict[str, str]
+    reverse_map: Dict[str, Union[str, Callable]]
     _tags: SelectiveDict
-
-    _list_tags = ("ARTIST", "COMPOSER")
 
     def __init__(self, filename):
 
@@ -148,7 +158,7 @@ class TagBase(ABC):
         raise NotImplementedError("Call to abstarct method!")
 
     @property
-    def tags(self):
+    def tags(self) -> SelectiveDict:
         """Reads and returns file tags.
 
         If the tags are present it reads them from a suplied file and casts
@@ -170,9 +180,10 @@ class TagBase(ABC):
         return self._tags
 
     @staticmethod
-    def _get_reversed(_map_keys: Dict[str, str]) -> Dict[str, str]:
+    def _get_reversed(map_keys: Dict[str, str]
+                      ) -> Dict[str, Union[str, Callable]]:
         """Swaps keys and values in dictionary.
-        
+
         Given a dictionary of [keys, values] it returns a reversed version
         with [values, key] while preserving order of items if is an instance
         of collections.OderedDict.
@@ -184,14 +195,14 @@ class TagBase(ABC):
         """
         reverse_map: Dict[str, str] = collections.OrderedDict()
 
-        for key, value in _map_keys.items():
+        for key, value in map_keys.items():
             reverse_map[value] = key
 
         return reverse_map
 
     @classmethod
     def _get_default_tag(cls, tag_name: str) -> Union[bytes, str, list]:
-        """Return default baue with corret type for each supported tag.
+        """Return default value with corret type for each supported tag.
         
         Parameters
         ----------
@@ -200,7 +211,7 @@ class TagBase(ABC):
         """
         if tag_name == "COVERART":
             return bytes()
-        elif tag_name in cls._list_tags:
+        elif tag_name in LIST_TAGS:
             return [""]
         else:
             return ""
@@ -214,13 +225,17 @@ class TagBase(ABC):
         tag: List[Any]
             tag or a list of tags to be processed
         """
-        if tag not in cls._list_tags:
+        def rm_pref_comma(string: str) -> str:
+            """Remove comma from the string begining."""
+            return re.sub(r"^ ?, ?", "", string.strip())
+
+        if tag not in LIST_TAGS:
             try:
                 tag = tag[0]
             except IndexError:
                 pass
             if isinstance(tag, str):
-                tag = tag.strip()
+                tag = rm_pref_comma(tag)
             return tag
         else:
-            return [t.strip() for t in tag if t not in ("", " ", None)]
+            return [rm_pref_comma(t) for t in tag if t not in ("", " ", None)]

@@ -2,13 +2,16 @@
 
 import logging
 import re  # lazy loaded
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List, Tuple, Optional
+
+import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import fuzzywuzzy.process as process  # lazy loaded
 
 from wiki_music.constants import ORDER_NUMBER, TIME, TO_DELETE
 from wiki_music.utilities import (NoTracklistException, normalize_caseless,
                                   warning)
 
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 __all__ = ["DataExtractors"]
 
@@ -24,8 +27,8 @@ class DataExtractors:
     This class is not ment to be instantiated, only inherited.
     """
 
-    @classmethod
-    def _from_table(cls, tables: List["BeautifulSoup"]
+    @staticmethod
+    def _from_table(tables: List["BeautifulSoup"]
                     ) -> List[List[List[str]]]:
         """Extract wkikipedia html table composed of 'td' and 'th' html tags.
 
@@ -87,8 +90,8 @@ class DataExtractors:
 
         return data_collect
 
-    @classmethod
-    def _html2python_list(cls, table: "BeautifulSoup") -> List[str]:
+    @staticmethod
+    def _html2python_list(table: "BeautifulSoup") -> List[str]:
         """Converst html list to python list.
 
         Html list can be ordered <ol> or unordered <ul> its elements should be
@@ -113,8 +116,8 @@ class DataExtractors:
             return rows
 
     @classmethod
-    @warning
-    def _from_list(cls, table: "BeautifulSoup") -> List[List[str]]:
+    @warning(log)
+    def _from_list(cls, table: "BeautifulSoup") -> List[List[List[str]]]:
         """Extract trackist formated as a html list with 'ol' and 'ul' tags.
 
         See also
@@ -166,8 +169,8 @@ class DataExtractors:
 
             return [data]
 
-    @classmethod
-    def _get_track(cls, cell: str) -> Tuple[str, List[str]]:
+    @staticmethod
+    def _get_track(cell: str) -> Tuple[str, List[str]]:
         """Extract track and subtracks names from table cell.
 
         Parameters
@@ -198,8 +201,8 @@ class DataExtractors:
 
         return tracks[0], tracks[1:len(tracks)]
 
-    @classmethod
-    def _get_artist(cls, cell: str) -> List[str]:
+    @staticmethod
+    def _get_artist(cell: str) -> List[str]:
         """Splits list of artists in tracklist table cell separated by , or &.
 
         Parameters
@@ -214,22 +217,29 @@ class DataExtractors:
         """
         return [c.replace(",", "").strip() for c in re.split(",|&", cell)]
 
-    @classmethod
-    def _cut_out(cls, string: str, start: int, end: int) -> str:
-        """Given a string cuts out part specified by pointers.
+    @staticmethod
+    def _fuzzy_extract(string: str, choices: List[str],
+                       limit: Optional[int] = None) -> List[str]:
+        """Fuzzy extract names, track types .. from brackets behind track name.
 
         Parameters
         ----------
         string: str
-            string containing substring to be removed
-        start: int
-            pointer to the begining of the substring to be removed
-        end: int
-            pointer to the end of the substring to be removed
+            string to match
+        choices: List[str]
+            list of possible choisec for string to match
+        limit: int
+            max number of extracted choices
 
         Returns
         -------
-        str
-            copy of passed in string with part between pointers removed
+        List[str]
+            list of extracted choices
         """
-        return (string[:start] + string[end + 1:]).strip()
+        if limit is None:
+            limit = len(choices)
+
+        return [b[0] for b in process.extractBests(string, choices,
+                                                   scorer=fuzz.token_set_ratio,
+                                                   score_cutoff=90,
+                                                   limit=limit)]

@@ -25,6 +25,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/marian-code/wikipedia-music-tags",
     author="Marián Rynik",
+    keywords=" tagging music tags wikipedia",
     author_email="marian.rynik@outlook.sk",
     license="MIT",
     classifiers=[
@@ -46,6 +47,7 @@ setup(
     packages=find_packages(exclude=("setup", "tests")),
     include_package_data=True,
     install_requires=REQUIREMENTS,
+    extras_require={"test": ["unittest"] + REQUIREMENTS},
     python_requires=">=3.6",
     entry_points={
         "console_scripts": [

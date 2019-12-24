@@ -30,9 +30,6 @@ wiki_music/logs/
 # unique user files
 wiki_music/files/google_api_key.txt
 
-# data folder
-wiki_music/data/
-
 # mypy typechecking folder
 .mypy_cache
 
@@ -41,6 +38,9 @@ deprecated/
 
 # exclude compiled files
 *.py[cod]
+
+# profiling
+profile_data/
 
 # built version of documentation
 docs/_build/

@@ -10,13 +10,15 @@ logging.getLogger(__name__)
 __all__ = ["set_log_handles"]
 
 # logger formater
-FORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
-                              "pid = %(process)d \n\t - "
-                              "proces name = %(processName)s \n\t - "
-                              "module = %(module)s,"
-                              "funcName = %(funcName)s \n\t - "
-                              "%(message)s \n\t",
-                              datefmt="%H:%M:%S")
+FFORMATTER = logging.Formatter("%(asctime)s - %(levelname)s \n\t - "
+                               "thread name = %(threadName)s \n\t - "
+                               "module = %(module)s,"
+                               "funcName = %(funcName)s \n\t - "
+                               "%(message)s \n\t",
+                               datefmt="%H:%M:%S")
+
+CFORMATTER = logging.Formatter("%(levelname)s - %(threadName)s - "
+                               "%(funcName)s - %(message)s")
 
 # create dir to store logs
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,6 +54,13 @@ def set_log_handles(level: int):
     for name in logging.root.manager.loggerDict:
         if "wiki_music" in name:
             log = logging.getLogger(name)
+
+            # ch = logging.StreamHandler()
+            # ch.setLevel(level)
+            # ch.setFormatter(CFORMATTER)
+
+            # log.addHandler(ch)
+
             # assumed format is wiki_music.<submodule>.<subsubmodule>.<...>
             try:
                 log_name = name.split(".")[1]
@@ -65,7 +74,7 @@ def set_log_handles(level: int):
 
                 fh = logging.FileHandler(log_path, mode="w")
                 fh.setLevel(level)
-                fh.setFormatter(FORMATTER)
+                fh.setFormatter(FFORMATTER)
 
                 log.addHandler(fh)
 

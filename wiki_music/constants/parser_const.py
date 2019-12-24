@@ -1,22 +1,23 @@
 """Holds constants that are used in parser."""
 
 import re  # lazy loaded
-from typing import Tuple, Pattern
+from typing import Tuple, Pattern, Dict
 
 __all__ = ["CONTENTS_IDS", "DEF_TYPES", "DELIMITERS", "COMPOSER_HEADER",
            "TO_DELETE", "UNWANTED", "NO_LYRIS", "ORDER_NUMBER", "WIKI_GENRES",
            "TIME", "PERSONNEL_SECTIONS"]
 
 #: defines possible types of tracks that parser is able to extract
-DEF_TYPES: Tuple[str, ...] = ("Instrumental", "Acoustic", "Acoustic Version",
-                              "Orchestral", "Live", "Piano Version",
-                              "Acoustic Folk Medley")
+DEF_TYPES: Tuple[str, ...] = ("Instrumental", "Acoustic", "Orchestral", "Live",
+                              "Piano", "Acoustic Folk Medley")
 #: these tracks usually have no lyrics so no attempt to download them is made
 NO_LYRIS: Tuple[str, str] = ("Instrumental", "Orchestral")
 #: defines unwanted strings that will be deleted from track title, also helps
 #: in extracting artists in brackets from track title
-UNWANTED: Tuple[str, ...] = ("featuring", "feat.", "feat", "narration by",
-                             "narration")
+UNWANTED: Dict[str, Pattern] = {
+    "artist": re.compile(r" ?feat\.?(uring)? ?|narration( by)?:? ?", flags=re.I),
+    "composer": re.compile(r"lyrics( and)?,? music:? ?|music( and)?,? lyrics:? ?|music:? ?|lyrics:? ?", flags=re.I)
+}
 #: regex expressions that are deleted from track title
 TO_DELETE: Pattern = re.compile(r"\( ?bonus ?(track)? ?\)", flags=re.I)
 #: regex expresion that matches number with/out dot and any muber of spaces
@@ -29,7 +30,8 @@ WIKI_GENRES: Pattern = re.compile(r"/wiki/(?!Music_genre)", flags=re.I)
 TIME: Pattern = re.compile(r"\( *\d+\:\d+ *\)")
 #: strings that are are used to extract composer name
 DELIMITERS: Tuple[str, ...] = ("written by", "composed by", "lyrics by",
-                               "music by", "arrangements by", "vocal lines by")
+                               "music by", "arrangements by", "vocal lines by",
+                               "arranged by")
 #: strings used to identify section headers in text and page contents
 CONTENTS_IDS: Tuple[str, ...] = ("Track_listing", "Personnel", "Credits",
                                  "References")

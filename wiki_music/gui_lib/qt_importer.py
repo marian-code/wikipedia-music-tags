@@ -7,6 +7,7 @@ Pyside2 and PySide.
 """
 
 import logging
+from typing import TYPE_CHECKING
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ try:
                                 QVBoxLayout, QTableWidget, QWidget, QDialog,
                                 QStatusBar, QSystemTrayIcon, QSizePolicy,
                                 QRubberBand, QStyleFactory, QSizeGrip,
-                                QProgressBar, QProgressDialog)
+                                QProgressBar, QProgressDialog, QTableView)
     from qtpy.QtGui import (QStandardItemModel, QStandardItem, QImage,
                             QPixmap, QIcon, QPainter, QResizeEvent)
     from qtpy.QtCore import (Qt, QSortFilterProxyModel, QTimer, QObject,
@@ -62,6 +63,9 @@ try:
                              QByteArray, QIODevice, QPoint, QEvent,
                              QModelIndex, QVariant)
     from qtpy import uic
+
+    if TYPE_CHECKING:
+        from qtpy.QtGui import QDropEvent, QEnterEvent, QMoveEvent
 except ImportError as e:
     log.critical(f"None of the Qt backends is available: {e}")
     raise ImportError(f"None of the Qt backends is available: {e}")

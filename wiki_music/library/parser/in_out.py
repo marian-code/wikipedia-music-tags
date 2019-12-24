@@ -4,7 +4,10 @@ import logging
 import pickle  # lazy loaded
 from abc import abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, Tuple
+
+import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import fuzzywuzzy.process as process  # lazy loaded
 
 from wiki_music.constants import (EXTENDED_TAGS, GREEN, LBLUE, LGREEN,
                                   OUTPUT_FOLDER, RESET, YELLOW)
@@ -16,7 +19,7 @@ from ..lyrics import save_lyrics
 from ..tags_io import read_tags, write_tags
 from .base import ParserBase
 
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 wnc = win_naming_convetion
 nc = normalize_caseless
@@ -26,8 +29,17 @@ if TYPE_CHECKING:
     from wikipedia import WikipediaPage
     from bs4 import BeautifulSoup
 
-    Bs4Soup = Optional["BeautifulSoup"]
-    WikiPage = Optional["WikipediaPage"]
+    Bs4Soup = Optional[BeautifulSoup]
+    WikiPage = Optional[WikipediaPage]
+
+    from typing_extensions import TypedDict
+
+    SongDict = TypedDict("SongDict", {
+        "ALBUM": str, "ALBUMARTIST": str, "ARTIST": List[str],
+        "COMPOSER": List[str], "COVERART": bytes, "DATE": str,
+        "DISCNUMBER": int, "GENRE": str, "LYRICS": str, "TITLE": str,
+        "TRACKNUMBER": str, "TYPE": str, "FILE": str})
+    SongList = List[SongDict]
 
 __all__ = ["ParserInOut"]
 
@@ -106,42 +118,107 @@ class ParserInOut(ParserBase):
         """Search current working directory and assign files to tracks."""
         wnc = win_naming_convetion
 
-        # write data to ID3 tags
+        # TODO untested !!!!
+        class FilesList(list):
+
+            def get(self, key: str) -> Union[str, int]:
+                """Always return the firs element."""
+                return self[0][key]
+
+        class FifoList(list):
+
+            def __init__(self, work_dir: Path) -> None:
+                super().__init__()
+                self.work_dir = work_dir
+
+            def put(self, scored_files: List[Tuple[str, int]]):
+                """Convert list of tuples to list of dicts and append."""
+                self.append(FilesList([{"file": self.work_dir / s[0],
+                                        "score": s[1]}
+                                       for s in scored_files]))
+
         disk_files = list_files(self.work_dir)
 
-        if self._tracks:
-            # max() argument must have len >= 1
-            max_length = len(max(self._tracks, key=len))
-
-            files = []
-
-            print(GREEN + "\nFound files:")
-            for df in disk_files:
-                print(df.resolve())
-            print(GREEN + "\nAssigning files to tracks:")
-
-            for i, tr in enumerate(self._tracks):
-                self._tracks[i] = tr.strip()
-
-                for path in disk_files:
-                    f = path.name
-                    if (nc(wnc(tr)) in nc(f) and nc(self._types[i]) in nc(f)):  # noqa E129
-
-                        print(LBLUE + tr + RESET,
-                              "-" * (1 + max_length - len(tr)) + ">", path)
-                        files.append(path)
-                        break
-                else:
-                    print(YELLOW + tr + RESET,
-                          "." * (2 + max_length - len(tr)),
-                          "Does not have a matching file!")
-
-                    files.append(None)
-
-            self.files = files
-
-        else:
+        if not self._tracks:
             self.files = disk_files
+            return
+
+        # max() argument must have len >= 1
+        max_length = len(max(self._tracks, key=len))
+
+        files = []
+
+        print(GREEN + "\nFound files:")
+        for df in disk_files:
+            print(df.resolve())
+        print(GREEN + "\nAssigning files to tracks:")
+
+        # TODO untested !!!!
+        # new file assignment
+        file_map = FifoList(self.work_dir)
+        limit = int(len(disk_files) / 2)
+        for tr, tp in zip(self._tracks, self._types):
+            # for each track select best matching files
+            file_map.put(process.extractBests(nc(wnc(f"{tr} {tp}")),
+                                              [f.name for f in disk_files],
+                                              scorer=fuzz.token_set_ratio,
+                                              limit=limit))
+
+        # if there are more tracks than files
+        len_diff = len(disk_files) - len(self._tracks)
+        if len_diff < 0:
+            indeces = [i for i in range(len(file_map))]
+            # sort indeces based on first file score
+            indeces = [f for _, f in sorted(zip(indeces, file_map),
+                                            key=lambda x: x[1].get("score"))]
+            # keep only number of best indeces coresponding to number of
+            # tracks
+            indeces = indeces[:len_diff]
+
+            # keep the best matching files, reassign the rest to None
+            for i, f in enumerate(file_map):
+                if i not in indeces:
+                    file_map[i] = {"file": None, "score": 0}
+
+        # if lengths are equal but two tacks have same files
+        for i in range(len(file_map)):
+            # if None file is assigned skip iteration
+            if not file_map[i].get("file"):
+                continue
+            for j in range(i + 1, len(file_map)):
+                # if None file is assigned skip iteration
+                if not file_map[j].get("file"):
+                    continue
+                # if files are equal, keep one with the higher score,
+                # and reassign the one with lower score to next in its
+                # respective list
+                if file_map[i].get("file") == file_map[j].get("file"):
+                    if file_map[i].get("score") > file_map[j].get("score"):
+                        file_map[j].pop(0)
+                    elif file_map[i].get("score") < file_map[j].get("score"):
+                        file_map[i].pop(0)
+                    else:
+                        log.debug(i, j)
+                        log.debug(nc(wnc(f"{self._tracks[j]} "
+                                         f"{self._types[j]}")))
+                        log.debug(*file_map[i], sep="\n")
+                        log.debug("-----------------------")
+                        log.debug(*file_map[j], sep="\n")
+                        raise Exception(f"File mapping to tracks is "
+                                        f"ambiguous! Cannot load files")
+
+        # print out file assignments
+        for tr, f in zip(self._tracks, file_map):
+
+            if f.get("file"):
+                print(LBLUE + tr + RESET,
+                      "-" * (1 + max_length - len(tr)) + ">", f.get("file"))
+                files.append(f.get("file"))
+            else:
+                print(YELLOW + tr + RESET, "." * (2 + max_length - len(tr)),
+                      "Does not have a matching file!")
+
+        self.files = files
 
     def basic_out(self):
         """Outputs files in three basic formats.
@@ -279,11 +356,15 @@ class ParserInOut(ParserBase):
 
         return s
 
-    def data_to_dict(self
-                     ) -> List[Dict[str, Union[str, int, bytes, list]]]:
+    def data_to_dict(self, indeces: Optional[List[int]] = None) -> "SongList":
         """Converts parser data to list of dictionaries.
 
         If yaml_dump is enabled list is written to file.
+
+        Parameters
+        ----------
+        indeces: Optional[List[int]]
+            indeces of files to save
 
         Warnings
         --------
@@ -299,10 +380,14 @@ class ParserInOut(ParserBase):
         List[Dict[str, Union[str, int, bytes, list]]]
             each dictionary in list represents tags of one song
         """
-        dict_data = []
+        dict_data: SongList = []
         for i, _ in enumerate(self._tracks):
 
-            tags = dict()
+            tags: "SongDict" = dict()
+
+            if indeces:
+                if i not in indeces:
+                    continue
 
             for t in EXTENDED_TAGS:
                 attr = getattr(self, t)
@@ -319,8 +404,13 @@ class ParserInOut(ParserBase):
 
         return dict_data
 
-    def write_tags(self) -> bool:
+    def write_tags(self, indeces: Optional[List[int]] = None) -> bool:
         """Write tags to coresponding files. Writing is done in a parallel.
+
+        Parameters
+        ----------
+        indeces: Optional[List[int]]
+            indeces of files to save
 
         See also
         --------
@@ -340,7 +430,7 @@ class ParserInOut(ParserBase):
             return False
         else:
             ThreadPool(target=write_tags,
-                       args=[(data, ) for data in self.data_to_dict()]).run()
+                       args=[(d, ) for d in self.data_to_dict(indeces)]).run()
 
             return True
 

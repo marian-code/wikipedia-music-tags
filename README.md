@@ -3,6 +3,9 @@
 [![license](https://img.shields.io/pypi/l/qtpy.svg)](./LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/wikipedia-music-tags/badge/?version=latest)](https://wikipedia-music-tags.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/github/marian-code/wikipedia-music-tags/badge.svg?branch=master)](https://coveralls.io/github/marian-code/wikipedia-music-tags?branch=master)
+[![Requirements Status](https://requires.io/github/marian-code/wikipedia-music-tags/requirements.svg?branch=master)](https://requires.io/github/marian-code/wikipedia-music-tags/requirements/?branch=master)
+[![Build Status](https://travis-ci.com/marian-code/wikipedia-music-tags.svg?branch=master)](https://travis-ci.com/marian-code/wikipedia-music-tags.svg?branch=master)
+
 
 Python application which parses wikipedia for music tags and writes them to 
 files. Has also the ability to search for lyrics and album cover art. The app
@@ -25,7 +28,7 @@ Package can be installed with pip:
 ```
 pip install wiki_music
 ```
-For more detailes refer to Documentation which can be found at:
+For more details refer to Documentation which can be found at:
 [readthedocs](https://wikipedia-music-tags.readthedocs.io/en/latest/index.html).
 
 [Installation intructions](https://wikipedia-music-tags.readthedocs.io/en/latest/instalation.html)

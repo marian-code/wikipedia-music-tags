@@ -345,7 +345,7 @@ class PictureEdit(QDialog):
         uic.loadUi(COVER_ART_EDIT_UI, self)
 
         self._log = log
-        self.save_dir = save_dir
+        self.save_dir = Path(save_dir)
 
         self.setWindowTitle("Edit cover art")
         self.setWindowIcon(QIcon(get_icon()))
@@ -633,9 +633,8 @@ class CoverArtSearch(BaseGui):
 
         # init thread that preforms the search
         self.image_search_thread = Thread(target=self.gimd.download,
-                                          args=(arguments, ),
+                                          args=(arguments, ), daemon=True,
                                           name="ImageSearch")
-        self.image_search_thread.daemon = True
         self.image_search_thread.start()
 
         # setup dialog layout and connect to button signals

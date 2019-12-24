@@ -1,7 +1,7 @@
 """Module for variable synchronization between application and GUI."""
 
 import logging
-from queue import Queue
+from queue import Queue, Empty
 from threading import Barrier, RLock
 from typing import Any, ClassVar, Dict, Hashable, Tuple, Union, Optional
 
@@ -11,13 +11,14 @@ from wiki_music.constants import SETTINGS_YML
 
 log = logging.getLogger(__name__)
 
-__all__ = ["SharedVars", "YmlSettings", "Action", "Control", "Progress"]
+__all__ = ["GuiLoggger", "YmlSettings", "Action", "Control", "Progress",
+           "ThreadPoolProgress"]
 
 
 class Action:
     """Represents action that should be taken by GUI.
 
-    Attributes
+    Parameters
     ----------
     switch: str
         type of action
@@ -28,12 +29,23 @@ class Action:
     options: list
         list of options to display in GUI for user to choose
     response
+        property that caches GUI response
+
+    Attributes
+    ----------
+    _queue: Queue[Action]
+        queue with actions gui should take
+    _response_queue: Queue[Action]
+        GUI response to actions taken
 
     Warning
     -------
     Action may be used only once, the response is cached and GUI will not be
     asked for new response on each call of :attr:`response`
     """
+
+    _queue: "Queue[Action]" = Queue()  # action commands
+    _response_queue: "Queue[Action]" = Queue()  # action responses
 
     def __init__(self, switch: str, message: Optional[str] = None,
                  load: bool = False, options: list = []) -> None:
@@ -44,44 +56,64 @@ class Action:
         self.load = load
         self.options = options
 
+        self._put(self)
+
+    @classmethod
+    def _put(cls, value: "Action"):
+        cls._queue.put(value)
+
+    @classmethod
+    def _put_resp(cls, value: "Action"):
+        cls._response_queue.put(value)
+
+    @classmethod
+    def _get_resp(cls) -> "Action":
+        return cls._response_queue.get()
+
+    @classmethod
+    def get_nowait(cls) -> Optional["Action"]:
+        """Get the latest entry in the response queue or None if it is empty.
+
+        Returns
+        -------
+        Optional[Action]
+            instance of the Action class or None
+        """
+        try:
+            return cls._queue.get_nowait()
+        except Empty:
+            return None
+
     @property
     def response(self) -> Any:
         """Pass `Action` to GUI, wait for response than return it.
 
         :type: Any
         """
-        SharedVars.a_queue.put(self)
-        return SharedVars.r_queue.get()._response
+        return self._get_resp()._response
 
     @response.setter
     def response(self, value: Any):
         self._response = value
-        SharedVars.r_queue.put(self)
+        self._put_resp(self)
 
 
-# TODO should probably have its own queue and not reuse r_queue
 class Control(Action):
-    """Passes flow control actions to GUI."""
+    """Passes flow control actions to GUI.
 
-    @property
-    def response(self) -> Any:
-        """Pass `Control` to GUI, wait for response than return it.
+    See also
+    --------
+    :class:`Action`
+    """
 
-        :type: Any
-        """
-        SharedVars.a_queue.put(self)
-        return SharedVars.r_queue.get()._response
-
-    @response.setter
-    def response(self, value: Any):
-        self._response = value
-        SharedVars.r_queue.put(self)
+    _queue: "Queue[Action]" = Queue()  # control commands
+    _response_queue: "Queue[Action]" = Queue()  # control responses
 
 
 class Progress:
     """Class that informs GUI of parser progress.
 
-    Attributes
+    Parameters
     ----------
     desctiption: str
         desctiption of the ongoing action
@@ -91,7 +123,14 @@ class Progress:
         max progress value
     finished: bool
         flag indicating that the background process has finished work
+
+    Attributes
+    ----------
+    _queue: Queue[Action]
+        queue which describes parser progress
     """
+
+    _queue: "Queue[Progress]" = Queue()  # main progress
 
     def __init__(self, description: str = "", actual: int = 0,
                  maximum: int = 0, finished: bool = False,
@@ -105,56 +144,54 @@ class Progress:
         if busy:
             self.max = self.actual
 
+        self._put(self)
+
+    @classmethod
+    def _put(cls, value: "Progress"):
+        cls._queue.put(value)
+
+    @classmethod
+    def get_nowait(cls) -> Optional["Progress"]:
+        """Get the latest entry in the Progress queue or None if it is empty.
+
+        Returns
+        -------
+        Optional[Progress]
+            instance of the Progress class or None
+        """
+        try:
+            return cls._queue.get_nowait()
+        except Empty:
+            return None
+
     def __str__(self):
         return (f"<Progres: actual={self.actual}, max={self.max}, "
                 f"desc={self.description}>")
 
 
-class SharedVars:
-    """Class for synchronizing variables between parser and GUI thread.
+class ThreadPoolProgress(Progress):
+    """Class that informs GUI of threadpool progress.
 
-    Serves to pass the questions asked in parser to to PyQt GIU.
-    Should not be instantiated, all methods and attributes belog to the
-    class. The class implements API similar to logging.Logger with info(),
-    warning() and exception() methods. These are prefered to directly
-    setting the attributes value.
+    See also
+    --------
+    :class:`Progress`
+    """
+
+    _queue: "Queue[Progress]" = Queue()  # treadpool progress
+
+
+class GuiLoggger:
+    """Class Implementing logging facility for GUI.
+
+    API copies that of python logging.Logger
 
     Attributes
     ----------
     progress: int
         controlls main gui progressbar
-    a_queue: Queue[Action]
-        queue with actions gui should take
-    r_queue: Queue[Action]
-        GUI response to actions taken
-    c_queue: Queue[Action]
-        queue containing flow control actions
-    p_queue: Queue[Progress]
-        informs main GUI progresbar of parser progress
-    tp_queue: Queue[Progress]
-        informas gui of threadpool progress
     """
 
-    # thread safe attributes, defined by properties in metaclass
     progress: ClassVar[int] = 0
-
-    # control queues
-    a_queue: "Queue[Action]" = Queue()
-    r_queue: "Queue[Action]" = Queue()
-    c_queue: "Queue[Action]" = Queue()
-    p_queue: "Queue[Progress]" = Queue()
-    tp_queue: "Queue[Progress]" = Queue()
-
-    @classmethod
-    def set_threadpool_prog(cls, actual: int, maximum: int):
-        """Increments progress read by GUI threadpool progressbar dialog.
-
-        See also
-        --------
-        :meth:`wiki_music.gui_lib.main_window.Checkers._threadpool_check`
-            periodically running method that displays progress in GUI.
-        """
-        cls.tp_queue.put(Progress(actual=actual, maximum=maximum))
 
     @classmethod
     def info(cls, msg: str):
@@ -170,7 +207,7 @@ class SharedVars:
         if len(msg) > 100 and ":" in msg:
             msg = msg.split(": ", 1)[1]
 
-        cls.p_queue.put(Progress(str(msg).strip(), cls.progress))
+        Progress(description=str(msg).strip(), actual=cls.progress)
 
     @classmethod
     def warning(cls, msg: Union[Exception, str]):
@@ -183,7 +220,7 @@ class SharedVars:
         msg: str
             message text
         """
-        cls.c_queue.put(Control("warning", str(msg)))
+        Control("warning", str(msg))
 
     @classmethod
     def exception(cls, msg: Union[Exception, str]):
@@ -196,7 +233,7 @@ class SharedVars:
         msg: str
             message text
         """
-        cls.c_queue.put(Control("exception", str(msg)))
+        Control("exception", str(msg))
 
 
 class YmlSettings:
@@ -234,10 +271,24 @@ class YmlSettings:
         """
         with cls._lock:
             cls._settings_dict[key] = value
-            with SETTINGS_YML.open("w") as f:
-                _settings_dict = yaml.dump(cls._settings_dict, f,
-                                           default_flow_style=False,
-                                           allow_unicode=True)
+            cls._dump()
+
+    @classmethod
+    def delete(cls, key: Hashable):
+        """Delete specified key for settings dictionary.
+
+        Parameters
+        ----------
+        key: Hashable
+            key to delete
+        """
+        with cls._lock:
+            try:
+                del cls._settings_dict[key]
+            except KeyError:
+                log.debug("deleting non-existent YAML setting")
+            else:
+                cls._dump()
 
     @classmethod
     def read(cls, key: Hashable, default: Any) -> Any:
@@ -259,5 +310,15 @@ class YmlSettings:
             try:
                 return cls._settings_dict[key]
             except KeyError:
-                log.debug("Accesing non-existent setting")
+                log.debug("Accesing non-existent YAML setting")
                 return default
+
+    @classmethod
+    def _dump(cls):
+        """Syncronize in-memory settings dict with disk file.
+
+        Has to be called in locked context.
+        """
+        with SETTINGS_YML.open("w") as f:
+            yaml.dump(cls._settings_dict, f, default_flow_style=False,
+                      allow_unicode=True)

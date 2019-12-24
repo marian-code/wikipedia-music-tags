@@ -1,5 +1,8 @@
 """wiki_music GUI entry point."""
 
+# from wiki_music.profiler import init_yappi
+# init_yappi()
+
 import logging
 import sys
 from threading import current_thread

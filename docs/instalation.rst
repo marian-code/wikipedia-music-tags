@@ -39,9 +39,6 @@ For basic setup just clone from git and install requirements.
 
 The module was written so it could run on any platform with python
 installation. But it is only tested under Windows 10 with Anaconda 5.2.0.
-With only some minor modifications it should be able to run on Linux and
-Os X too. Problems concern mainly default paths and interaction with
-clipboard in GUI.
 
 Multiple Qt backends are supported thanks to QtPy. So you can substitute 
 PyQt5 for: PyQt4, PySide2 or PySide. However, for now only compatibility with 
@@ -59,10 +56,9 @@ All modules are found in PyPI so installing should be as easy as:
 
     git clone git@github.com:marian-code/wikipedia-music-tags.git
     cd wikipedia-music-tags
-    pip install -r requirements.txt
     pip install -e .
 
-This will install package in developement mode. The app CLI and GUI version
+This will install package in editable mode. The app CLI and GUI version
 can be run by:
 
 .. code-block:: bash
@@ -79,7 +75,7 @@ packages that are not necessary:
 * *lxml* makes Beautifulsoup a whole lot faster
 * *PyQt5* if you want to use console mode or other Qt backend
 
-If you want to build the frozen app you hate to install aditional libraries.
+If you want to build the frozen app you have to install aditional libraries.
 
 .. code-block:: bash
 
@@ -93,7 +89,7 @@ And if you want to build the docs:
 
 Since the docs are built automatically on commit to git repo it is not
 necessary to build them locally but it is worth checking if there are any
-errors beforecommiting to git.
+errors before commiting to git.
 
 
 
@@ -110,7 +106,7 @@ Building frozen app
     you can use option ``--exclude-module=<module_name>`` in freeze.py to
     exclude unwanted libraries. See section `Creating virtual environment`_
 
-There are few optional optimization which you can do before building frozen
+There are few optional optimizations which you can do before building frozen
 app. You can use 'vanilla' numpy to further reduce size of freezed app. Vanilla
 numpy build can be downloaded from here:
 `numpy vanilla <https://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_.
@@ -159,8 +155,8 @@ With UPX compression and vanilla Numpy ~??MB
 With OPENBLAS numpy and UPX compression ~140MB.
 
 This will generate list three directories under setup/ folder: gdist/ cdist/
-and build/. Build contains just pyinstaller help files and **(g/c)dist/wiki_music**
-contain packaged GUI and CLI console apps. 
+and build/. Build contains just pyinstaller help files and
+**(g/c)dist/wiki_music** contains packaged GUI and CLI console apps. 
 
 Creating virtual environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -87,7 +87,7 @@ def get_music_path() -> Path:
 
     Returns
     -------
-    str
+    Path
         string path pointing to music library location
     """
     if sys.platform.startswith("win32"):

@@ -6,9 +6,8 @@ import subprocess  # lazy loaded
 import sys
 import time  # lazy loaded
 import webbrowser  # lazy loaded
-from queue import Empty
 from threading import Thread
-from typing import Optional, Union, TYPE_CHECKING
+from typing import List, Optional, Union, TYPE_CHECKING
 
 from wiki_music import __version__
 from wiki_music.constants import LOG_DIR, ROOT_DIR
@@ -18,10 +17,12 @@ from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QFileDialog,
                                             QProgressBar, QProgressDialog, Qt,
                                             QTimer)
 from wiki_music.utilities import (NLTK, GoogleApiKey, Mp3tagNotFoundException,
-                                  SharedVars, YmlSettings, exception, warning)
+                                  GuiLoggger, YmlSettings, exception, warning)
+
+from wiki_music.utilities import Action, Progress, Control, ThreadPoolProgress
 
 if TYPE_CHECKING:
-    from wiki_music.utilities import Action, Progress, Control
+    from wiki_music.gui_lib import CustomQTableView
 
 log = logging.getLogger(__name__)
 log.debug("finished gui imports")
@@ -73,6 +74,7 @@ class Checkers(BaseGui):
         self.threadpool_timer = QTimer()
         self.threadpool_timer.timeout.connect(self._threadpool_check)
         self.threadpool_timer.setSingleShot(True)
+        self.threadpool_timer.setTimerType(Qt.PreciseTimer)
 
     def _start_checkers(self):
         """Initializes timers of periodically repeating methods.
@@ -86,15 +88,42 @@ class Checkers(BaseGui):
         self.exception_timer.start(500)
         self.conditions_timer.start(400)
 
-    @staticmethod
-    def _get_action(queue: str) -> Union["Action", "Progress", "Control"]:
+    def _question(self, message: str, ignore_button: bool = False
+                  ) -> Union[str, bool]:
+        """Create dialog and request response from user.
 
-        try:
-            action = getattr(SharedVars, queue).get_nowait()
-        except Empty:
-            action = None
-        finally:
-            return action
+        Parameters
+        ----------
+        message: str
+            text of the message to show in dialog
+        ignore_button: bool
+            whether to show ignore button
+        """
+        if ignore_button:
+            buttons = QMessageBox.Yes | QMessageBox.No | QMessageBox.Ignore
+            msg_type = (QMessageBox.Information, "Information")
+        else:
+            buttons = QMessageBox.Yes | QMessageBox.No
+            msg_type = (QMessageBox.Question, "Question")
+
+        msg = QMessageBox(*msg_type, message, buttons)
+
+        if ignore_button:
+            # change button text
+            dont_bother_button = msg.button(QMessageBox.Ignore)
+            dont_bother_button.setText("Don't bother me again")
+
+        # exec dialog
+        out = msg.exec_()
+
+        if out == QMessageBox.Yes:
+            return True
+        elif out == QMessageBox.No:
+            return False
+        elif out == QMessageBox.Ignore:
+            return "d"
+        else:
+            raise Exception("Wrong messagebox option")
 
     # periodically checking methods
     @exception(log)
@@ -104,35 +133,8 @@ class Checkers(BaseGui):
         Periodically checks if parser requires user input, if so displays
         dialog with appropriate description and input options.
         """
-        def msg_process(out: QMessageBox.StandardButton) -> Union[str, bool]:
-            if out == QMessageBox.Yes:
-                return True
-            elif out == QMessageBox.No:
-                return False
-            elif out == QMessageBox.Ignore:
-                return "d"
-            else:
-                raise Exception("Wrong messagebox option")
 
-        def question(message: str, ignore_button=False) -> Union[str, bool]:
-
-            if ignore_button:
-                buttons = QMessageBox.Yes | QMessageBox.No | QMessageBox.Ignore
-                msg_type = (QMessageBox.Information, "Information")
-            else:
-                buttons = QMessageBox.Yes | QMessageBox.No
-                msg_type = (QMessageBox.Question, "Question")
-
-            msg = QMessageBox(*msg_type, message, buttons)
-
-            if ignore_button:
-                # change button text
-                dont_bother_button = msg.button(QMessageBox.Ignore)
-                dont_bother_button.setText("Don't bother me again")
-
-            return msg_process(msg.exec_())
-
-        action = self._get_action("a_queue")
+        action = Action.get_nowait()
         if action:
             self._log.debug(f"got action to carry out: {action.switch}")
 
@@ -156,10 +158,10 @@ class Checkers(BaseGui):
                     action.response = "N/A"
 
             elif action.switch == "composers":
-                action.response = question(action.message)
+                action.response = self._question(action.message)
 
             elif action.switch == "lyrics":
-                answer = question(action.message)
+                answer = self._question(action.message)
                 action.response = answer
 
                 if answer:
@@ -170,9 +172,6 @@ class Checkers(BaseGui):
                                                         self)
                     self.progressShow.setCancelButton(None)
                     self._threadpool_check()
-
-            elif action.switch == "api_key":
-                action.response = question(action.message, ignore_button=True)
 
             elif action.switch == "load_api_key":
                 dialog = QInputDialog(self)
@@ -186,8 +185,9 @@ class Checkers(BaseGui):
                 else:
                     action.response = None
 
-            elif action.switch == "nltk_data":
-                action.response = question(action.message, ignore_button=True)
+            elif action.switch in ("nltk_data", "api_key"):
+                action.response = self._question(action.message,
+                                                 ignore_button=True)
 
             elif action.switch == "download_nltk_data":
                 folder = QFileDialog.getExistingDirectory(
@@ -197,7 +197,9 @@ class Checkers(BaseGui):
                     action.response = folder
                 else:
                     action.response = action.message
-
+            elif action.switch == "load":
+                # if we want to only load values to gui
+                pass
             else:
                 raise Exception(f"Requested unknown action: {action.switch}")
 
@@ -212,7 +214,7 @@ class Checkers(BaseGui):
         displays message with information and if applicable option to exit the
         app
         """
-        action = self._get_action("c_queue")
+        action = Control.get_nowait()
         if action:
             if action.switch == "exception":
                 msg = QMessageBox(QMessageBox.Critical, "Exception",
@@ -248,7 +250,7 @@ class Checkers(BaseGui):
 
         Runs periodically.
         """
-        progress = self._get_action("p_queue")
+        progress = Progress.get_nowait()
         if progress:
             for item in ("Done", "Preload"):
                 if item in progress.description:
@@ -261,7 +263,7 @@ class Checkers(BaseGui):
 
     def _threadpool_check(self):
 
-        progress = self._get_action("tp_queue")
+        progress = ThreadPoolProgress.get_nowait()
         if progress:
             self.progressShow.setValue(progress.actual)
             self.progressShow.setMaximum(progress.max)
@@ -269,7 +271,7 @@ class Checkers(BaseGui):
             if progress.actual == progress.max:
                 return
 
-        self.threadpool_timer.start(50)
+        self.threadpool_timer.start(10)
 
 
 class Buttons(BaseGui):
@@ -383,8 +385,14 @@ class Buttons(BaseGui):
             QMessageBox(QMessageBox.Information, "Message",
                         "You must select directory first!").exec_()
 
-    def _show_help(self, help_type):
+    def _show_help(self, help_type: str):
+        """Show app help information: index, git, version or logs.
 
+        Parameters
+        ----------
+        help_type: str
+            which help option to show
+        """
         if help_type == "index":
             self._open_browser("https://wikipedia-music-tags.readthedocs.io"
                                "/en/latest/index.html")
@@ -400,12 +408,16 @@ class Buttons(BaseGui):
     def _entry_band(self):
         """Connect to albumartist entry field."""
         self.ALBUMARTIST = self.band_entry_input.text()
+        if self.ALBUMARTIST:
+            self.start_preload()
 
     def _entry_album(self):
         """Connect to album entry field."""
         self.ALBUM = self.album_entry_input.text()
+        if self.ALBUM:
+            self.start_preload()
 
-    def _select_(self):
+    def _select_yaml(self):
         """Connect to  checkbox."""
         self.write_yaml = self.write_yaml_sw.isChecked()
 
@@ -423,6 +435,8 @@ class Buttons(BaseGui):
 
 class Window(DataModel, Checkers, Buttons, CoverArtSearch):
     """Toplevel GUI class, main winndow with all its functionality."""
+
+    tableView: "CustomQTableView"
 
     def __init__(self, debug):
 
@@ -447,9 +461,9 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         # map buttons to functions
         # must use lambda otherwise wrapper doesnt work correctly
         self.browse_button.clicked.connect(lambda: self._select_dir())
-        self.wiki_search_button.clicked.connect(lambda: self._run_search())
+        self.wiki_search_button.clicked.connect(lambda: self._wiki_search())
         self.coverArt.clicked.connect(lambda: self.cover_art_search())
-        self.lyrics_button.clicked.connect(lambda: self._run_lyrics_search())
+        self.lyrics_button.clicked.connect(lambda: self._lyrics_search())
         self.toolButton.clicked.connect(lambda: self._select_file())
 
         # connect the album and band entry field to preload function
@@ -462,6 +476,9 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
         # show table
         self.tableView.show()
+
+        # enable dragging files and dirs into the table
+        self.tableView.FileDropped.connect(self._load_dropped_dir)
 
         # enable drag and drop ordering of columns in table
         self.tableView.horizontalHeader().setSectionsMovable(True)
@@ -479,7 +496,10 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         self.actionMp3_Tag.triggered.connect(lambda: self._run_Mp3tag())
 
         # save action
-        self.actionAll_Tags.triggered.connect(lambda: self._save_all())
+        self.actionAll_Tags.triggered.connect(
+            lambda: self._save_tags(selected=False))
+        self.actionSelected_Tags.triggered.connect(
+            lambda: self._save_tags(selected=True))
 
         # show help
         self.actionHelp.triggered.connect(lambda: self._show_help("index"))
@@ -491,13 +511,13 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         # settings
         self.actionNltkData.triggered.connect(
             lambda: NLTK.download_data(in_thread=True))
-        self.actionGetApiKey.triggered.connect(lambda: GoogleApiKey.get(True))
+        self.actionGetApiKey.triggered.connect(
+            lambda: GoogleApiKey.get(True, in_thread=True))
 
         # search actons
-        self.actionWikipedia.triggered.connect(lambda: self._run_search())
+        self.actionWikipedia.triggered.connect(lambda: self._wiki_search())
         self.actionLyrics.triggered.connect(lambda: self.cover_art_search())
-        self.actionCoverArt.triggered.connect(
-            lambda: self._run_lyrics_search())
+        self.actionCoverArt.triggered.connect(lambda: self._lyrics_search())
 
         # main actions
         self.actionOpen.triggered.connect(lambda: self._select_dir())
@@ -522,11 +542,22 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
             # connect switches to functions
             self.offline_debbug_sw.stateChanged.connect(
                 self._select_offline_debbug)
-            self.write_yaml_sw.stateChanged.connect(self._select_)
+            self.write_yaml_sw.stateChanged.connect(self._select_yaml)
+
+    def _selected_table_rows(self) -> List[int]:
+        """Returns indeces of selected table rows.
+
+        Returns
+        -------
+        List[int]
+            indeces of selected rows
+        """
+        indeces = self.tableView.selectionModel().selectedRows()
+        return [self.proxy.mapToSource(i).row() for i in indeces]
 
     # methods that bind to gui elements
     @exception(log)
-    def _save_all(self):
+    def _save_tags(self, selected: bool = False):
         """Save changes to file tags, after saving reload files from disk."""
         # first stop any running preload, as it is not needed any more
         self.stop_preload()
@@ -541,13 +572,15 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
                             "You must specify directory with files!").exec_()
                 return
 
+            indeces = self._selected_table_rows()
+
             # show save progress
             self.progressShow = QProgressDialog("Writing tags", "", 0,
-                                                self.number_of_tracks, self)
+                                                len(indeces), self)
             self.progressShow.setCancelButton(None)
             self._threadpool_check()
 
-            if not self.write_tags():
+            if not self.write_tags(indeces):
                 msg = ("Cannot write tags because there are no "
                        "coresponding files")
                 QMessageBox(QMessageBox.Information, "Info", msg)
@@ -556,7 +589,32 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
             # reload files from disc after save
             self.reinit_parser()
             self.read_files()
-            self._parser_to_gui()
+
+    def _load2gui(self):
+        """Load files, start preload and show in GUI."""
+        self._init_progress_bar(0, 2)
+
+        # TODO non-atomic
+        # read files and start preload
+        self.read_files()
+        QTimer.singleShot(500, lambda: self.start_preload())
+
+    def _load_dropped_dir(self, path: str):
+        """Handle directory dropped onto the table.
+
+        Parameters
+        ----------
+        path: str
+            path to dropped directory
+        """
+        log.debug(f"Dropped dir: {path}")
+
+        answer = self._question(f"Do you want to load files from: {path}? "
+                                f"Previous changes will be discarded")
+
+        if answer:
+            self.work_dir = path
+            self._load2gui()
 
     @exception(log)
     def _select_dir(self):
@@ -564,18 +622,8 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         with RememberDir(self) as rd:
             self.work_dir, load_ok = rd.get_dir()
 
-        # if dialog was canceled, return imediatelly
-        if not load_ok:
-            return
-
-        self._init_progress_bar(0, 2)
-
-        # TODO non-atomic
-        # read files and start preload
-        self.read_files()
-        self.start_preload()
-
-        self._parser_to_gui()
+        if load_ok:
+            self._load2gui()
 
     def _init_progress_bar(self, minimum: int, maximum: int):
         """Resets main progresbar to 0 and sets range.
@@ -587,12 +635,12 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         maximum: int
             maximum progressbar value
         """
-        SharedVars.progress = minimum
+        GuiLoggger.progress = minimum
         self.progressBar.setRange(minimum, maximum)
         self.progressBar.setValue(minimum)
 
     @exception(log)
-    def _run_search(self):
+    def _wiki_search(self):
         """Start wikipedia search in background thread."""
         if not self._input_is_present(with_warn=True):
             return
@@ -605,12 +653,12 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         self.reinit_parser()
         self._start_checkers()
 
-        main_app = Thread(target=self._parser.run_wiki, name="WikiSearch")
-        main_app.daemon = True
+        main_app = Thread(target=self._parser.run_wiki,
+                          name="WikiSearch", daemon=True)
         main_app.start()
 
     @exception(log)
-    def _run_lyrics_search(self):
+    def _lyrics_search(self):
         """Start only lyric search in background thread."""
         self.stop_preload()
 
@@ -628,6 +676,6 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         log.info("starting lyrics search")
 
         self._start_checkers()
-        main_app = Thread(target=self._parser.run_lyrics, name="LyricsSearch")
-        main_app.daemon = True
+        main_app = Thread(target=self._parser.run_lyrics,
+                          name="LyricsSearch", daemon=True)
         main_app.start()

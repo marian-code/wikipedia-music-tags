@@ -10,10 +10,16 @@
     <height>742</height>
    </rect>
   </property>
+  <property name="acceptDrops">
+   <bool>true</bool>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="acceptDrops">
+    <bool>true</bool>
+   </property>
    <layout class="QGridLayout" name="gridlayout">
     <property name="leftMargin">
      <number>5</number>
@@ -46,6 +52,9 @@
           <width>600</width>
           <height>16777215</height>
          </size>
+        </property>
+        <property name="acceptDrops">
+         <bool>true</bool>
         </property>
         <property name="title">
          <string>Input</string>
@@ -187,7 +196,11 @@
         </widget>
        </item>
        <item row="7" column="0">
-        <widget class="QLineEdit" name="composer_detail"/>
+        <widget class="QLineEdit" name="composer_detail">
+         <property name="dragEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
        <item row="8" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout">
@@ -218,7 +231,11 @@
         </widget>
        </item>
        <item row="11" column="0">
-        <widget class="QTextEdit" name="lyrics_detail"/>
+        <widget class="QTextEdit" name="lyrics_detail">
+         <property name="acceptDrops">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -284,9 +301,24 @@
      </layout>
     </item>
     <item row="2" column="0" colspan="4">
-     <widget class="QTableView" name="tableView">
+     <widget class="CustomQTableView" name="tableView">
+      <property name="acceptDrops">
+       <bool>true</bool>
+      </property>
       <property name="sizeAdjustPolicy">
        <enum>QAbstractScrollArea::AdjustToContents</enum>
+      </property>
+      <property name="dragEnabled">
+       <bool>true</bool>
+      </property>
+      <property name="dragDropOverwriteMode">
+       <bool>true</bool>
+      </property>
+      <property name="dragDropMode">
+       <enum>QAbstractItemView::DropOnly</enum>
+      </property>
+      <property name="defaultDropAction">
+       <enum>Qt::LinkAction</enum>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
@@ -391,6 +423,7 @@
      <string>Save</string>
     </property>
     <addaction name="actionAll_Tags"/>
+    <addaction name="actionSelected_Tags"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -524,7 +557,19 @@
     <string>Download nltk data</string>
    </property>
   </action>
+  <action name="actionSelected_Tags">
+   <property name="text">
+    <string>Selected Tags</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomQTableView</class>
+   <extends>QTableView</extends>
+   <header>wiki_music.gui_lib.custom_classes</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

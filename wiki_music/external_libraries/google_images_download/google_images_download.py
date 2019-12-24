@@ -772,6 +772,8 @@ class googleimagesdownload:
                         # ! altered for wiki_music ############################
                         download_status, download_message_thumbnail, wiki_music_thumb = self.download_image_thumbnail(object['image_thumbnail_url'],main_directory,dir_name,return_image_name,arguments['print_urls'],arguments['socket_timeout'],arguments['print_size'],arguments['no_download_thumbs'])
                         print(download_message_thumbnail)
+                    else:
+                        wiki_music_thumb = bytes()
 
                     count += 1
                     object['image_filename'] = return_image_name
@@ -779,6 +781,7 @@ class googleimagesdownload:
                     abs_path.append(absolute_path)
                 else:
                     errorCount += 1
+                    wiki_music_thumb = bytes()
 
                 # ! added for wiki_music ######################################
                 wiki_music_image["thumb"] = wiki_music_thumb

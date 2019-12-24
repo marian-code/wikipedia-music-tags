@@ -2,9 +2,8 @@
 
 import logging
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Iterable, Optional, Tuple, Union
 
-from wiki_music.constants.paths import DIR_FILE
 from wiki_music.gui_lib.qt_importer import (Property, QBuffer, QByteArray,
                                             QEvent, QFileDialog, QHBoxLayout,
                                             QImage, QIODevice, QLabel,
@@ -13,15 +12,91 @@ from wiki_music.gui_lib.qt_importer import (Property, QBuffer, QByteArray,
                                             QSize, QSizeGrip, QSizePolicy,
                                             QSortFilterProxyModel,
                                             QStandardItem, QStandardItemModel,
-                                            QStyleFactory, Qt, QTableWidget,
-                                            QVariant, QVBoxLayout, QWidget,
-                                            Signal)
-from wiki_music.utilities.gui_utils import get_music_path
+                                            QStyleFactory, Qt, QTableView,
+                                            QTableWidget, QVariant,
+                                            QVBoxLayout, QWidget, Signal)
+from wiki_music.utilities import YmlSettings, get_music_path
+
+if TYPE_CHECKING:
+    from wiki_music.gui_lib.qt_importer import (QDropEvent, QEnterEvent,
+                                                QMoveEvent)
 
 logging.getLogger(__name__)
 
 __all__ = ["NumberSortModel", "CustomQStandardItem", "ImageTable",
-           "ResizablePixmap", "CustomQStandardItemModel", "RememberDir"]
+           "ResizablePixmap", "CustomQStandardItemModel", "RememberDir",
+           "CustomQTableView"]
+
+
+class CustomQTableView(QTableView):
+    """Table view implementing drag & drop actions.
+
+    This is a custom widget for QtDesigner, its location must remain the same,
+    otherwise UIC compiler will not find it at compile time. If it should be
+    moved than QtableView widget promote settings must be changed accordingly.
+    This class has to reimplement all three methods for drag & drop to work.
+
+    Accepts only drops with paths to file or directory
+
+    Attributes
+    ----------
+    FileDropped: Signal(Path)
+
+    References
+    ----------
+    https://stackoverflow.com/questions/19622014/how-do-i-use-promote-to-in-qt-designer-in-pyqt4
+    https://www.learnpyqt.com/courses/qt-creator/embed-pyqtgraph-custom-widgets-qt-app/
+    """
+
+    FileDropped: Signal = Signal(str)
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event: "QEnterEvent"):
+        """Handle start of a mouse drag, allow only data with file loactions.
+
+        Parameters
+        ----------
+        event: QEnterEvent
+            object containing info about occuring event
+        """
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event: "QMoveEvent"):
+        """Handle mouse drag movement, allow only data with file loactions.
+
+        Parameters
+        ----------
+        event: QMoveEvent
+            object containing info about occuring event
+        """
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event: "QDropEvent"):
+        """Handle data drop into the table.
+
+        Only the first address is used, others are discarded.
+
+        Parameters
+        ----------
+        event: QDropEvent
+            object containing info about occuring event and dropped data
+        """
+        # take the first address and convert to local file
+        path = Path(event.mimeData().urls()[0].toLocalFile())
+
+        if path.is_dir():
+            self.FileDropped.emit(str(path.resolve()))
+        else:
+            self.FileDropped.emit(str(path.parent.resolve()))
 
 
 class NumberSortModel(QSortFilterProxyModel):
@@ -100,9 +175,12 @@ class CustomQStandardItem(QStandardItem):
             if not self._filtered:
 
                 self._filtered = super().data(Qt.DisplayRole)
-                path = Path(self._filtered)
-                if path.is_file():
-                    self._filtered = path.name
+                if self._filtered == "":
+                    pass
+                else:
+                    path = Path(self._filtered)
+                    if path.is_file():
+                        self._filtered = path.name
 
             return self._filtered
 
@@ -139,7 +217,7 @@ class CustomQStandardItem(QStandardItem):
         """
         return super().data(role)
 
-    def text(self, split=False) -> Union[str, list]:
+    def text(self, split: bool = False) -> Union[str, list]:
         """Reimplemented, if the data is path than return full path.
 
         Parameters
@@ -159,16 +237,69 @@ class CustomQStandardItem(QStandardItem):
             data = text
 
         if split and "," in data:
-            return [x.strip() for x in data.split(",")]
+            return [d.strip() for d in data.split(",") if d]
         else:
             return data
 
 
 class CustomQStandardItemModel(QStandardItemModel):
-    """Make table columns indexable by its names.
+    """Make table columns indexable by its names. Add easy column manipulation.
 
-    Overrides the default impementation adds `__getitem__`
+    Overrides the default impementation. adds `__getitem__`
     """
+
+    def setColumn(self, column: Union[int, str], value_list: list):
+        """Write python list to Qt table column.
+
+        Parameters
+        ----------
+        column: Union[int, str]
+            column integer index or header name
+        value_list: list
+            values to put in column
+        """
+        col = self._format_col(column)
+
+        for row, value in enumerate(value_list):
+            self.setItem(row, col, CustomQStandardItem(value))
+
+    def getColumn(self, column: Union[int, str], split: bool = False) -> list:
+        """Return whole table column as python list.
+
+        Parameters
+        ----------
+        column: Union[int, str]
+            column integer index or header name
+        split: bool
+            is strings in each column cell should be split on ',' to list
+
+        Returns
+        -------
+        list
+            list of column cell items
+        """
+        col = self._format_col(column)
+
+        return [self.item(row, col).text(split=split)
+                for row in range(self.rowCount())]
+
+    def _format_col(self, column: Union[int, str]) -> int:
+        """Convert column header name to index.
+
+        Parameters
+        ----------
+        column: Union[int, str]
+            column integer index or header name
+
+        Returns
+        -------
+        int
+            column index
+        """
+        if isinstance(column, int):
+            return column
+        else:
+            return self.__getitem__(column)
 
     def __getitem__(self, name: str) -> int:
         """Column index from column header name.
@@ -396,6 +527,7 @@ class ResizablePixmap(QLabel):
     bytes_image_edit: bytes
 
     def __init__(self, bytes_image: bytes, stretch: bool = True) -> None:
+
         QLabel.__init__(self)
 
         if stretch:
@@ -815,9 +947,6 @@ class RememberDir:
         # keep reference to main window for dialog centering
         self.window_instance = window_instance
 
-        # ensure directory for storing file exists
-        DIR_FILE.parent.mkdir(parents=True, exist_ok=True)
-
     def get_dir(self) -> Tuple[str, bool]:
         """Shows a folder selection dialog with the last visited dir as root.
 
@@ -842,13 +971,12 @@ class RememberDir:
         If the file could not be read, try to get music path on local PC
         """
         # load last opened dir
-        try:
-            self._start_dir = DIR_FILE.read_text()
-        except FileNotFoundError:
-            self._start_dir = get_music_path()
+        self._start_dir = str(YmlSettings.read("last_opened_dir",
+                                               get_music_path().resolve()))
 
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """On context exit try to save opened directory to file."""
-        DIR_FILE.write_text(self._start_dir)
+        if self._start_dir:
+            YmlSettings.write("last_opened_dir", self._start_dir)

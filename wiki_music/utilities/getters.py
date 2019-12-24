@@ -5,13 +5,14 @@ import sys
 import webbrowser  # lazy loaded
 from pathlib import Path
 from threading import RLock, Thread
-from typing import TYPE_CHECKING, Optional, Union, Type
+from time import sleep
+from typing import TYPE_CHECKING, Optional, Type, Union
 
 from wiki_music.constants import (API_KEY_FILE, API_KEY_MESSAGE,
                                   GOOGLE_API_URL, NLTK_DOWNLOAD_MESSAGE)
 
 from .parser_utils import ThreadPool
-from .sync import YmlSettings, Action
+from .sync import Action, YmlSettings
 from .utils import MultiLog, limited_input
 
 log = logging.getLogger(__name__)
@@ -85,10 +86,8 @@ class GoogleApiKey:
         if in_thread:
             cls._log.debug("api key download started from GUI, "
                            "spawning new background thread")
-            t = Thread(target=cls.get, args=(GUI, False),
-                       name="API-key-getter")
-            t.daemon = True
-            t.start()
+            Thread(target=cls.get, args=(GUI, False),
+                   name="API-key-getter", daemon=True).start()
             return None
 
         # ask user if he wants to get the google API key
@@ -98,7 +97,6 @@ class GoogleApiKey:
             inpt = a.response
         else:
             print(API_KEY_MESSAGE)
-
             inpt = limited_input(dont_bother=True)
 
         if inpt == "d":
@@ -118,7 +116,9 @@ class GoogleApiKey:
                 api_key = str(input("Paste the key here: ")).strip()
 
             cls._log.debug("saving api key file to file")
-            # write the key to file
+            # delete don't bother setting
+            YmlSettings.delete("api_key_dont_bother")
+            # write key to file
             API_KEY_FILE.write_text(api_key)
 
             return api_key
@@ -169,15 +169,21 @@ class NLTK(metaclass=_NltkMeta):
     _log: MultiLog = MultiLog(log)
 
     @classmethod
-    def run_import(cls, GUI=False):
+    def run_import(cls, GUI: bool = False, delay: float = 1):
         """Import nltk in separate thread and assign it to class attribute.
 
         Parameters
         ----------
         GUI: bool
             tells if we are running in GUI mode
+        delay: float
+            delays the start of import by specified amount of seconds
         """
-        def imp():
+        def imp(delay: float):
+
+            if delay:
+                sleep(delay)
+
             with cls._lock:
                 cls._log.debug("import nltk")
                 try:
@@ -195,7 +201,7 @@ class NLTK(metaclass=_NltkMeta):
 
             cls._import_running = True
             # load NLTK in separate thread
-            Thread(target=imp, name="ImportNLTK").start()
+            Thread(target=imp, args=(delay, ), name="ImportNLTK").start()
         else:
             cls._log.debug("nltk import already running")
 
@@ -256,10 +262,8 @@ class NLTK(metaclass=_NltkMeta):
         thread is not halted.
         """
         if in_thread:
-            t = Thread(target=cls.download_data, args=(False,),
-                       name="NLTK-downloader")
-            t.daemon = True
-            t.start()
+            Thread(target=cls.download_data, args=(False,),
+                   name="NLTK-downloader", daemon=True).start()
             return
 
         NLTK_DATA = cls._get_default_path()
@@ -291,6 +295,9 @@ class NLTK(metaclass=_NltkMeta):
         # append path to defaults and save to settings so app may find it
         cls._nltk.data.path.append(NLTK_DATA)
         YmlSettings.write("nltk_data_path", str(NLTK_DATA))
+
+        # delete don't bother setting
+        YmlSettings.delete("nltk_dont_bother")
 
         # download data
         cls._log.info("Downloading nltk data")

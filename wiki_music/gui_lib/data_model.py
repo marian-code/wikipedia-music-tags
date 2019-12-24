@@ -18,7 +18,7 @@ from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QMessageBox,
                                             QModelIndex, QPixmap,
                                             QStandardItemModel, QTimer)
 from wiki_music.library.parser import WikipediaRunner
-from wiki_music.utilities import exception, for_all_methods, time_methods
+from wiki_music.utilities import exception
 
 log = logging.getLogger(__name__)
 log.debug("data model imports done")
@@ -210,9 +210,9 @@ class ParserInteract(BaseGui):
         :class:`wiki_music.library.parser.preload.WikiCooker.Preload`
             parser inner class controlling preload
         """
-        self._parser.Preload.stop()
+        self._parser.stop_preload()
 
-    def start_preload(self):
+    def start_preload(self, delay: Optional[float] = None):
         """Starts page preload.
 
         See also
@@ -220,10 +220,15 @@ class ParserInteract(BaseGui):
         :class:`wiki_music.library.parser.preload.WikiCooker.Preload`
             parser inner class controlling preload
         """
-        self._parser.Preload.start()
+        self._parser.start_preload()
 
-    def write_tags(self) -> bool:
+    def write_tags(self, indeces: Optional[List[int]]) -> bool:
         """Writes tags to music files.
+
+        Parameters
+        ----------
+        indeces: Optional[List[int]]
+            indeces of files to save
 
         See also
         --------
@@ -236,7 +241,7 @@ class ParserInteract(BaseGui):
             truth if writing was successful
         """
         self._gui_to_parser()
-        return self._parser.write_tags()
+        return self._parser.write_tags(indeces)
 
     def read_files(self):
         """Reads tags from music files.
@@ -247,6 +252,7 @@ class ParserInteract(BaseGui):
             method for reading tags from files
         """
         self._parser.read_files()
+        self._parser_to_gui()
 
     @property
     def number_of_tracks(self):
@@ -275,7 +281,6 @@ class ParserInteract(BaseGui):
         self._parser.reinit(protected_vars=False)
 
 
-@for_all_methods(time_methods)
 class DataModel(ParserInteract):
     """Transfer data between GUI and parser and manage GUI data model.
 
@@ -368,18 +373,10 @@ class DataModel(ParserInteract):
         locking mechanism. We rely on the fact that only GUI or the parser
         are trying to access data at a given time.
         """
-        col: int
-
         # TODO non-atomic
         for h in GUI_HEADERS:
-
-            col = self.table[h]
-            split = h in SPLIT_HEADERS
-
-            col_data = [self.table.item(row, col).text(split=split)
-                        for row in range(self.table.rowCount())]
-
-            setattr(self._parser, h, col_data)
+            setattr(self._parser, h,
+                    self.table.getColumn(h, split=(h in SPLIT_HEADERS)))
 
     def _display_image(self, image: Optional[bytes] = None):
         """Shows cover art image preview in main window.
@@ -413,11 +410,9 @@ class DataModel(ParserInteract):
         locking mechanism. We rely on the fact that only GUI or the parser
         are trying to access data at a given time.
         """
-        col: int
-
         if self.number_of_tracks:
 
-            log.debug("init entries")
+            log.debug("init table entries")
 
             self.table.setRowCount(self.number_of_tracks)
 
@@ -427,20 +422,19 @@ class DataModel(ParserInteract):
                 setattr(self, s, getattr(self._parser, s))
 
             # TODO non-atomic
-            for idx, h in enumerate(GUI_HEADERS):
-                col = self.table[h]
-                for row, value in enumerate(getattr(self._parser, h)):
-                    self.table.setItem(row, col, CustomQStandardItem(value))
+            for h in GUI_HEADERS:
+                self.table.setColumn(h, getattr(self._parser, h))
 
-                if idx != len(GUI_HEADERS) - 2:
-                    self.tableView.resizeColumnToContents(col)
+                # do not resize lyrics column, it is too wide
+                if h != "LYRICS":
+                    self.tableView.resizeColumnToContents(self.table[h])
 
             self.tableView.update()
 
             log.debug("show cover art")
             self._display_image()
 
-            log.debug("init entries done")
+            log.debug("init table entries done")
         else:
             QTimer.singleShot(100, self._parser_to_gui)
 
@@ -460,8 +454,8 @@ class DataModel(ParserInteract):
         row = self.proxy.mapToSource(proxy_index).row()
 
         # maintain row highlight
-        index = self.tableView.selectionModel().selectedRows()
-        self.tableView.selectRow(index[0].row())
+        for i in self.tableView.selectionModel().selectedRows():
+            self.tableView.selectRow(i.row())
 
         entries = [
             (0, self.number_detail),
@@ -477,7 +471,7 @@ class DataModel(ParserInteract):
         for col, ent in entries:
             ent.disconnect()
             ent.setText(self.table.item(row, col).text())
-            # col_inner = col is a hack to change the
+            # c = col is a hack to change the
             # scope of col otherwise lambda will refer
             # to actual value of col since it is in
             # outer scope

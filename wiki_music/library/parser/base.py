@@ -71,8 +71,7 @@ class ParserBase:
         string with path to directory with music files, this variable can be
         protected from reseting in __init__ method
     log: :class:`wiki_music.utilities.utils.MultiLog`
-        instance of MUltiLog which sends messages to logger and
-        :class:`wiki_music.utilities.sync.SharedVars`
+        instance of MUltiLog which sends messages to logger and GUI
     _sections: Dict[str, List[Bs4Soup]]
         dictionary of lists of BeautifulSoup objects each entry in the
         dict contains one whole section of the page and is indexed by that
@@ -111,7 +110,7 @@ class ParserBase:
         self._subtracks: NSList = []
 
         # bytes
-        self.cover_art: bytes = bytes()
+        self._cover_art: bytes = bytes()
 
         # strings
         self._release_date: str = ""
@@ -200,11 +199,11 @@ class ParserBase:
 
         :type: bytes
         """
-        return self.cover_art
+        return self._cover_art
 
     @COVERART.setter
     def COVERART(self, value: bytes):
-        self.cover_art = value
+        self._cover_art = value
 
     @property
     def DATE(self) -> str:
@@ -287,11 +286,11 @@ class ParserBase:
 
         :type: List[str]
         """
-        return [str(f) for f in self.files]
+        return [str(f) if f else f for f in self.files]
 
     @FILE.setter
     def FILE(self, value: SList):
-        self.files = [Path(v) for v in value]
+        self._files = [Path(v) if v.strip() else None for v in value]
 
     @property
     def TYPE(self) -> SList:
