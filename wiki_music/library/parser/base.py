@@ -40,8 +40,10 @@ class ParserBase:
     ----------
     offline_debug: bool
         determines if app will run in offline debug mode
-    write_yaml: bool
+    write_json: bool
         determines if tracklist in  format will be output
+    multi_threaded: bool
+        whether to run parts of the code in parallel
     _contents: List[str]
         stores the wikipedia page contents
     _disk_sep: List[int]
@@ -122,7 +124,8 @@ class ParserBase:
             self._album: str = ""
             self._band: str = ""
             self.offline_debug = False
-            self.write_yaml = False
+            self.write_json = False
+            self.multi_threaded= True
             self.work_dir: Path = Path("")
             self._log: MultiLog = MultiLog(log)
             self._GUI = False

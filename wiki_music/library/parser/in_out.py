@@ -1,10 +1,11 @@
 """Module with parser inpu-output methods."""
 
+from itertools import product, filterfalse, combinations  # lazy loaded
 import logging
 import pickle  # lazy loaded
 from abc import abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
 import fuzzywuzzy.process as process  # lazy loaded
@@ -12,8 +13,8 @@ import fuzzywuzzy.process as process  # lazy loaded
 from wiki_music.constants import (EXTENDED_TAGS, GREEN, LBLUE, LGREEN,
                                   OUTPUT_FOLDER, RESET, YELLOW)
 from wiki_music.utilities import (ThreadPool, bracket, count_spaces,
-                                  list_files, normalize_caseless,
-                                  win_naming_convetion, write_roman, yaml_dump)
+                                  list_files, win_naming_convetion,
+                                  write_roman, json_dump, lrange)
 
 from ..lyrics import save_lyrics
 from ..tags_io import read_tags, write_tags
@@ -22,7 +23,6 @@ from .base import ParserBase
 log = logging.getLogger(__name__)
 
 wnc = win_naming_convetion
-nc = normalize_caseless
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -116,13 +116,12 @@ class ParserInOut(ParserBase):
 
     def _reassign_files(self):
         """Search current working directory and assign files to tracks."""
-        wnc = win_naming_convetion
 
         # TODO untested !!!!
         class FilesList(list):
 
             def get(self, key: str) -> Union[str, int]:
-                """Always return the firs element."""
+                """Always return the first element."""
                 return self[0][key]
 
         class FifoList(list):
@@ -159,53 +158,57 @@ class ParserInOut(ParserBase):
         limit = int(len(disk_files) / 2)
         for tr, tp in zip(self._tracks, self._types):
             # for each track select best matching files
-            file_map.put(process.extractBests(nc(wnc(f"{tr} {tp}")),
+            file_map.put(process.extractBests(wnc(f"{tr} {tp}"),
                                               [f.name for f in disk_files],
                                               scorer=fuzz.token_set_ratio,
                                               limit=limit))
 
+        # ! does not work deletes all matches fromn file map
         # if there are more tracks than files
         len_diff = len(disk_files) - len(self._tracks)
         if len_diff < 0:
-            indeces = [i for i in range(len(file_map))]
-            # sort indeces based on first file score
-            indeces = [f for _, f in sorted(zip(indeces, file_map),
+            indices = [i for i in lrange(file_map)]
+            print(indices)
+            # sort indices based on first file score
+            indices = [i for i, _ in sorted(zip(indices, file_map),
                                             key=lambda x: x[1].get("score"))]
-            # keep only number of best indeces coresponding to number of
+            print(indices)
+            # keep only number of best indices coresponding to number of
             # tracks
-            indeces = indeces[:len_diff]
+            indices = indices[:len_diff]
+            print(indices)
 
             # keep the best matching files, reassign the rest to None
-            for i, f in enumerate(file_map):
-                if i not in indeces:
+            for i in lrange(file_map):
+                if i not in indices:
                     file_map[i] = {"file": None, "score": 0}
 
+        print("-----------------------------------")
+        print(file_map)
+
         # if lengths are equal but two tacks have same files
-        for i in range(len(file_map)):
+        for i, j in combinations(lrange(file_map), 2):
+
             # if None file is assigned skip iteration
-            if not file_map[i].get("file"):
+            if not file_map[i].get("file") or not file_map[j].get("file"):
                 continue
-            for j in range(i + 1, len(file_map)):
-                # if None file is assigned skip iteration
-                if not file_map[j].get("file"):
-                    continue
-                # if files are equal, keep one with the higher score,
-                # and reassign the one with lower score to next in its
-                # respective list
-                if file_map[i].get("file") == file_map[j].get("file"):
-                    if file_map[i].get("score") > file_map[j].get("score"):
-                        file_map[j].pop(0)
-                    elif file_map[i].get("score") < file_map[j].get("score"):
-                        file_map[i].pop(0)
-                    else:
-                        log.debug(i, j)
-                        log.debug(nc(wnc(f"{self._tracks[j]} "
-                                         f"{self._types[j]}")))
-                        log.debug(*file_map[i], sep="\n")
-                        log.debug("-----------------------")
-                        log.debug(*file_map[j], sep="\n")
-                        raise Exception(f"File mapping to tracks is "
-                                        f"ambiguous! Cannot load files")
+
+            # if files are equal, keep one with the higher score,
+            # and reassign the one with lower score to next in its
+            # respective list
+            elif file_map[i].get("file") == file_map[j].get("file"):
+                if file_map[i].get("score") > file_map[j].get("score"):
+                    file_map[j].pop(0)
+                elif file_map[i].get("score") < file_map[j].get("score"):
+                    file_map[i].pop(0)
+                else:
+                    log.debug(f"i: {i}, j:{j}")
+                    log.debug(wnc(f"{self._tracks[j]} {self._types[j]}"))
+                    f = lambda x: f"{str(x['file']):100}:{x['score']:3}"
+                    for f1, f2 in zip(file_map[i], file_map[j]):
+                        print(f"{f(f1)} | {f(f2)}")
+                    raise Exception(f"File mapping to tracks is "
+                                    f"ambiguous! Cannot load files")
 
         # print out file assignments
         for tr, f in zip(self._tracks, file_map):
@@ -217,6 +220,7 @@ class ParserInOut(ParserBase):
             else:
                 print(YELLOW + tr + RESET, "." * (2 + max_length - len(tr)),
                       "Does not have a matching file!")
+                files.append(None)
 
         self.files = files
 
@@ -326,29 +330,26 @@ class ParserInOut(ParserBase):
         if not self._personnel:
             s += "---\n"
 
-        for pers, app in zip(self._personnel, self._appearences):
+        for pers, app in filterfalse(lambda x: not bool(x[1]),
+                                     zip(self._personnel, self._appearences)):
 
-            if app:
-                s += pers + " - "
-                temp = 1000
+            s += pers + " - "
+            temp = 1000
 
-                for k, a in enumerate(sorted(app)):
-                    for j, _ in enumerate(self._disk_sep[:-1]):
+            for (k, a), j in product(enumerate(sorted(app)),
+                                     lrange(self._disk_sep[:-1])):
 
-                        if (a >= self._disk_sep[j] and
-                            a < self._disk_sep[j + 1]):  # noqa E129
+                if (a >= self._disk_sep[j] and a < self._disk_sep[j + 1]):
 
-                            if j != temp:
-                                s += f"{self._disks[j]}: {self._numbers[a]}"
-                                temp = j
-                            else:
-                                s += self._numbers[a]
-
-                            if k != len(app) - 1:
-                                s += ", "
-                            break
+                    if j != temp:
+                        s += f"{self._disks[j]}: {self._numbers[a]}"
+                        temp = j
                     else:
-                        pass
+                        s += self._numbers[a]
+
+                    if k != len(app) - 1:
+                        s += ", "
+                    break
 
                 s += u'\n'
             else:
@@ -356,19 +357,15 @@ class ParserInOut(ParserBase):
 
         return s
 
-    def data_to_dict(self, indeces: Optional[List[int]] = None) -> "SongList":
+    def data_to_dict(self, indices: List[int]) -> "SongList":
         """Converts parser data to list of dictionaries.
 
-        If yaml_dump is enabled list is written to file.
+        If json_dump is enabled list is written to file.
 
         Parameters
         ----------
-        indeces: Optional[List[int]]
-            indeces of files to save
-
-        Warnings
-        --------
-        This class is not ment to be instantiated, only inherited.
+        indices: List[int]
+            indices of files to save
 
         See also
         --------
@@ -385,9 +382,8 @@ class ParserInOut(ParserBase):
 
             tags: "SongDict" = dict()
 
-            if indeces:
-                if i not in indeces:
-                    continue
+            if i not in indices:
+                continue
 
             for t in EXTENDED_TAGS:
                 attr = getattr(self, t)
@@ -398,19 +394,19 @@ class ParserInOut(ParserBase):
 
             dict_data.append(tags)
 
-        if self.write_yaml:
-            yaml_dump(dict_data, self.work_dir)
-            print("Saved YAML file")
+        if self.write_json:
+            json_dump(dict_data, self.work_dir)
+            print("Saved json file")
 
         return dict_data
 
-    def write_tags(self, indeces: Optional[List[int]] = None) -> bool:
+    def write_tags(self, indices: List[int]) -> bool:
         """Write tags to coresponding files. Writing is done in a parallel.
 
         Parameters
         ----------
-        indeces: Optional[List[int]]
-            indeces of files to save
+        indices: List[int]
+            indices of files to save
 
         See also
         --------
@@ -429,8 +425,12 @@ class ParserInOut(ParserBase):
         if not any(self.files):
             return False
         else:
-            ThreadPool(target=write_tags,
-                       args=[(d, ) for d in self.data_to_dict(indeces)]).run()
+            t = ThreadPool(target=write_tags,
+                           args=[(d, ) for d in self.data_to_dict(indices)])
+            if self.multi_threaded:
+                t.run()
+            else:
+                t.run_serial()
 
             return True
 
@@ -449,7 +449,8 @@ class ParserInOut(ParserBase):
         """
         if find:
             self._lyrics = save_lyrics(self._tracks, self._types, self._band,
-                                       self._album, self._GUI)
+                                       self._album, self._GUI,
+                                       self.multi_threaded)
         else:
             self._lyrics = [""] * len(self)
 
@@ -462,11 +463,12 @@ class ParserInOut(ParserBase):
             function that thandles tag reading
         """
         # initialize variables
-
         self.reinit(protected_vars=False)
 
-        # read tags in parallel
-        for tag in ThreadPool(read_tags, [(f, ) for f in self.files]).run():
+        t = ThreadPool(read_tags, [(f, ) for f in self.files])
+
+        # read tags
+        for tag in t.run(serial=not self.multi_threaded):
 
             for key, value in tag.items():
 

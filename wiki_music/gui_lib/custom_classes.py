@@ -1,31 +1,87 @@
 """Module housing custom Qt classes designed to support the package."""
 
 import logging
+from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, Optional, Tuple, Union
+from typing import (TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple,
+                    Union)
 
 from wiki_music.gui_lib.qt_importer import (Property, QBuffer, QByteArray,
-                                            QEvent, QFileDialog, QHBoxLayout,
-                                            QImage, QIODevice, QLabel,
-                                            QModelIndex, QPixmap, QPoint,
+                                            QColor, QEvent, QFileDialog,
+                                            QHBoxLayout, QImage, QIODevice,
+                                            QItemSelectionModel, QLabel,
+                                            QPixmap, QPoint,
                                             QRect, QResizeEvent, QRubberBand,
                                             QSize, QSizeGrip, QSizePolicy,
                                             QSortFilterProxyModel,
                                             QStandardItem, QStandardItemModel,
+                                            QStyle, QStyledItemDelegate,
                                             QStyleFactory, Qt, QTableView,
                                             QTableWidget, QVariant,
                                             QVBoxLayout, QWidget, Signal)
-from wiki_music.utilities import YmlSettings, get_music_path
+from wiki_music.utilities import IniSettings, get_music_path
 
 if TYPE_CHECKING:
     from wiki_music.gui_lib.qt_importer import (QDropEvent, QEnterEvent,
-                                                QMoveEvent)
+                                                QMoveEvent, QModelIndex,
+                                                QPainter, QStyleOptionViewItem)
 
 logging.getLogger(__name__)
 
 __all__ = ["NumberSortModel", "CustomQStandardItem", "ImageTable",
-           "ResizablePixmap", "CustomQStandardItemModel", "RememberDir",
-           "CustomQTableView"]
+           "ResizablePixmap", "TableItemModel", "RememberDir",
+           "CustomQTableView", "CheckableListModel"]
+
+
+# TODO
+# we can use parent reference to get info which cell should be highlighted
+class TextColorDelegate(QStyledItemDelegate):
+    """Delegate used for changing text color and highlighting behaviour.
+
+    References
+    ----------
+    https://stackoverflow.com/questions/49986965/pyqt4-qtableview-cell-text-changes-color-on-row-selection
+    https://doc.qt.io/qtforpython/PySide2/QtWidgets/QStyledItemDelegate.html
+    """
+
+    def __init__(self, parent=None) -> None:
+        """Object initialization
+
+        cells - marked cells that have different content
+        """
+
+        QStyledItemDelegate.__init__(self, parent)
+        self._parent = parent
+
+    def paint(self, painter: "QPainter", option: "QStyleOptionViewItem",
+              index: "QModelIndex"):
+        """Painter function used for overriding display behaviour."""
+        painter.save()
+
+        #print("index", type(index), index)
+        #print("painter", type(painter), painter)
+        #print("option", type(option), option)
+
+        if self._parent.search_visible:
+            if len(self._parent.proxy_indices) > 0:
+                if index == self._parent.proxy_indices[0]:
+                    painter.fillRect(option.rect, Qt.red)
+                elif index in self._parent.proxy_indices:
+                   painter.fillRect(option.rect, option.palette.highlight()) 
+            else:
+                # TODO not right, highlights whole column
+                painter.fillRect(option.rect, option.palette.light()) 
+        else:
+            if (option.state & QStyle.State_Selected):
+                print("ahoj")
+                painter.fillRect(option.rect, option.palette.highlight())
+            elif (option.state & QStyle.State_None):
+                print("cau")
+                painter.fillRect(option.rect, option.palette.base()) 
+
+        painter.drawText(option.rect, Qt.AlignLeft, index.data(Qt.DisplayRole))
+
+        painter.restore()
 
 
 class CustomQTableView(QTableView):
@@ -52,7 +108,19 @@ class CustomQTableView(QTableView):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
         self.setAcceptDrops(True)
+
+        self.real_indices = deque()
+        self.proxy_indices = deque()
+
+        self.setStyleSheet("selection-background-color: #55aaff;")
+
+        self.setItemDelegate(TextColorDelegate(self))
+
+        self.horizontalHeader().sortIndicatorChanged.connect(self._re_sort)
+
+        self.search_visible = False
 
     def dragEnterEvent(self, event: "QEnterEvent"):
         """Handle start of a mouse drag, allow only data with file loactions.
@@ -98,12 +166,180 @@ class CustomQTableView(QTableView):
         else:
             self.FileDropped.emit(str(path.parent.resolve()))
 
+    def set_search_visibility(self, tab: str):
+
+        if tab == "replace_tab":
+            self.search_visible = True
+        else:
+            self.search_visible = False
+
+        self.viewport().update()
+
+    # TODO we do not preserve actual position of edit cursor
+    # ! not working
+    def _re_sort(self):
+        """After table sorting changed, map new proxy indices and re-sort."""
+
+        proxy_ind = [self.model().mapFromSource(i) for i in self.real_indices]
+
+        real_ind, proxy_ind = zip(*sorted(zip(self.real_indices, proxy_ind),
+                                          key=lambda x: (x[1].row(),
+                                                         x[1].column())))
+
+        self.real_indices = deque(real_ind)
+        self.proxy_indices = deque(proxy_ind)   
+
+    # TODO
+    def search_string(self, string: str, case_sensitive: bool,
+                      support_re: bool, support_wildcard: bool,
+                      col_indices: List[int]):
+        """Search all table fields for string match.
+
+        Parameters
+        ----------
+        string: str
+            string to search for
+        case_sensitive: bool
+            if True search will be case sensitive
+        support_re: bool
+            support regular expressions
+        support_wildcard: bool
+            support widlcard operators
+        col_indices: List[int]
+            list of column indices where search will be performed
+
+        References
+        ----------
+        https://doc-snapshots.qt.io/4.8/qt.html#MatchFlag-enum
+        https://stackoverflow.com/questions/11898382/pyqt-search-item-qtablewidget-and-take-its-coordinates
+        """
+        # first clear selection highlights
+        self.selectionModel().clear()
+
+        # need to recurse two layers first is the NumberSortModel and the 
+        # second is the actual model: TableItemModel
+        model = self.model().sourceModel()
+
+        # set the right flags for search
+        flags = Qt.MatchContains
+        if support_re:
+            flags |= Qt.MatchRegExp
+        if support_wildcard:
+            flags |= Qt.MatchWildcard
+        if case_sensitive:
+            flags |= Qt.MatchCaseSensitive
+
+        indices = list()
+        for i in col_indices:
+            indices.extend(model.findItems(string, flags, i))
+
+        # if no indices fulfilling criteria were found, exit
+        if not indices:
+            # update the view to highlight data
+            self.viewport().update()
+            return
+
+        # get QModelIndex from found data
+        self.real_indices = [i.index() for i in indices]
+
+        # sort indeces according to their row and column
+        self._re_sort()
+
+        # update the view to highlight data
+        self.viewport().update()
+
+    # TODO
+    def _search_next(self):
+
+        self.real_indices.rotate(-1)
+        self.proxy_indices.rotate(-1)
+        self.viewport().update()
+
+    # TODO
+    def _search_previous(self):
+
+        self.real_indices.rotate(1)
+        self.proxy_indices.rotate(1)
+        self.viewport().update()
+
+    # TODO
+    def _replace_one(self, search_str: str, replace_str: str):
+        self._replace_all(search_str, replace_str, only_one=True)
+
+    # TODO
+    def _replace_all(self, search_str: str, replace_str: str,
+                     only_one: bool = False):
+
+        model = self.model().sourceModel()
+
+        while self.real_indices and self.proxy_indices:
+
+            # remove already replaced cells from stack
+            index = self.real_indices.popleft()
+            self.proxy_indices.popleft()
+
+            # get cell string
+            text = model.item(index.row(), index.column()).text()
+            # replace with desired text
+            text = text.replace(search_str, replace_str)
+            # set new value
+            model.item(index.row(), index.column()).setText(text)
+
+            # clear selection after replacement
+            self.viewport().update()
+
+            # if replace only one, break after the first iteration
+            if only_one:
+                break
+
+
+# TODO
+class CheckableListModel(QStandardItemModel):
+    """Builds list view with checkable items.
+
+    References
+    ----------
+    https://stackoverflow.com/questions/846684/a-listview-of-checkboxes-in-pyqt
+    """
+
+    def add(self, item_name: str, checked: Optional[bool] = False):
+        """Add one row to checkabel list.
+
+        Paremeters
+        ----------
+        item_name: str
+            name of the list item
+        checked: Optional[bool]
+            control if item will be in checked state upon insertion
+        """
+        item = QStandardItem(item_name)
+        item.setCheckable(True)
+        if checked:
+            item.setCheckState(Qt.Checked)
+        else:
+            item.setCheckState(Qt.Unchecked)
+
+        self.appendRow(item)
+
+    def get_checked_indices(self) -> List[int]:
+
+        checked = list()
+        for i in range(self.rowCount()):
+            if bool(self.item(i, 0).checkState()):
+                checked.append(i)
+
+        return checked
+
+    def remove(self, item_name: str):
+        # TODO
+        pass
+
 
 class NumberSortModel(QSortFilterProxyModel):
     """Custom table proxy model which can sort numbers not only strings."""
 
-    def lessThan(self, left_index: QModelIndex,
-                 right_index: QModelIndex) -> bool:
+    def lessThan(self, left_index: "QModelIndex",
+                 right_index: "QModelIndex") -> bool:
         """Reimplemented comparator method to handle numbers correctly.
 
         Parameters
@@ -151,6 +387,7 @@ class CustomQStandardItem(QStandardItem):
             data = ""
 
         super().__init__(data)
+
         self._filtered: str = ""
 
     def data(self, role: Qt.ItemDataRole) -> QVariant:
@@ -242,7 +479,7 @@ class CustomQStandardItem(QStandardItem):
             return data
 
 
-class CustomQStandardItemModel(QStandardItemModel):
+class TableItemModel(QStandardItemModel):
     """Make table columns indexable by its names. Add easy column manipulation.
 
     Overrides the default impementation. adds `__getitem__`
@@ -971,7 +1208,7 @@ class RememberDir:
         If the file could not be read, try to get music path on local PC
         """
         # load last opened dir
-        self._start_dir = str(YmlSettings.read("last_opened_dir",
+        self._start_dir = str(IniSettings.read("last_opened_dir",
                                                get_music_path().resolve()))
 
         return self
@@ -979,4 +1216,4 @@ class RememberDir:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """On context exit try to save opened directory to file."""
         if self._start_dir:
-            YmlSettings.write("last_opened_dir", self._start_dir)
+            IniSettings.write("last_opened_dir", self._start_dir)

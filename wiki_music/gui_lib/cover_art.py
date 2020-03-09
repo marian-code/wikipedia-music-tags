@@ -11,11 +11,11 @@ from wiki_music.constants import (ASPECT_RATIOS, COVER_ART_EDIT_UI,
 from wiki_music.external_libraries.google_images_download import (  # lazy loaded
     google_images_download, google_images_download_offline)
 from wiki_music.gui_lib import BaseGui, ImageTable, SelectablePixmap
-from wiki_music.gui_lib.qt_importer import (QDialog, QHBoxLayout, QIcon,
-                                            QMessageBox, QSize, Qt, QTimer,
-                                            QWidget, Signal, uic)
+from wiki_music.gui_lib.qt_importer import (QDialog, QFileDialog, QHBoxLayout,
+                                            QIcon, QMessageBox, QSize, Qt,
+                                            QTimer, QWidget, Signal, uic)
 from wiki_music.utilities import (MultiLog, comp_res, exception, get_icon,
-                                  get_image, get_image_size)
+                                  get_image, get_image_size, get_sizes)
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
@@ -606,6 +606,7 @@ class CoverArtSearch(BaseGui):
             method that stats picture edit dialog
         """
         self.images = []
+        self._stop_aysnc_loader = False
 
         if self.offline_debug:
             self.gimd = google_images_download_offline.googleimagesdownload()
@@ -649,6 +650,8 @@ class CoverArtSearch(BaseGui):
         # TODO connect
         self.search_dialog.search_button.clicked.connect(self._do_nothing)
         self.search_dialog.browser_button.clicked.connect(self._do_nothing)
+        self.search_dialog.load_from_file_button.clicked.connect(
+            lambda x: self._load_from_file())
 
         self.search_dialog.show()
 
@@ -713,13 +716,13 @@ class CoverArtSearch(BaseGui):
                 # if stack is empty break the loop
                 break
             else:
-                # if item is present try to red it
+                # if item is present try to read it
                 try:
                     dim = (f"{image['dim'][1][0]}x{image['dim'][1][1]}\n"
                            f"{(image['dim'][0] / 1024):.2f}Kb")
                 except TypeError as e:
-                    # if we couldnat load image parameters, don't show it
-                    self._log.debug(e)
+                    # if we couldn't load image parameters, don't show it
+                    self._log.debug(f"couldn't get image dimensions: {e}")
                     pass
                 else:
                     # show and store image
@@ -738,8 +741,28 @@ class CoverArtSearch(BaseGui):
 
         # if not enough images were loaded and search window was not destroyed
         # schedule another run
-        if all(continue_load()):
+        if all(continue_load()) and not self._stop_aysnc_loader:
             QTimer.singleShot(50, self._async_loader)
+
+    @exception(log)
+    def _load_from_file(self):
+
+        file_types = "Image files (*.png *.jpg *.jpeg)"
+
+        filename = QFileDialog.getOpenFileName(self, "Select cover art file",
+                                               self.work_dir,
+                                               f"{file_types};;All files (*)")
+
+        filename = filename[0]
+
+        # stop internet image search
+        self.gimd.close()
+        # stop async loader method loop
+        self._stop_aysnc_loader = True
+        # append picture to downloaded list along with its dimensions
+        self.images.append({"dim": get_sizes(filename), "url": Path(filename)})
+        # start picture editor
+        self._select_picture(-1)
 
     @exception(log)
     def _select_picture(self, index: int):
@@ -750,11 +773,12 @@ class CoverArtSearch(BaseGui):
         index: int
             position of the picture in downloade pictures list
         """
-        # 0-th position is size in KB, and 1-st position is tuple of dimensions
+        # 0-th position is size in KB,
+        # and 1-st position is tuple of dimensions
         dimensions: Tuple[int, int] = self.images[index]["dim"][1]
         url: Union[Path, str] = self.images[index]["url"]
 
-        self._log.info(f"Downloading full size cover art from: {url}")
+        self._log.info(f"Get full size cover art from: {url}")
 
         # create dialog to handle image editing
         self.picture_editor = PictureEdit(dimensions, get_image(url),

@@ -73,7 +73,7 @@ class TagMp3(TagBase):
             except IndexError:
                 tag = self._get_default_tag(value)
             finally:
-                tags[value] = self._process_tag(tag)
+                tags[value] = self._process_tag(value, tag)
 
         return tags
 
@@ -81,20 +81,20 @@ class TagMp3(TagBase):
 
         if tag == "COVERART":
             try:
-                self._song[self.reverse_map[tag]](
+                self._song[self._reverse_map[tag]](
                     mime=u"image/jpeg", type=PictureType.COVER_FRONT,
                     desc=u"Cover", data=value, encoding=3)
             except KeyError:
-                self._song.add(self.reverse_map[tag](
+                self._song.add(self._reverse_map[tag](
                     mime=u"image/jpeg", type=PictureType.COVER_FRONT,
                     desc=u"Cover", data=value, encoding=3))
                 log.warning(f"Couldn't find tag {tag}: "
-                            f"{self.reverse_map[tag]}")
+                            f"{self._reverse_map[tag]}")
         else:
             # if tag is not present add it
             try:
-                self._song[self.reverse_map[tag]](encoding=3, text=value)
+                self._song[self._reverse_map[tag]](encoding=3, text=value)
             except KeyError:
-                self._song.add(self.reverse_map[tag](encoding=3, text=value))
+                self._song.add(self._reverse_map[tag](encoding=3, text=value))
                 log.warning(f"Couldn't find tag {tag}: "
-                            f"{self.reverse_map[tag]}")
+                            f"{self._reverse_map[tag]}")

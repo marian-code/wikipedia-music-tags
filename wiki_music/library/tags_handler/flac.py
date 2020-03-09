@@ -51,15 +51,14 @@ class TagFlac(TagBase):
         for key, value in self._map_keys.items():  # pylint: disable=no-member
             try:
                 if key == "picture":
-                    tag = self._song.pictures[0].data
-                    continue
+                    tag = [self._song.pictures[0].data]
                 else:
                     tag = self._song.tags[key]
 
             except (KeyError, AttributeError):
                 tag = self._get_default_tag(value)
             finally:
-                tags[value] = self._process_tag(tag)
+                tags[value] = self._process_tag(value, tag)
 
         return tags
 
@@ -77,4 +76,4 @@ class TagFlac(TagBase):
             self._song.clear_pictures()
             self._song.add_picture(pic)
         else:
-            self._song.tags[self.reverse_map[tag]] = value
+            self._song.tags[self._reverse_map[tag]] = value

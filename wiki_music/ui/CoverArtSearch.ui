@@ -75,6 +75,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="load_from_file_button">
+       <property name="text">
+        <string>Load from file</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="cancel_button">
        <property name="text">
         <string>Cancel</string>

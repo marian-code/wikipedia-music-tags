@@ -33,274 +33,7 @@
     <property name="bottomMargin">
      <number>5</number>
     </property>
-    <item row="0" column="3" rowspan="2">
-     <layout class="QHBoxLayout" name="picture_layout">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetMinimumSize</enum>
-      </property>
-     </layout>
-    </item>
-    <item row="0" column="0">
-     <layout class="QGridLayout" name="gridLayout">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetMaximumSize</enum>
-      </property>
-      <item row="0" column="0">
-       <widget class="QGroupBox" name="input_frame">
-        <property name="maximumSize">
-         <size>
-          <width>600</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="acceptDrops">
-         <bool>true</bool>
-        </property>
-        <property name="title">
-         <string>Input</string>
-        </property>
-        <layout class="QGridLayout" name="input_grid">
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="band_entry_input"/>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Input Artist</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>Input Album</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QLineEdit" name="album_entry_input"/>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QGroupBox" name="common_tags_frame">
-        <property name="maximumSize">
-         <size>
-          <width>600</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Common Tags</string>
-        </property>
-        <layout class="QGridLayout" name="common_tags_grid">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Album Artist</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Album</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QLabel" name="label_5">
-           <property name="text">
-            <string>Year</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>Genre</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLineEdit" name="band_entry"/>
-         </item>
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="album_entry"/>
-         </item>
-         <item row="1" column="2">
-          <widget class="QLineEdit" name="year_entry"/>
-         </item>
-         <item row="1" column="3">
-          <widget class="QLineEdit" name="genre_entry"/>
-         </item>
-        </layout>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="5" rowspan="3">
-     <widget class="QGroupBox" name="detail_frame">
-      <property name="minimumSize">
-       <size>
-        <width>321</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>321</width>
-        <height>16777215</height>
-       </size>
-      </property>
-      <property name="title">
-       <string>Detail</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>Song title</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLineEdit" name="title_detail"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Number</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLineEdit" name="number_detail"/>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_9">
-         <property name="text">
-          <string>Artists</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLineEdit" name="artist_detail"/>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="text">
-          <string>Composers</string>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0">
-        <widget class="QLineEdit" name="composer_detail">
-         <property name="dragEnabled">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QLabel" name="label_11">
-           <property name="text">
-            <string>File</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QToolButton" name="toolButton">
-           <property name="text">
-            <string>...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="9" column="0">
-        <widget class="QLineEdit" name="file_detail"/>
-       </item>
-       <item row="10" column="0">
-        <widget class="QLabel" name="label_12">
-         <property name="text">
-          <string>Lyrics</string>
-         </property>
-        </widget>
-       </item>
-       <item row="11" column="0">
-        <widget class="QTextEdit" name="lyrics_detail">
-         <property name="acceptDrops">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="0" column="4" rowspan="3">
-     <widget class="Line" name="line">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1" rowspan="2">
-     <layout class="QGridLayout" name="buttons_grid">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetMinimumSize</enum>
-      </property>
-      <item row="0" column="0">
-       <widget class="QPushButton" name="browse_button">
-        <property name="maximumSize">
-         <size>
-          <width>93</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>browse</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QPushButton" name="lyrics_button">
-        <property name="maximumSize">
-         <size>
-          <width>93</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Lyrics search</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QPushButton" name="coverArt">
-        <property name="text">
-         <string>Cover Art</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QPushButton" name="wiki_search_button">
-        <property name="maximumSize">
-         <size>
-          <width>93</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Wiki Search</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="2" column="0" colspan="4">
+    <item row="2" column="0" colspan="2">
      <widget class="CustomQTableView" name="tableView">
       <property name="acceptDrops">
        <bool>true</bool>
@@ -352,38 +85,509 @@
       </attribute>
      </widget>
     </item>
-    <item row="0" column="2">
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetMinimumSize</enum>
+    <item row="1" column="2" rowspan="2">
+     <widget class="QGroupBox" name="detail_frame">
+      <property name="minimumSize">
+       <size>
+        <width>321</width>
+        <height>0</height>
+       </size>
       </property>
-      <item>
-       <widget class="QCheckBox" name="write_yaml_sw">
-        <property name="maximumSize">
-         <size>
-          <width>109</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Write yaml?</string>
+      <property name="maximumSize">
+       <size>
+        <width>321</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="title">
+       <string>Detail</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="3" column="0">
+        <widget class="QLineEdit" name="number_detail"/>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLineEdit" name="artist_detail"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLineEdit" name="title_detail"/>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>Artists</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Number</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Song title</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLabel" name="label_11">
+           <property name="text">
+            <string>File</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="toolButton">
+           <property name="text">
+            <string>...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>Composers</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLineEdit" name="file_detail"/>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLineEdit" name="composer_detail">
+         <property name="dragEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QTextEdit" name="lyrics_detail">
+         <property name="acceptDrops">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <widget class="QLabel" name="label_12">
+         <property name="text">
+          <string>Lyrics</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="tool_tab">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>200</height>
+       </size>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="tab_3">
+       <attribute name="title">
+        <string>Search</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="3">
+         <layout class="QHBoxLayout" name="picture_layout">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
+         </layout>
+        </item>
+        <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMaximumSize</enum>
+          </property>
+          <property name="spacing">
+           <number>2</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QGroupBox" name="input_frame">
+            <property name="maximumSize">
+             <size>
+              <width>600</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="acceptDrops">
+             <bool>true</bool>
+            </property>
+            <property name="title">
+             <string>Input</string>
+            </property>
+            <layout class="QGridLayout" name="input_grid">
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="band_entry_input"/>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label">
+               <property name="text">
+                <string>Input Artist</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Input Album</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLineEdit" name="album_entry_input"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QGroupBox" name="common_tags_frame">
+            <property name="maximumSize">
+             <size>
+              <width>600</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="title">
+             <string>Common Tags</string>
+            </property>
+            <layout class="QGridLayout" name="common_tags_grid">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Album Artist</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_4">
+               <property name="text">
+                <string>Album</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_5">
+               <property name="text">
+                <string>Year</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLabel" name="label_6">
+               <property name="text">
+                <string>Genre</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLineEdit" name="band_entry"/>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="album_entry"/>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLineEdit" name="year_entry"/>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLineEdit" name="genre_entry"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="1">
+         <layout class="QGridLayout" name="buttons_grid">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="browse_button">
+            <property name="maximumSize">
+             <size>
+              <width>93</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>browse</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="lyrics_button">
+            <property name="maximumSize">
+             <size>
+              <width>93</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Lyrics search</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QPushButton" name="coverArt">
+            <property name="text">
+             <string>Cover Art</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="wiki_search_button">
+            <property name="maximumSize">
+             <size>
+              <width>93</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Wiki Search</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="2">
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
+          <item>
+           <widget class="QCheckBox" name="write_json_sw">
+            <property name="maximumSize">
+             <size>
+              <width>109</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Write json?</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="offline_debbug_sw">
+            <property name="maximumSize">
+             <size>
+              <width>109</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Offline debug?</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="multi_threaded_sw">
+            <property name="text">
+             <string>Multi threaded</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_4">
+       <attribute name="title">
+        <string>Replace Tool</string>
+       </attribute>
+       <widget class="QLineEdit" name="search_string_input">
+        <property name="geometry">
+         <rect>
+          <x>140</x>
+          <y>10</y>
+          <width>171</width>
+          <height>22</height>
+         </rect>
         </property>
        </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="offline_debbug_sw">
-        <property name="maximumSize">
-         <size>
-          <width>109</width>
-          <height>16777215</height>
-         </size>
+       <widget class="QLabel" name="label_13">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>10</y>
+          <width>55</width>
+          <height>16</height>
+         </rect>
         </property>
         <property name="text">
-         <string>Offline debug?</string>
+         <string>Search:</string>
         </property>
        </widget>
-      </item>
-     </layout>
+       <widget class="QPushButton" name="replace_one">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>10</y>
+          <width>75</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Replace</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="search_next">
+        <property name="geometry">
+         <rect>
+          <x>320</x>
+          <y>40</y>
+          <width>75</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Next</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="search_previous">
+        <property name="geometry">
+         <rect>
+          <x>320</x>
+          <y>10</y>
+          <width>75</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Previous</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="replace_all">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>40</y>
+          <width>75</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Replace all</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="search_support_re">
+        <property name="geometry">
+         <rect>
+          <x>490</x>
+          <y>10</y>
+          <width>141</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Support re patterns</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_14">
+        <property name="geometry">
+         <rect>
+          <x>650</x>
+          <y>0</y>
+          <width>131</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Select tags to edit</string>
+        </property>
+       </widget>
+       <widget class="QListView" name="replace_tag_selector_view">
+        <property name="geometry">
+         <rect>
+          <x>650</x>
+          <y>30</y>
+          <width>221</width>
+          <height>141</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="search_support_wildcard">
+        <property name="geometry">
+         <rect>
+          <x>490</x>
+          <y>30</y>
+          <width>141</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Support wildcards</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="search_case_sensitive">
+        <property name="geometry">
+         <rect>
+          <x>490</x>
+          <y>50</y>
+          <width>131</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Case sensitive</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_15">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>40</y>
+          <width>55</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Replace:</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="replace_string_input">
+        <property name="geometry">
+         <rect>
+          <x>140</x>
+          <y>40</y>
+          <width>171</width>
+          <height>22</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_16">
+        <property name="geometry">
+         <rect>
+          <x>120</x>
+          <y>110</y>
+          <width>351</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Only replace all is working dependably now !!!</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -396,7 +600,7 @@
      <x>0</x>
      <y>0</y>
      <width>1401</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -449,12 +653,19 @@
     <addaction name="actionGetApiKey"/>
     <addaction name="actionNltkData"/>
    </widget>
+   <widget class="QMenu" name="menuMass_replace">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionMass_replace"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOpen"/>
    <addaction name="menuSave"/>
    <addaction name="menuHelp"/>
    <addaction name="menuSearch"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuMass_replace"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
@@ -560,6 +771,11 @@
   <action name="actionSelected_Tags">
    <property name="text">
     <string>Selected Tags</string>
+   </property>
+  </action>
+  <action name="actionMass_replace">
+   <property name="text">
+    <string>Mass replace</string>
    </property>
   </action>
  </widget>

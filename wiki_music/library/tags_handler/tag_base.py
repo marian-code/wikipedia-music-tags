@@ -4,8 +4,13 @@ import collections
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import ClassVar, Dict, List, Optional, Union, Callable
+from typing import (ClassVar, Dict, List, Optional, Union, Callable,
+                    TYPE_CHECKING)
 from wiki_music.constants.tags import LIST_TAGS
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 logging.getLogger(__name__)
 
@@ -98,15 +103,15 @@ class TagBase(ABC):
 
     __doc__: Optional[str]
     _map_keys: ClassVar[Dict[str, str]]
-    reverse_map: Dict[str, Union[str, Callable]]
+    _reverse_map: Dict[str, Union[str, Callable]]
     _tags: SelectiveDict
 
-    def __init__(self, filename):
+    def __init__(self, filename: "Path") -> None:
 
         self._song = None
         self._tags = None
 
-        self.reverse_map = self._get_reversed(self._map_keys)
+        self._reverse_map = self._get_reversed(self._map_keys)
 
         self._open(filename)
 
@@ -193,15 +198,15 @@ class TagBase(ABC):
         dict
             dictionary with switched keys and values
         """
-        reverse_map: Dict[str, str] = collections.OrderedDict()
+        _reverse_map: Dict[str, str] = collections.OrderedDict()
 
         for key, value in map_keys.items():
-            reverse_map[value] = key
+            _reverse_map[value] = key
 
-        return reverse_map
+        return _reverse_map
 
-    @classmethod
-    def _get_default_tag(cls, tag_name: str) -> Union[bytes, str, list]:
+    @staticmethod
+    def _get_default_tag(tag_name: str) -> Union[bytes, str, list]:
         """Return default value with corret type for each supported tag.
         
         Parameters
@@ -216,20 +221,22 @@ class TagBase(ABC):
         else:
             return ""
 
-    @classmethod
-    def _process_tag(cls, tag: List) -> Union[bytes, str, list]:
+    @staticmethod
+    def _process_tag(tag_name: str, tag: List) -> Union[bytes, str, list]:
         """Postprocessing of each tag based on its expected type.
 
         Parameters
         ----------
         tag: List[Any]
             tag or a list of tags to be processed
+        tag_name: str
+            string identifying tag
         """
         def rm_pref_comma(string: str) -> str:
             """Remove comma from the string begining."""
             return re.sub(r"^ ?, ?", "", string.strip())
 
-        if tag not in LIST_TAGS:
+        if tag_name not in LIST_TAGS:
             try:
                 tag = tag[0]
             except IndexError:
@@ -238,4 +245,6 @@ class TagBase(ABC):
                 tag = rm_pref_comma(tag)
             return tag
         else:
+            if len(tag) == 1:
+                tag = tag[0].split(",")
             return [rm_pref_comma(t) for t in tag if t not in ("", " ", None)]

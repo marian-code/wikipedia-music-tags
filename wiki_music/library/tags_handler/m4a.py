@@ -56,7 +56,7 @@ class TagM4a(TagBase):
             except KeyError:
                 tag = self._get_default_tag(value)
             finally:
-                tags[value] = self._process_tag(tag)
+                tags[value] = self._process_tag(value, tag)
 
         return tags
 
@@ -68,4 +68,4 @@ class TagM4a(TagBase):
             fmt = MP4Cover.FORMAT_JPEG
             value = [MP4Cover(value, imageformat=fmt)]  # type: ignore
 
-        self._song.tags[self.reverse_map[tag]] = value
+        self._song.tags[self._reverse_map[tag]] = value

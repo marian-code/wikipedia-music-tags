@@ -125,7 +125,7 @@ def get_image(address: Union["Path", str]) -> bytes:
     if isinstance(address, str):
         return requests.get(address).content
     else:
-        # this is for offline debug
+        # this is for offline debug when address is pathlib.Path instance
         try:
             return address.read_bytes()
         except Exception as e:
@@ -165,11 +165,8 @@ def comp_res(image: bytes, quality: int, x: int = 0, y: int = 0) -> bytes:
         img = img.resize((x, y), Image.LANCZOS)
 
     file_stream = io.BytesIO()
-    img.save(file_stream,
-             FORMAT,
-             optimize=True,
-             quality=quality,
-             progressive=True)
+    img.save(file_stream, FORMAT, optimize=True,
+             quality=quality, progressive=True)
 
     return file_stream.getvalue()
 
@@ -210,15 +207,18 @@ def get_icon() -> str:
         raise FileNotFoundError(f"There is no icon file in: {icon}")
 
 
-def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
-    """Get file size and image size of internet picture.
+def get_sizes(uri: Union[str, Path]
+              ) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
+    """Get file size and image size of internet or disk  picture.
 
-    Inforamtion is retrieved without downloading the whole picture.
+    Information is retrieved without downloading the whole picture in case of
+    interner pic and without reading the whole picture from disk in case of
+    local picture. 
 
     Parameters
     ----------
-    uri: str
-        picture url addres
+    uri: Union[str, Path]
+        picture url addres or disk address
 
     References
     ----------
@@ -231,8 +231,14 @@ def get_sizes(uri: str) -> Tuple[Optional[int], Optional[Tuple[int, int]]]:
         and dimensions tuple as a second element
     """
     try:
-        fl = urllib.request.urlopen(uri)
-        size = fl.headers.get("content-length")
+        if isinstance(uri, Path):
+            # TODO not working somehow, this is for load coverart from disk
+            fl = uri.open("r")
+            size = uri.stat().st_size
+        else:
+            fl = urllib.request.urlopen(uri)
+            size = fl.headers.get("content-length")
+
         if size:
             size = int(size)
 

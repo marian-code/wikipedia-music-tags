@@ -1,63 +1,46 @@
 """wiki_music CLI entry point."""
 
 import logging
-import signal
-import sys
-from typing import TypeVar
+from atexit import register
 
 from wiki_music.constants.colors import GREEN, RESET
 from wiki_music.library import WikipediaRunner
-from wiki_music.utilities import input_parser, set_log_handles
-
-
-# add signal handler to exit gracefully upon Ctrl+C
-def signal_handler(signalnum: int, frame: TypeVar("Frame")):
-    """Handle Ctrl-C signals(KeyboardInterupt) gracefully.
-
-    Parameters
-    ----------
-    signalnum: int
-        signam identifier
-    frame: Frame
-        current stack frame
-    """
-    print("\nAborting by user request...")
-    sys.exit()
+from wiki_music.utilities import (input_parser, set_log_handles,
+                                  set_signal_handler, exit_cleaner)
 
 
 def main():
     """CLI application entry point."""
-    # register sinal handler
-    signal.signal(signal.SIGINT, signal_handler)
+    # register Ctrl-C signal handler
+    set_signal_handler()
+
+    # register exit cleaner
+    register(exit_cleaner)
 
     # read command line input
-    (write_yaml, offline_debug, only_lyrics,
-     album, band, work_dir, with_log, debug) = input_parser()
+    args = input_parser()
 
     # setup loggers
-    if debug:
+    if args["debug"]:
         set_log_handles(logging.DEBUG)
     else:
         set_log_handles(logging.WARNING)
 
     # get input if it was not specified on command line
-    if not only_lyrics:
-        if not album:
+    if not args["lyrics_only"]:
+        if not args["album"]:
             print(GREEN + "Enter album name: " + RESET, end="")
-            album = str(input())
-        if not band:
+            args["album"] = str(input())
+        if not args["band"]:
             print(GREEN + "Enter band name: " + RESET, end="")
-            band = str(input())
+            args["band"] = str(input())
         print(RESET)
 
     # instantiate parser
-    parser = WikipediaRunner(album=album, albumartist=band, work_dir=work_dir,
-                             with_log=with_log, GUI=False,
-                             offline_debug=offline_debug,
-                             write_yaml=write_yaml)
+    parser = WikipediaRunner(**args, GUI=False)
 
     # run search
-    if only_lyrics:
+    if args["lyrics_only"]:
         parser.run_lyrics()
     else:
         parser.run_wiki()

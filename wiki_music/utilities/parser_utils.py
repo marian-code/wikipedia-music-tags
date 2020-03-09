@@ -10,7 +10,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Dict, Generator, List,
                     Optional, Tuple, Union, Generator)
 
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
-import yaml  # lazy loaded
+import json  # lazy loaded
 
 from wiki_music.constants import GREEN, RESET
 
@@ -24,8 +24,8 @@ log = logging.getLogger(__name__)
 
 __all__ = ["ThreadWithTrace", "bracket", "write_roman", "normalize",
            "normalize_caseless", "caseless_equal", "caseless_contains",
-           "count_spaces", "yaml_dump", "complete_N_dim",
-           "delete_N_dim", "ThreadPool", "yaml_load", "ThreadWithReturn"]
+           "count_spaces", "json_dump", "complete_N_dim",
+           "delete_N_dim", "ThreadPool", "ThreadWithReturn"]
 
 
 class ThreadWithTrace(Thread):
@@ -77,7 +77,7 @@ class ThreadWithTrace(Thread):
 
 class ThreadWithReturn(Thread):
     """Subclass of threading.Thread which caches result of running function.
-    
+
     The result is returned by calling the Thread.join() method.
 
     Parameters
@@ -166,7 +166,7 @@ class ThreadPool:
 
         return response
 
-    def run(self, timeout: Optional[float] = 60) -> list:
+    def run(self, timeout: Optional[float] = 60, serial: bool = False) -> list:
         """Starts the execution of threads in pool.
 
         Returns after all threads join() metod has returned.
@@ -180,12 +180,17 @@ class ThreadPool:
         ----------
         timeout: Optional[float]
             timeout after which waiting for results will be abandoned
+        serial: bool
+            run threadpool in orderly fasion, mainly for debugging
 
         Returns
         -------
         list
             list of returned values from the functions run by the ThreadPool
         """
+        if serial:
+            return self.run_serial()
+
         N_threads = len(self._args)
 
         if N_threads == 1:
@@ -443,8 +448,8 @@ def count_spaces(*lists: Tuple[List[str], ...]) -> Tuple[List[str], int]:
     return spaces, max_length
 
 
-def yaml_dump(dict_data: List[Dict[str, str]], save_dir: "Path"):
-    """Save yaml tracklist file to disk.
+def json_dump(dict_data: List[Dict[str, str]], save_dir: "Path"):
+    """Save json tracklist file to disk.
 
     Parameters
     ----------
@@ -454,27 +459,10 @@ def yaml_dump(dict_data: List[Dict[str, str]], save_dir: "Path"):
     save_dir: Path
         directory to save to
     """
-    path = save_dir / "database.yaml"
-    print(GREEN + "\nSaving YAML file: " + RESET + str(path) + "\n")
+    path = save_dir / "database.json"
+    print(GREEN + "\nSaving json file: " + RESET + str(path) + "\n")
     with path.open("w") as f:
-        yaml.dump(dict_data, f, default_flow_style=False)
-
-
-def yaml_load(yml_file: "Path") -> List[dict]:
-    """Loads yaml format file to dictionary.
-
-    Parameters
-    ----------
-    yml_file: Path
-        path to yml file
-
-    Returns
-    -------
-    List[dict]
-        list of loaded dictionaries
-    """
-    with yml_file.open("r") as f:
-        return yaml.full_load(f)
+        json.dump(dict_data, f, indent=4, sort_keys=True)
 
 
 def _find_N_dim(array: Union[list, str], template: str

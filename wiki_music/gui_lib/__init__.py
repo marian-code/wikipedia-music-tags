@@ -7,16 +7,17 @@ import logging
 # be sure to preserve import order! custom classes must be imported first!
 # otherwise other imports will fail.
 from .custom_classes import (
-    CustomQStandardItem, CustomQStandardItemModel, ImageTable, ImageWidget,
+    CustomQStandardItem, TableItemModel, ImageTable, ImageWidget,
     NumberSortModel, RememberDir, ResizablePixmap, ResizableRubberBand,
-    SelectablePixmap, CustomQTableView)
+    SelectablePixmap, CustomQTableView, CheckableListModel)
 from .base import BaseGui
 from .data_model import DataModel
 from .cover_art import CoverArtSearch
 
-__all__ = ["CustomQStandardItem", "CustomQStandardItemModel", "ImageTable",
+__all__ = ["CustomQStandardItem", "TableItemModel", "ImageTable",
            "ImageWidget", "NumberSortModel", "RememberDir", "ResizablePixmap",
            "ResizableRubberBand", "SelectablePixmap", "BaseGui",
-           "CoverArtSearch", "DataModel", "CustomQTableView"]
+           "CoverArtSearch", "DataModel", "CustomQTableView",
+           "CheckableListModel"]
 
 logging.getLogger(__name__)

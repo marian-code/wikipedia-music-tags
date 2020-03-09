@@ -3,12 +3,14 @@
 import argparse  # lazy loaded
 import logging
 import re  # lazy loaded
+import signal
 import sys
 import unicodedata
+from itertools import chain
 from pathlib import Path
 from shutil import rmtree
 from time import sleep
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Sized, Tuple, TypeVar, Union
 
 from .sync import GuiLoggger
 
@@ -16,7 +18,7 @@ logging.getLogger(__name__)
 
 __all__ = ["list_files", "to_bool", "normalize", "we_are_frozen",
            "win_naming_convetion", "flatten_set", "input_parser", "MultiLog",
-           "limited_input"]
+           "limited_input", "set_signal_handler", "lrange", "exit_cleaner"]
 
 
 class MultiLog:
@@ -130,7 +132,7 @@ def to_bool(string: Union[str, bool]) -> bool:
     Note
     ----
     all these values and their uprercase variants are considered true:
-    y, yes, t, true, <empty string>
+    y, yes, t, true, on, 1 <empty string>
 
     Returns
     -------
@@ -140,7 +142,7 @@ def to_bool(string: Union[str, bool]) -> bool:
     if isinstance(string, bool):
         return string
     else:
-        return string.casefold() in ("y", "yes", "t", "true", "")
+        return string.casefold() in ("y", "yes", "t", "true", "", "on", "1")
 
 
 def limited_input(dont_bother: bool) -> Union[bool, str]:
@@ -240,7 +242,7 @@ def flatten_set(array: List[list]) -> set:
     set
         1D set made of serialized lists
     """
-    return set([item for sublist in array for item in sublist])
+    return set(chain(*array))
 
 
 def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
@@ -259,7 +261,7 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     Returns
     -------
     bool
-        yaml switch for outputing in yaml format
+        json switch for outputing in json format
     bool
         offline_debug switch to turn on offline debugging
     bool
@@ -280,14 +282,14 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
                                             "GUI mode, others work only with"
                                             "CLI app.")
 
-    parser.add_argument("-y", "--yaml",
-                        action="store_true",
-                        help="Write yaml save file?")
-    parser.add_argument("-o", "--offline_debbug",
+    parser.add_argument("-j", "--json",
+                        action="store_true", dest="write_json",
+                        help="Write json save file?")
+    parser.add_argument("-od", "--offline_debbug",
                         action="store_true",
                         help="Use offline pickle debbug file instead of "
                         "web page?")
-    parser.add_argument("-l", "--lyrics_only",
+    parser.add_argument("-lo", "--lyrics_only",
                         action="store_true",
                         help="Download only lyrics?")
     parser.add_argument("-a", "--album",
@@ -302,7 +304,7 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
                         default=Path(".").resolve(),
                         help="working directory",
                         type=str)
-    parser.add_argument("-W", "--With_log",
+    parser.add_argument("-wl", "--with_log",
                         default=False,
                         action="store_false",
                         help="Print loggning output, "
@@ -319,8 +321,48 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     if args.band:
         args.band = " ".join(args.band)
 
-    return (args.yaml, args.offline_debbug, args.lyrics_only, args.album,
-            args.band, args.work_dir, args.With_log, args.debug)
+    return vars(args)
+
+
+def set_signal_handler():
+    """Registers signal handler for Ctrl-C (KeyboardInterupt) signals."""
+    def signal_handler(signalnum: int, frame: TypeVar("Frame")):
+        """Handle Ctrl-C signals(KeyboardInterupt) gracefully.
+
+        Parameters
+        ----------
+        signalnum: int
+            signam identifier
+        frame: Frame
+            current stack frame
+        """
+        print("\nAborting by user request...")
+        sys.exit()
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+
+def lrange(iterable: Sized) -> range:
+    """Returns iterable that spans list indices.
+
+    Parameters
+    ----------
+    iterable: Sized
+        indices of this iterable will be looped through
+
+    Returns
+    -------
+    range
+        range iterable running from 0 -> len(iterable)
+    """
+    return range(len(iterable))
+
+
+def exit_cleaner():
+    # TODO use weakref to all threads
+    # https://docs.python.org/3/library/weakref.html
+    print("TODO clean at exit")
+    
 
 
 def loading():

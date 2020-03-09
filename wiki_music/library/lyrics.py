@@ -31,7 +31,7 @@ __all__ = ["save_lyrics"]
 
 
 def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
-                GUI: bool) -> List[str]:
+                GUI: bool, multi_threaded: bool) -> List[str]:
     """Searches and downloads lyrics for each track.
 
     Does some preprocessing before it starts the lyricsfinder
@@ -59,6 +59,10 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
         album artist name
     album: str
         album name
+    GUI: bool
+        whether app is running in GUI mode
+    multi_threaded: bool
+        whether to download lyrics in parallel of in orderely fasion
 
     Returns
     -------
@@ -102,9 +106,13 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
     manager = lyricsfinder.LyricsManager()
 
     # run search
-    raw_lyrics = ThreadPool(target=_get_lyrics,
-                            args=[(manager, band, album, t, GOOGLE_API_KEY)
-                                  for t in tracks_dict.keys()]).run()
+    t = ThreadPool(target=_get_lyrics,
+                   args=[(manager, band, album, t, GOOGLE_API_KEY)
+                         for t in tracks_dict.keys()])
+    if multi_threaded:
+        raw_lyrics = t.run()
+    else:
+        raw_lyrics = t.run_serial()
 
     log.info("Assign lyrics to tracks_dict")
 

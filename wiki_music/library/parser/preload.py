@@ -53,9 +53,8 @@ class CircularDict(collections.OrderedDict):
 
     def __setitem__(self, key: str, value: Any):
 
-        if self._maxlen:
-            if self._maxlen <= len(self):
-                self.popitem(last=False)
+        if self._maxlen and self._maxlen <= len(self):
+            self.popitem(last=False)
 
         super().__setitem__(key, value)
 
@@ -117,12 +116,19 @@ class Preload:
         :meth:`terminate`
             method that takes care of ending the app execution
         """
-        album_artist = self._sections["infobox"][0].find(
-            href="/wiki/Album")  # type: ignore
+        try:
+            album_artist = self._sections["infobox"][0].find(
+                href=re.compile(r"/wiki/Album(#Live)?", re.I))  # type: ignore
+        except IndexError:
+            # infobox was not found so probably we didn't get album page
+            self._log.exception(f"The wikipedia page: {self._url} probably "
+                                f"does not belong to album: {self._album}")
+            return False
+
         if album_artist:
             album_artist = album_artist.parent.get_text()
 
-            if fuzz.token_set_ratio(nc(self._band), nc(album_artist)) > 90:
+            if fuzz.token_set_ratio(self._band, album_artist) > 90:
                 return True
             else:
                 b = re.sub(r"[Bb]y|[Ss]tudio album", "", album_artist).strip()
@@ -212,14 +218,35 @@ class Preload:
         try:
             for query in searches:
                 log.debug(f"trying query: {query}")
-                self._page = wiki.page(title=query, auto_suggest=True)
+                page = wiki.page(title=query, auto_suggest=True)
+
+                responses = dict()
+
+                http_album = page.url.rsplit("/", 1)[1].replace("_", " ")
+                probability = fuzz.token_sort_ratio(http_album, self._album)
+                if probability > 90:
+                    self._page = page
+                    self._url = self._page.url
+                    return None
+                else:
+                    responses[probability] = page
+            else:
+                self._page = responses[max(responses.keys())]
+                self._url = self._page.url
+                return None
+            """
                 # TODO this might be overkill
                 summ = nc(self._page.summary)
                 if nc(self._band) in summ and nc(self._album) in summ:
                     self._url = self._page.url
                     return None
+                else:
+                    log.debug(f"couldn't find {self._album} and/or "
+                              f"{self._band} in {self._page.url} summary")
+                
             else:
                 return "Could not get wikipedia page."
+            """
         except wiki.exceptions.DisambiguationError as e:
             # TODO if the propper page cannot be found we could show a dialog
             # TODO with a list of possible matches for user to choose from

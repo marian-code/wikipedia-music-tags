@@ -8,17 +8,19 @@ attributes should not be accesed directly in GUI.
 
 import logging
 from pathlib import Path
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, TYPE_CHECKING
 
 from wiki_music.constants import GUI_HEADERS, SPLIT_HEADERS, STR_TAGS
-from wiki_music.gui_lib import (BaseGui, CustomQStandardItem,
-                                CustomQStandardItemModel, NumberSortModel,
-                                ResizablePixmap)
+from wiki_music.gui_lib import (BaseGui, CustomQStandardItem, NumberSortModel,
+                                ResizablePixmap, TableItemModel)
 from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QMessageBox,
-                                            QModelIndex, QPixmap,
-                                            QStandardItemModel, QTimer)
+                                            QPixmap, QStandardItemModel,
+                                            QTimer)
 from wiki_music.library.parser import WikipediaRunner
 from wiki_music.utilities import exception
+
+if TYPE_CHECKING:
+    from wiki_music.gui_lib.qt_importer import QModelIndex
 
 log = logging.getLogger(__name__)
 log.debug("data model imports done")
@@ -222,13 +224,13 @@ class ParserInteract(BaseGui):
         """
         self._parser.start_preload()
 
-    def write_tags(self, indeces: Optional[List[int]]) -> bool:
+    def write_tags(self, indices: List[int]) -> bool:
         """Writes tags to music files.
 
         Parameters
         ----------
-        indeces: Optional[List[int]]
-            indeces of files to save
+        indices: List[int]
+            indices of files to save
 
         See also
         --------
@@ -241,7 +243,7 @@ class ParserInteract(BaseGui):
             truth if writing was successful
         """
         self._gui_to_parser()
-        return self._parser.write_tags(indeces)
+        return self._parser.write_tags(indices)
 
     def read_files(self):
         """Reads tags from music files.
@@ -296,14 +298,14 @@ class DataModel(ParserInteract):
     ----------
     cover_art: Optional[ResizablePixmap]
         Qt class that displays the found cover art picture
-    table: CustomQStandardItemModel
+    table: TableItemModel
         Qt table for displaying parser data
     proxy: NumberSortModel
         table model for data sorting
     """
 
     cover_art: Optional[ResizablePixmap]
-    table: CustomQStandardItemModel
+    table: TableItemModel
     proxy: NumberSortModel
 
     def __init__(self) -> None:
@@ -315,7 +317,7 @@ class DataModel(ParserInteract):
         self.cover_art = None
 
         # create table with headers
-        self.table = CustomQStandardItemModel()
+        self.table = TableItemModel()
         self.table.setHorizontalHeaderLabels(GUI_HEADERS)
 
         self.proxy = NumberSortModel()
@@ -439,7 +441,7 @@ class DataModel(ParserInteract):
             QTimer.singleShot(100, self._parser_to_gui)
 
     @exception(log)
-    def _detail(self, proxy_index: QModelIndex):
+    def _detail(self, proxy_index: "QModelIndex"):
         """Display detail of the row that is clicked and sync changes to table.
 
         Parameters
@@ -450,7 +452,7 @@ class DataModel(ParserInteract):
         """
         # proxy_index is QModelIndex proxyIndex Class type
         # it is index of data mapping as shown in gui
-        # real indeces are different
+        # real indices are different
         row = self.proxy.mapToSource(proxy_index).row()
 
         # maintain row highlight

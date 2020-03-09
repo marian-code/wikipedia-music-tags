@@ -7,7 +7,7 @@ from appdirs import user_data_dir, user_log_dir
 
 __all__ = ["ROOT_DIR", "LOG_DIR", "OUTPUT_FOLDER", "OFFLINE_DEBUG_IMAGES",
            "FILES_DIR", "GOOGLE_API_URL", "API_KEY_FILE", "module_path",
-           "SETTINGS_YML"]
+           "SETTINGS_INI"]
 
 
 def _dir_writable(dir_name: Path) -> bool:
@@ -83,4 +83,4 @@ API_KEY_FILE: Path = Path(ROOT_DIR, "files", "google_api_key.txt")
 GOOGLE_API_URL: str = ("https://console.developers.google.com/projectselector/"
                        "apis/library/customsearch.googleapis.com")
 #: dictionary with package settings
-SETTINGS_YML: Path = Path(ROOT_DIR, "files", "settings.yml")
+SETTINGS_INI: Path = Path(ROOT_DIR, "files", "settings.ini")

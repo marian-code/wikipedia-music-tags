@@ -12,7 +12,7 @@ from wiki_music.constants import (API_KEY_FILE, API_KEY_MESSAGE,
                                   GOOGLE_API_URL, NLTK_DOWNLOAD_MESSAGE)
 
 from .parser_utils import ThreadPool
-from .sync import Action, YmlSettings
+from .sync import Action, IniSettings
 from .utils import MultiLog, limited_input
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class GoogleApiKey:
                 cls._api_key = API_KEY_FILE.read_text("r").strip()
             except Exception:
                 cls._log.debug("api key not present in file")
-                if YmlSettings.read("api_key_dont_bother", False):
+                if IniSettings.read("api_key_dont_bother", False):
                     cls._log.debug("will try to obtain api key from internet")
                     cls._api_key = cls.get(GUI)
                 else:
@@ -101,7 +101,7 @@ class GoogleApiKey:
 
         if inpt == "d":
             cls._log.debug("answer is don't bother")
-            YmlSettings.write("api_key_dont_bother", True)
+            IniSettings.write("api_key_dont_bother", True)
             return None
         elif inpt:
             cls._log.debug("opening browser page")
@@ -117,7 +117,7 @@ class GoogleApiKey:
 
             cls._log.debug("saving api key file to file")
             # delete don't bother setting
-            YmlSettings.delete("api_key_dont_bother")
+            IniSettings.delete("api_key_dont_bother")
             # write key to file
             API_KEY_FILE.write_text(api_key)
 
@@ -166,10 +166,12 @@ class NLTK(metaclass=_NltkMeta):
 
     _import_running: bool = False
     _GUI: bool = False
+    _multi_threaded: bool = True
     _log: MultiLog = MultiLog(log)
 
     @classmethod
-    def run_import(cls, GUI: bool = False, delay: float = 1):
+    def run_import(cls, GUI: bool = False, delay: float = 1,
+                   multi_threaded_download: bool = True):
         """Import nltk in separate thread and assign it to class attribute.
 
         Parameters
@@ -178,6 +180,9 @@ class NLTK(metaclass=_NltkMeta):
             tells if we are running in GUI mode
         delay: float
             delays the start of import by specified amount of seconds
+        multi_threaded_download: bool
+            if NLTK data needs to be dowloaded, this switch controls, whether
+            it will be in parallel
         """
         def imp(delay: float):
 
@@ -196,6 +201,7 @@ class NLTK(metaclass=_NltkMeta):
                     cls._check_nltk_data()
 
         cls._GUI = GUI
+        cls._multi_threaded = multi_threaded_download
 
         if not cls._import_running:
 
@@ -209,12 +215,12 @@ class NLTK(metaclass=_NltkMeta):
     def _check_nltk_data(cls):
 
         # check if user rejected download previously
-        if YmlSettings.read("nltk_dont_bother", False):
+        if IniSettings.read("nltk_dont_bother", False):
             cls._log.debug("do not bother with nltk data")
             return
 
         # try to read package defined path
-        path = YmlSettings.read("nltk_data_path", "")
+        path = IniSettings.read("nltk_data_path", "")
         if path:
             cls.nltk.data.path.append(path)
 
@@ -239,7 +245,7 @@ class NLTK(metaclass=_NltkMeta):
                 inpt = limited_input(dont_bother=True)
 
             if inpt == "d":
-                YmlSettings.write("nltk_dont_bother", True)
+                IniSettings.write("nltk_dont_bother", True)
             elif inpt:
                 cls.download_data()
             else:
@@ -294,10 +300,10 @@ class NLTK(metaclass=_NltkMeta):
 
         # append path to defaults and save to settings so app may find it
         cls._nltk.data.path.append(NLTK_DATA)
-        YmlSettings.write("nltk_data_path", str(NLTK_DATA))
+        IniSettings.write("nltk_data_path", str(NLTK_DATA))
 
         # delete don't bother setting
-        YmlSettings.delete("nltk_dont_bother")
+        IniSettings.delete("nltk_dont_bother")
 
         # download data
         cls._log.info("Downloading nltk data")
@@ -305,7 +311,12 @@ class NLTK(metaclass=_NltkMeta):
         datas = ("words", "stopwords", "maxent_ne_chunker",
                  "averaged_perceptron_tagger", "punkt")
 
-        ThreadPool(cls._nltk.download, [(d, NLTK_DATA) for d in datas]).run()
+        t = ThreadPool(cls._nltk.download, [(d, NLTK_DATA) for d in datas])
+
+        if cls._multi_threaded:
+            t.run()
+        else:
+            t.run_serial()
 
         # clear unnecessary files
         cls._download_postprocess(NLTK_DATA)

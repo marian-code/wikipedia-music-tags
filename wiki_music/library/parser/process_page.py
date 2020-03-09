@@ -4,9 +4,11 @@ Class :class:`WikipediaParser` has complete functionallity but its methods need
 to be called in the correst order to give sensible results.
 """
 
+from itertools import product  # lazy loaded
 import logging
 import re  # lazy loaded
 from os import path
+from operator import itemgetter
 from threading import Thread
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -22,7 +24,7 @@ from wiki_music.utilities import (
     NoGenreException, NoNames2ExtractException, NoPersonnelException,
     NoReleaseDateException, NoTracklistException, caseless_contains,
     complete_N_dim, delete_N_dim, flatten_set, get_image, normalize,
-    normalize_caseless, warning)
+    normalize_caseless, warning, lrange)
 
 from .base import ParserBase
 from .extractors import DataExtractors
@@ -63,13 +65,18 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
     GUI: bool
         if True - assume app is running in GUI mode\n
         if False - assume app is running in CLI mode
+    multi_threaded: bool
+        whether to run some parts of code in threads
     """
 
-    def __init__(self, protected_vars: bool = True, GUI: bool = False) -> None:
+    def __init__(self, protected_vars: bool = True, GUI: bool = False,
+                 multi_threaded: bool = True) -> None:
 
         log.debug("init parser")
 
-        NLTK.run_import(GUI=GUI, delay=1)  # imports nltk in separate thread
+        # imports nltk in separate thread
+        NLTK.run_import(GUI=GUI, delay=1,
+                        multi_threaded_download=multi_threaded)
         WikiCooker.__init__(self, protected_vars=protected_vars)
         ParserInOut.__init__(self, protected_vars=protected_vars)
 
@@ -254,10 +261,9 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         # split to sentences
         sentences = []
 
-        for sentence in html.split("."):
-            for d in DELIMITERS:
-                if re.search(d, sentence, re.IGNORECASE):
-                    sentences.append(sentence)
+        for sentence, d in product(html.split("."), DELIMITERS):
+            if re.search(d, sentence, re.IGNORECASE):
+                sentences.append(sentence)
 
         # extract composers from sentences
         for sentence in sentences:
@@ -337,19 +343,16 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         filtered_personnel: List[str] = []
         appearences: List[List[int]] = []
 
-        for s in PERSONNEL_SECTIONS:
+        sections = [s for s in PERSONNEL_SECTIONS if s in self._sections]
 
-            if s not in self._sections:
-                continue
+        for html in itemgetter(*sections)(self._sections):
+            # if the toplevel tag is the list itself
+            if html.name in ("ul", "ol"):
+                personnel.extend(self._html2python_list(html))
 
-            for html in self._sections[s]:
-                # if the toplevel tag is the list itself
-                if html.name in ("ul", "ol"):
-                    personnel.extend(self._html2python_list(html))
-
-                # if the list is nested inside some other tags
-                for h in html.find_all(["ul", "ol"]):
-                    personnel.extend(self._html2python_list(h))
+            # if the list is nested inside some other tags
+            for h in html.find_all(["ul", "ol"]):
+                personnel.extend(self._html2python_list(h))
 
         for i, person in enumerate(personnel):
 
@@ -379,8 +382,9 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                     appearences[-1].append(j)
 
             # ensure no duplicates
-            appearences[-1] = list(set(appearences[-1]))
-            appearences[-1] = [a - 1 for a in appearences[-1]]
+            if appearences:
+                appearences[-1] = list(set(appearences[-1]))
+                appearences[-1] = [a - 1 for a in appearences[-1]]
             filtered_personnel.append(person)
 
         self._personnel = filtered_personnel
@@ -422,9 +426,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         tables: List["Tag"] = []
         for html in self._sections["track_listing"]:
             # if the toplevel tag is the table itself
-            if html.name == "table":
-                if "tracklist" in html["class"]:
-                    tables.extend(html)
+            if html.name == "table" and "tracklist" in html["class"]:
+                tables.extend(html)
 
             # if the list is nested inside some other tags
             for h in html.find_all("table", class_="tracklist"):
@@ -526,10 +529,9 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         self._disks = [i[0] for i in disks_filtered]
 
         # assign disc number to tracks
-        for i, _ in enumerate(self._tracks):
-            for j, _ in enumerate(self._disk_sep[:-1]):
-                if self._disk_sep[j] <= i and i < self._disk_sep[j + 1]:
-                    self._disc_num.append(j + 1)
+        for i, j in product(lrange(self._tracks), lrange(self._disk_sep[:-1])):
+            if self._disk_sep[j] <= i and i < self._disk_sep[j + 1]:
+                self._disc_num.append(j + 1)
 
         return self._tracks, self._artists
 
@@ -558,7 +560,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             self._types.append("")
             self._subtypes.append([])
 
-            self._tracks[i] = re.sub(TO_DELETE, "", tr)
+            for td in TO_DELETE.values():
+                self._tracks[i] = re.sub(td, "", tr)
 
             for in_brackets in re.findall(r'\((.*?)\)', tr):
 
@@ -580,6 +583,18 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 # check against composers
                 artists = re.sub(UNWANTED["composer"], "", in_brackets)
                 composers = self._fuzzy_extract(artists, comp_flat)
+
+                # extract composers by phrases
+                c = re.sub(r"(.*?)(lyrics|music|written|text|arrangements"
+                           r"|composed) by (.*?)", r"\3", in_brackets)
+
+                if c != in_brackets:
+                    # for some strange reason using re.split outputs also
+                    # delimiters in final list so first replace with one
+                    # specified delimiter and than split
+                    composers.extend(re.sub(r" ?(,? ?and|, ) ?",
+                                            "|", c).split("|"))
+                    composers = list(set(composers))
 
                 if composers:
                     self._composers[i].extend(composers)
@@ -627,6 +642,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                                 self._subtypes[i][j] = _type
                                 self._subtracks[i][j] = re.sub(rs, "", sbtr)
 
+        self._complete()
+
     def _complete(self):
         """Recursively complete inforamtion in parser lists.
 
@@ -638,9 +655,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         delete: list = ["", " "]
 
         # complete everything with everything
-        for to_replace in to_complete:
-            for to_find in to_complete:
-                complete_N_dim(to_replace, to_find)
+        for to_replace, to_find in product(to_complete, repeat=2):
+            complete_N_dim(to_replace, to_find)
 
         # sort artist alphabeticaly
         if self._artists:

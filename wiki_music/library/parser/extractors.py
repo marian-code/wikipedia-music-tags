@@ -3,13 +3,13 @@
 import logging
 import re  # lazy loaded
 from typing import TYPE_CHECKING, List, Tuple, Optional
+from itertools import product  # lazy loaded
 
 import fuzzywuzzy.fuzz as fuzz  # lazy loaded
 import fuzzywuzzy.process as process  # lazy loaded
 
 from wiki_music.constants import ORDER_NUMBER, TIME, TO_DELETE
-from wiki_music.utilities import (NoTracklistException, normalize_caseless,
-                                  warning)
+from wiki_music.utilities import (NoTracklistException, warning)
 
 log = logging.getLogger(__name__)
 
@@ -70,18 +70,17 @@ class DataExtractors:
                     cspan = int(cell.get('colspan', 1))
                     rspan = int(cell.get('rowspan', 1))
 
-                    for k in range(rspan):
-                        for l in range(cspan):
-                            # sometimes cell is devided to subsells, so lets
-                            # deal with this first
-                            subcells = cell.find("div",
-                                                 class_=re.compile("^hlist"))
-                            if subcells:
-                                c = ", ".join([s.text for s in
-                                               subcells.findAll("li")])
-                            else:
-                                c = cell.text
-                            data[i + k][j + l] += c
+                    for k, l in product(range(rspan), range(cspan)):
+                        # sometimes cell is devided to subsells, so lets
+                        # deal with this first
+                        subcells = cell.find("div",
+                                             class_=re.compile("^hlist"))
+                        if subcells:
+                            c = ", ".join([s.text for s in
+                                            subcells.findAll("li")])
+                        else:
+                            c = cell.text
+                        data[i + k][j + l] += c
 
             for i in range(nrows):
                 data[i] = list(filter(None, data[i]))
@@ -196,8 +195,7 @@ class DataExtractors:
             # odstranenie zatvoriek s casom
             t = re.sub(TIME, "", t)
             # remove bonus in bracket behinf track name
-            # TODO use TO_DELETE list from constats here
-            tracks[j] = re.sub(TO_DELETE, "", t)
+            tracks[j] = re.sub(TO_DELETE["bonus_track"], "", t)
 
         return tracks[0], tracks[1:len(tracks)]
 

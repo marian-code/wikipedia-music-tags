@@ -2,22 +2,33 @@
 
 ### Main problems ordered by targeted release
 - 0.7a0
-  - cannot handle french lyrics! for Alcest - Spiritual guide
-  - gender prompt is sometimes displayed twice
+  - problem with writing lyrics to flac files or maybe only rocketplayer does
+    not know how to read them
   - treadpool progressbar is not showing or showing late
   - cover art rectangle size is fixed to size of first shown picture
     if some larger one is displayed it is not resized
+  - something is wrong with artist completition when reading file from disk
+    for this album https://en.wikipedia.org/wiki/Ayreon_Universe_–_The_Best_of_Ayreon_Live
   - fix as many bugs as possible
-  - fix gui startup and show file speed, too slow, maybe big cover art?
+- 0.8a0
+  - better modularity for GUI one superclass is a bad idea, we have to limit
+    interactions and side effects to minimum. The namespace of the GUI class
+    is gigantic and poluted with names inimportant to whole object.
+  - implement undo/redo https://www.informit.com/articles/article.aspx?p=1187104
 - 0.xb0
+  - fix a problem with google images download https://github.com/hardikvasa/google-images-download/issues/302 until then add a warning if no coverart could be downloaded
   - make proper progressbar indicators
   - fix gui scaling and elements moving around
-  - convert constants to re patterns for better matching and use more re for better extraction
+  - convert constants to re patterns for better matching and use more re for better            extraction
+  - make parser parts as plugins so different parts of extraction can use
+    different backends
   - try to setup some CI system
   - cells with dropdowns for subtracks
   - make parser iterable
   - implement image search controls
   - support more music formats
+  - keep reference of all running threads and gui elements and cleanup on exit
+    use atexit module
 - 1.0.0
   - write automated tests
   - use https://coveralls.io for code test coverage stats
@@ -39,12 +50,11 @@
   if we were using QThreads
 - parser locks could be implemented easilly by getattr and setattr
   only for public attributes.
-- keep reference of all running threads and gui elements and cleanup on exit
-  use atexit module
 - use themes https://github.com/ColinDuquesnoy/QDarkStyleSheet ,
   https://github.com/seanwu1105/pyqt5-qtquick2-example
 - enable to open files from more dirs at once, when files are spread
-- implement a threadsafe dict alternative to queue for control queues
+- implement a threadsafe dict alternative to queue for control queues or
+  maybe use some alternative to multiprocessing pipe
 - https://github.com/beetbox/beets
 - https://picard.musicbrainz.org
 - http://docs.puddletag.net/about.html
@@ -57,7 +67,12 @@
 - tracklist not found here https://en.wikipedia.org/wiki/Ethera
 - try extract this https://en.wikipedia.org/wiki/Aina_(band)
 - non existent name appearing here https://en.wikipedia.org/wiki/Queen_of_Time
-- 
+- extract appearences like in https://en.wikipedia.org/wiki/Ayreon_Universe_–_The_Best_of_Ayreon_Live
+  and info from brackets
+- cannot handle french lyrics! for https://genius.com/albums/Alcest/Spiritual-instinct
+- on save Star One artist name is getting split to letters https://en.wikipedia.org/wiki/Space_Metal_(Star_One_album)
+- wrong parse of tracklist here: https://en.wikipedia.org/wiki/Space_Metal_(Star_One_album)
+  times are not deleted from track name
 
 # Release checklist
 - update version
@@ -72,6 +87,54 @@
 
 # Change Log
 
+### 9.3.2020
+- search & replace controls are almost finished color higlighting is working
+  up to 80% of times
+
+### 8.3.2020
+- implemented QStyledDelegate to control search & replace highlight colors
+
+### 7.3.2020
+- started implementing search and replace function, search is complete.
+  Replace shouild be working by highlighting and moving to next/previous is
+  broken for now. For now respective classes and functions are scattered
+  around the code, this shold be consolidated upon completion.
+
+### 28.2.2020
+- implemented loading coverart from disk to editor
+
+### 23.2.2020
+- added logs with caller traces to action class to hunt down, bug with double
+  display of gender prompt
+
+### 20.2.2020
+- bugfix when there were more songs than files the remaining song would be
+  ignored by parser and because of that table fields in GUI would not exist
+  and this would throw exceptions whenever table cell was clicked
+
+### 6.2.2020
+- fixed bug, save all would save only selected tracks if some of the track
+  were actually selected. If none was selected it worked normal
+
+### 12.1.2020
+- caught bug when flac artist were not split
+
+### 11.1.2020
+- got rid of yaml dependency, replaced with json for saving album data
+  and configparser for saving configuration *.ini files
+- fixed bug in flac tags reading, only first value of coverart bytes was fetched 
+- added multi threaded switch to GUI
+- enhanced composer extraction from brackets in track name
+
+### 10.1.2020
+- implemented some itertools and operator functions to shorten codebase
+- new more reliable wiki page guessing in difficult scenarios
+
+### 5.1.2020
+- some minor code cleanup, remove normalize_caseless from fuzzywuzzy functions,
+  as they cast to lowercase by default
+- handle when we end up on artist page instead of album page
+
 ### 24.12.2019 - 0.6a0
 - drag&drop is implemented and working
 - fixed bug  when NLTK import would delay start of the whole app
@@ -84,6 +147,7 @@
 - implemented Travis CI system, testing for Windows, Linux and MacOS with
   python versions 3.6 - 3.8. Except MacOs does not have 3.8
 - added more badges to README
+- handle CTRL-C gracefully in GUI
 
 ### 23.12.2019
 - started to implement drag and drop for folders into table to easilly

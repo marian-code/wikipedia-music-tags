@@ -7,7 +7,7 @@ import sys
 import time  # lazy loaded
 import webbrowser  # lazy loaded
 from threading import Thread
-from typing import List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from wiki_music import __version__
 from wiki_music.constants import LOG_DIR, ROOT_DIR
@@ -16,10 +16,11 @@ from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QFileDialog,
                                             QInputDialog, QMessageBox,
                                             QProgressBar, QProgressDialog, Qt,
                                             QTimer)
-from wiki_music.utilities import (NLTK, GoogleApiKey, Mp3tagNotFoundException,
-                                  GuiLoggger, YmlSettings, exception, warning)
-
-from wiki_music.utilities import Action, Progress, Control, ThreadPoolProgress
+from wiki_music.utilities import (NLTK, Action, Control, GoogleApiKey,
+                                  GuiLoggger, IniSettings,
+                                  Mp3tagNotFoundException, Progress,
+                                  ThreadPoolProgress, exception, lrange,
+                                  warning)
 
 if TYPE_CHECKING:
     from wiki_music.gui_lib import CustomQTableView
@@ -358,7 +359,7 @@ class Buttons(BaseGui):
             raise Mp3tagNotFoundException("Mp3tag is supported only on "
                                           "Windows")
 
-        MP3_TAG = YmlSettings.read("Mp3tag_path", None)
+        MP3_TAG = IniSettings.read("Mp3tag_path", None)
 
         if not MP3_TAG:
             msg = QMessageBox(QMessageBox.Warning, "Unable to locate Mp3tag",
@@ -378,7 +379,7 @@ class Buttons(BaseGui):
                                 "executable path",
                     file_types="Executable files (*.exe)")
 
-                YmlSettings.write("Mp3tag_path", MP3_TAG)
+                IniSettings.write("Mp3tag_path", MP3_TAG)
                 # run again
                 self._run_Mp3tag()
         else:
@@ -417,9 +418,16 @@ class Buttons(BaseGui):
         if self.ALBUM:
             self.start_preload()
 
-    def _select_yaml(self):
+    def _select_json(self):
         """Connect to  checkbox."""
-        self.write_yaml = self.write_yaml_sw.isChecked()
+        self._parser.write_json = self.write_json_sw.isChecked()
+        IniSettings.write("write_json", self._parser.write_json)
+
+    def _select_multi(self):
+        """Connect to  checkbox."""
+        self._parser.multi_threaded = self.multi_threaded_sw.isChecked()
+        IniSettings.write("multi_threaded", self._parser.multi_threaded)
+        log.debug(f"multi threaded is set to: {self._parser.multi_threaded}")
 
     def _select_offline_debbug(self):
         """Connect to offline debug checkbox.
@@ -429,11 +437,60 @@ class Buttons(BaseGui):
         Restarts the preload with right settings.
         """
         self.offline_debug = self.offline_debbug_sw.isChecked()
+        IniSettings.write("offline_debug", self._parser.offline_debug)
+
         if self._input_is_present():
             self.start_preload()
 
+    # TODO
+    def _search_parameters(self, string: str):
 
-class Window(DataModel, Checkers, Buttons, CoverArtSearch):
+        if (self.search_support_re.isChecked() and
+            self.search_support_wildcard.isChecked()):
+
+            msg = QMessageBox(QMessageBox.Warning, "Warning",
+                              "Attempting to use regex and wildcards at once "
+                              "may return unexpected results. "
+                              "Do you want to proceed?",
+                              QMessageBox.Yes | QMessageBox.No)
+
+            if msg.exec_() == QMessageBox.No:
+                return
+            else:
+                log.warning("Wildcard and regex used at once in search")
+
+        self.tableView.search_string(
+            string,
+            self.search_case_sensitive.isChecked(),
+            self.search_support_re.isChecked(),
+            self.search_support_wildcard.isChecked(),
+            self.replace_tag_selector_model.get_checked_indices()
+            )
+
+
+# TODO
+from wiki_music.constants import GUI_HEADERS
+from wiki_music.gui_lib import CheckableListModel
+
+
+class Replacer(BaseGui):
+
+    def __init__(self) -> None:
+
+        super().__init__()
+
+        self.replace_tag_selector_model = CheckableListModel()
+        self._fill_tags_list()
+
+    def _fill_tags_list(self):
+
+        for tag in GUI_HEADERS:
+            self.replace_tag_selector_model.add(tag)
+
+        self.replace_tag_selector_view.setModel(self.replace_tag_selector_model)
+
+
+class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
     """Toplevel GUI class, main winndow with all its functionality."""
 
     tableView: "CustomQTableView"
@@ -522,7 +579,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
         # main actions
         self.actionOpen.triggered.connect(lambda: self._select_dir())
 
-        # TODO menubar buttons taht are not implemented
+        # TODO menubar buttons that are not implemented
         self.actionNew.triggered.connect(self._do_nothing)
         self.actionExit.triggered.connect(self._do_nothing)
         self.actionSave.triggered.connect(self._do_nothing)
@@ -535,25 +592,77 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
 
         self.statusbar.addPermanentWidget(self.progressBar)
 
+        # re-run search when search columns are reselected
+        self.replace_tag_selector_model.itemChanged.connect(
+            lambda: self._search_parameters(self.search_string_input.text()))
+
+        # connect to control buttons
+        self.search_next.clicked.connect(self.tableView._search_next)
+        self.search_previous.clicked.connect(self.tableView._search_previous)
+        self.replace_one.clicked.connect(
+            lambda: self.tableView._replace_one(
+                self.search_string_input.text(),
+                self.replace_string_input.text()))
+        self.replace_all.clicked.connect(
+            lambda: self.tableView._replace_all(
+                self.search_string_input.text(),
+                self.replace_string_input.text()
+            ))
+
+        # search is run interacively as user is typing
+        self.search_string_input.textChanged.connect(self._search_parameters)
+
+        self.tool_tab.currentChanged.connect(
+            lambda index: self.tableView.set_search_visibility(
+                self.translate_tab_index(index))
+        )
+
+        # seems that filtering is done by rows
+        #self.search_string_input.textChanged.connect(self.proxy.setFilterFixedString)
+
         if not self._DEBUG:
             self.offline_debbug_sw.hide()
-            self.write_yaml_sw.hide()
+            self.write_json_sw.hide()
+            self.multi_threaded_sw.hide()
         else:
             # connect switches to functions
             self.offline_debbug_sw.stateChanged.connect(
                 self._select_offline_debbug)
-            self.write_yaml_sw.stateChanged.connect(self._select_yaml)
+            self.write_json_sw.stateChanged.connect(self._select_json)
+            self.multi_threaded_sw.stateChanged.connect(self._select_multi)
+
+            # set states
+            self.offline_debbug_sw.setChecked(
+                IniSettings.read("offline_debug", False, bool))
+            self.write_json_sw.setChecked(
+                IniSettings.read("write_json", False, bool))
+            self.multi_threaded_sw.setChecked(
+                IniSettings.read("multi_threaded", True, bool))
+
+    # TODO
+    @staticmethod
+    def translate_tab_index(index) -> str:
+
+        print(index)
+
+        if index == 0:
+            return "search_tab"
+        elif index == 1:
+            return "replace_tab"
+        else:
+            raise NotImplementedError(f"Settings for tab {index} have not "
+                                      f"yet been implemented")
 
     def _selected_table_rows(self) -> List[int]:
-        """Returns indeces of selected table rows.
+        """Returns indices of selected table rows.
 
         Returns
         -------
         List[int]
-            indeces of selected rows
+            indices of selected rows
         """
-        indeces = self.tableView.selectionModel().selectedRows()
-        return [self.proxy.mapToSource(i).row() for i in indeces]
+        indices = self.tableView.selectionModel().selectedRows()
+        return [self.proxy.mapToSource(i).row() for i in indices]
 
     # methods that bind to gui elements
     @exception(log)
@@ -572,15 +681,18 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch):
                             "You must specify directory with files!").exec_()
                 return
 
-            indeces = self._selected_table_rows()
+            if selected:
+                indices = self._selected_table_rows()
+            else:
+                indices = list(lrange(self._parser))  # TODO test this
 
             # show save progress
             self.progressShow = QProgressDialog("Writing tags", "", 0,
-                                                len(indeces), self)
+                                                len(indices), self)
             self.progressShow.setCancelButton(None)
             self._threadpool_check()
 
-            if not self.write_tags(indeces):
+            if not self.write_tags(indices):
                 msg = ("Cannot write tags because there are no "
                        "coresponding files")
                 QMessageBox(QMessageBox.Information, "Info", msg)

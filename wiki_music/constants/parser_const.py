@@ -19,7 +19,10 @@ UNWANTED: Dict[str, Pattern] = {
     "composer": re.compile(r"lyrics( and)?,? music:? ?|music( and)?,? lyrics:? ?|music:? ?|lyrics:? ?", flags=re.I)
 }
 #: regex expressions that are deleted from track title
-TO_DELETE: Pattern = re.compile(r"\( ?bonus ?(track)? ?\)", flags=re.I)
+TO_DELETE: Dict[str, Pattern] = {
+    "bonus_track": re.compile(r"\( ?bonus ?(track)? ?\)", flags=re.I),
+    "from_album": re.compile(r"\( ?from (.*?)(;|,|\||\)) ?", flags=re.I)
+}
 #: regex expresion that matches number with/out dot and any muber of spaces
 ORDER_NUMBER: Pattern = re.compile(r"^ *\d+\.? *")
 #: tuple with section headers from which personnel are extracted

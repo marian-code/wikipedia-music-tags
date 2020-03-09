@@ -118,9 +118,9 @@ def build(mode: str, installer_opt: List[str], exclude_libs: List[str],
         installer_opt.extend([
             "--distpath=gdist",
             "--windowed",
-            f"--add-data={WIKI_MUSIC / 'data')};data",
-            f"--add-data={WIKI_MUSIC / 'ui')};ui",
-            f"{WIKI_MUSIC / 'app_gui.py')}"
+            f"--add-data={(WIKI_MUSIC / 'data')};data",
+            f"--add-data={(WIKI_MUSIC / 'ui')};ui",
+            f"{(WIKI_MUSIC / 'app_gui.py')}"
         ])
     else:
         build_path = WORK_DIR / "cdist" / "wiki_music"
@@ -129,7 +129,7 @@ def build(mode: str, installer_opt: List[str], exclude_libs: List[str],
         installer_opt.extend([
             "--distpath=cdist",
             "--console",
-            f"{WIKI_MUSIC / 'app_cli.py')}"
+            f"{(WIKI_MUSIC / 'app_cli.py')}"
         ])
         exclude_libs.append("PyQt5")
         exclude_libs.append("distutils")
@@ -206,15 +206,15 @@ installer_opt = [
     "--upx-exclude=msvcp140.dll",
     "--upx-exclude=qwindows.dll",
     "--upx-exclude=qwindowsvistastyle.dll",
-    f"--upx-dir={WORK_DIR / 'upx')}",
+    f"--upx-dir={(WORK_DIR / 'upx')}",
 
     # ? pyinstaller data paths and hooks
     f"--paths={PACKAGE_PATH}",
-    f"--add-data={WIKI_MUSIC / 'files')};files",
-    f"--icon={WIKI_MUSIC / 'files' / 'icon.ico')}",
+    f"--add-data={(WIKI_MUSIC / 'files')};files",
+    f"--icon={(WIKI_MUSIC / 'files' / 'icon.ico')}",
     f"--specpath={WORK_DIR}",
     "--additional-hooks-dir=hooks",
-    f"--runtime-hook={WORK_DIR / 'rhooks' / 'pyi_rth_nltk.py')}",
+    f"--runtime-hook={(WORK_DIR / 'rhooks' / 'pyi_rth_nltk.py')}",
 
     # ? what to build
     "--onedir",

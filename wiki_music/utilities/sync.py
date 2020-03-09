@@ -5,13 +5,17 @@ from queue import Queue, Empty
 from threading import Barrier, RLock
 from typing import Any, ClassVar, Dict, Hashable, Tuple, Union, Optional
 
-import yaml  # lazy loaded
+from configparser import ConfigParser  # lazy loaded
 
-from wiki_music.constants import SETTINGS_YML
+from wiki_music.constants import SETTINGS_INI
+
+# TODO for debuggin purposes
+import inspect
+from threading import current_thread
 
 log = logging.getLogger(__name__)
 
-__all__ = ["GuiLoggger", "YmlSettings", "Action", "Control", "Progress",
+__all__ = ["GuiLoggger", "IniSettings", "Action", "Control", "Progress",
            "ThreadPoolProgress"]
 
 
@@ -56,10 +60,32 @@ class Action:
         self.load = load
         self.options = options
 
+        # TODO only for debugging
+        caller_name = inspect.stack()[1].function
+        caller_thread = current_thread().getName()
+        log.debug(f"{str(self)}\n"
+                  f"initilized by: {caller_name}\n"
+                  f"in thread: {caller_thread}")
+
         self._put(self)
+
+    def __str__(self) -> str:
+
+        return (f"Action<switch: {self.switch}, message: {self.message}, "
+                f"response: {self._response}, load: {self.load}, "
+                f"options: {self.options}>")
 
     @classmethod
     def _put(cls, value: "Action"):
+
+        # TODO only for debugging
+        caller_name = inspect.stack()[1].function
+        caller_thread = current_thread().getName()
+        log.debug(f"{str(value)}\n"
+                  f"put in queue by: {caller_name}\n"
+                  f"in thread: {caller_thread}\n"
+                  f"actual queue size: {cls._queue.qsize()}")
+
         cls._queue.put(value)
 
     @classmethod
@@ -236,26 +262,26 @@ class GuiLoggger:
         Control("exception", str(msg))
 
 
-class YmlSettings:
+class IniSettings:
     """Holds all package settings. All new settings are witten to disc.
 
     All methods are thraed safe.
 
     Attribures
     ----------
-    _settings_dict: dict
-        dictionary holding all settings
+    _parser: ConfigParser
+        dictionary-like object holding all settings
     """
 
-    _settings_dict: Dict[Hashable, Any]
     _lock: RLock = RLock()
+    _parser: ConfigParser = ConfigParser()
 
-    if SETTINGS_YML.is_file():
-        with SETTINGS_YML.open("r") as f:
-            _settings_dict = yaml.full_load(f)
+    if SETTINGS_INI.is_file():
+        _parser.read(SETTINGS_INI)
     else:
-        log.warning("Couldn't open settings yaml file")
-        _settings_dict = dict()
+        log.warning("Couldn't open settings ini file")
+
+        _parser["SETTINGS"] = {}
 
     # TODO might be an encoding problem
     @classmethod
@@ -270,7 +296,7 @@ class YmlSettings:
             value to write under key
         """
         with cls._lock:
-            cls._settings_dict[key] = value
+            cls._parser["SETTINGS"][key] = str(value)
             cls._dump()
 
     @classmethod
@@ -284,14 +310,15 @@ class YmlSettings:
         """
         with cls._lock:
             try:
-                del cls._settings_dict[key]
+                del cls._parser["SETTINGS"][key]
             except KeyError:
-                log.debug("deleting non-existent YAML setting")
+                log.debug("deleting non-existent INI setting")
             else:
                 cls._dump()
 
     @classmethod
-    def read(cls, key: Hashable, default: Any) -> Any:
+    def read(cls, key: Hashable, default: Any = None,
+             _type: type = str) -> Any:
         """Get value from settings dictionary.
 
         Parameters
@@ -300,25 +327,30 @@ class YmlSettings:
             dictionary key
         default: Any
             default value to return if key is not present
+        _type: type
+            after read variable is cast to specisied type, as configparser
+            always stores variables to string
 
         Returns
         -------
         Any
             value found under key if it was found or default
         """
+        if _type == bool:
+            _type = lambda x: x.lower() in ("y", "yes", "t", "true", "on", "1")
+
         with cls._lock:
             try:
-                return cls._settings_dict[key]
+                return _type(cls._parser["SETTINGS"][key])
             except KeyError:
-                log.debug("Accesing non-existent YAML setting")
+                log.debug("Accesing non-existent INI setting")
                 return default
 
     @classmethod
     def _dump(cls):
-        """Syncronize in-memory settings dict with disk file.
+        """Syncronize in-memory settings ini-parser object with disk file.
 
         Has to be called in locked context.
         """
-        with SETTINGS_YML.open("w") as f:
-            yaml.dump(cls._settings_dict, f, default_flow_style=False,
-                      allow_unicode=True)
+        with SETTINGS_INI.open("w") as f:
+            cls._parser.write(f)
