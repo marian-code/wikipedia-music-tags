@@ -51,25 +51,23 @@ except ImportError as e:
 
 try:
     from qtpy.QtWidgets import (QMainWindow, QFileDialog, QApplication,
-                                QTableWidgetItem, QMessageBox, QHBoxLayout,
+                                QTableWidgetItem, QMessageBox, QProgressDialog,
                                 QAbstractItemView, QInputDialog, QLabel,
                                 QVBoxLayout, QTableWidget, QWidget, QDialog,
                                 QStatusBar, QSystemTrayIcon, QSizePolicy,
                                 QRubberBand, QStyleFactory, QSizeGrip,
-                                QStyledItemDelegate, QProgressBar, QStyle,
-                                QProgressDialog, QTableView)
+                                QStyledItemDelegate, QProgressBar, QTableView)
     from qtpy.QtGui import (QStandardItemModel, QStandardItem, QImage, QColor,
-                            QPixmap, QIcon, QPainter, QResizeEvent)
+                            QPixmap, QIcon, QResizeEvent, QPalette)
     from qtpy.QtCore import (Qt, QSortFilterProxyModel, QTimer, QObject,
                              QBuffer, QSize, QRect, Property, Slot, Signal,
-                             QByteArray, QIODevice, QPoint, QEvent,
-                             QVariant, QItemSelectionModel)
+                             QByteArray, QIODevice, QPoint, QEvent, QVariant)
     from qtpy import uic
 
     if TYPE_CHECKING:
-        from qtpy.QtGui import (QDropEvent, QEnterEvent, QMoveEvent,
-                                QModelIndex, QPainter)
+        from qtpy.QtGui import QDropEvent, QEnterEvent, QMoveEvent
         from qtpy.QtWidgets import QStyleOptionViewItem
+        from qtpy.QtCore import QModelIndex
 except ImportError as e:
     log.critical(f"None of the Qt backends is available: {e}")
     raise ImportError(f"None of the Qt backends is available: {e}")

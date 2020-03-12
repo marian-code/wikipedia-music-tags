@@ -87,6 +87,14 @@
 
 # Change Log
 
+### 11.3.2020
+- additional spliting of code, custom classes noe occupy independent
+  sub-directory.
+
+### 10.3.2020
+- tidying up and consolidating search & replace codebase
+- split master GUI class to more files
+
 ### 9.3.2020
 - search & replace controls are almost finished color higlighting is working
   up to 80% of times

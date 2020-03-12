@@ -8,19 +8,20 @@ attributes should not be accesed directly in GUI.
 
 import logging
 from pathlib import Path
-from typing import Iterable, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, List, Optional, Union
 
 from wiki_music.constants import GUI_HEADERS, SPLIT_HEADERS, STR_TAGS
-from wiki_music.gui_lib import (BaseGui, CustomQStandardItem, NumberSortModel,
-                                ResizablePixmap, TableItemModel)
-from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QMessageBox,
-                                            QPixmap, QStandardItemModel,
-                                            QTimer)
+from wiki_music.gui_lib import (BaseGui, NumberSortModel, ResizablePixmap,
+                                TableItemModel)
+from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QImage, QLabel,
+                                            QMessageBox, QPixmap,
+                                            QStandardItemModel, QTimer)
 from wiki_music.library.parser import WikipediaRunner
 from wiki_music.utilities import exception
 
 if TYPE_CHECKING:
     from wiki_music.gui_lib.qt_importer import QModelIndex
+    from wiki_music.gui_lib import CustomQTableView
 
 log = logging.getLogger(__name__)
 log.debug("data model imports done")
@@ -307,6 +308,7 @@ class DataModel(ParserInteract):
     cover_art: Optional[ResizablePixmap]
     table: TableItemModel
     proxy: NumberSortModel
+    tableView: "CustomQTableView"
 
     def __init__(self) -> None:
 
@@ -325,7 +327,39 @@ class DataModel(ParserInteract):
 
         log.debug("init data model done")
 
-    def _input_is_present(self, with_warn=False) -> bool:
+    def _setup_table(self):
+
+        # create table-proxy mapping for sorting
+        self.tableView.setModel(self.proxy)
+        self.tableView.setSortingEnabled(True)
+
+        # show table
+        self.tableView.show()
+
+        # enable dragging files and dirs into the table
+        self.tableView.FileDropped.connect(self._load_dropped_dir)
+
+        # enable drag and drop ordering of columns in table
+        self.tableView.horizontalHeader().setSectionsMovable(True)
+        self.tableView.horizontalHeader().setDragEnabled(True)
+        self.tableView.horizontalHeader().setDragDropMode(
+            QAbstractItemView.InternalMove)
+
+        # connect to signal that is emited when table cell is clicked
+        self.tableView.clicked.connect(self._detail)
+
+    def _selected_table_rows(self) -> List[int]:
+        """Returns indices of selected table rows.
+
+        Returns
+        -------
+        List[int]
+            indices of selected rows
+        """
+        indices = self.tableView.selectionModel().selectedRows()
+        return [self.proxy.mapToSource(i).row() for i in indices]
+
+    def _input_is_present(self, with_warn: Optional[bool] = False) -> bool:
         """Check if apropriate input to conduct search is present.
 
         Returns
@@ -497,4 +531,4 @@ class DataModel(ParserInteract):
         if text is None:
             text = self.lyrics_detail.toPlainText()
 
-        self.table.setItem(row, col, CustomQStandardItem(text))
+        self.table.set_python_item(row, col, text)

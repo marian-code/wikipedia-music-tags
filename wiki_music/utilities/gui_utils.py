@@ -213,7 +213,7 @@ def get_sizes(uri: Union[str, Path]
 
     Information is retrieved without downloading the whole picture in case of
     interner pic and without reading the whole picture from disk in case of
-    local picture. 
+    local picture.
 
     Parameters
     ----------

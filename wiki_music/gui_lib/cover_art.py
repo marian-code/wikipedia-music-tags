@@ -11,9 +11,9 @@ from wiki_music.constants import (ASPECT_RATIOS, COVER_ART_EDIT_UI,
 from wiki_music.external_libraries.google_images_download import (  # lazy loaded
     google_images_download, google_images_download_offline)
 from wiki_music.gui_lib import BaseGui, ImageTable, SelectablePixmap
-from wiki_music.gui_lib.qt_importer import (QDialog, QFileDialog, QHBoxLayout,
-                                            QIcon, QMessageBox, QSize, Qt,
-                                            QTimer, QWidget, Signal, uic)
+from wiki_music.gui_lib.qt_importer import (QDialog, QFileDialog, QIcon,
+                                            QMessageBox, QSize, Qt, QTimer,
+                                            QWidget, Signal, uic)
 from wiki_music.utilities import (MultiLog, comp_res, exception, get_icon,
                                   get_image, get_image_size, get_sizes)
 
