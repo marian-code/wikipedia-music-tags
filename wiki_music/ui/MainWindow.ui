@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1401</width>
-    <height>742</height>
+    <height>738</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -97,21 +97,129 @@
        <number>0</number>
       </property>
       <widget class="QWidget" name="tab_3">
+       <attribute name="icon">
+        <iconset resource="../icons/tango.qrc">
+         <normaloff>:/icons/tango/16x16/system-search</normaloff>:/icons/tango/16x16/system-search</iconset>
+       </attribute>
        <attribute name="title">
         <string>Search</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="3">
-         <layout class="QHBoxLayout" name="picture_layout">
+        <item row="0" column="1">
+         <layout class="QGridLayout" name="buttons_grid">
           <property name="sizeConstraint">
            <enum>QLayout::SetMinimumSize</enum>
           </property>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="browse_button">
+            <property name="minimumSize">
+             <size>
+              <width>105</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">text-align: left</string>
+            </property>
+            <property name="text">
+             <string>Browse</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../icons/tango.qrc">
+              <normaloff>:/icons/tango/16x16/folder-open</normaloff>:/icons/tango/16x16/folder-open</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="lyrics_button">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>105</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>93</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">text-align: left</string>
+            </property>
+            <property name="text">
+             <string>Lyrics search</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../icons/tango.qrc">
+              <normaloff>:/icons/tango/16x16/format-justify-center</normaloff>:/icons/tango/16x16/format-justify-center</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QPushButton" name="coverArt">
+            <property name="minimumSize">
+             <size>
+              <width>105</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">text-align: left</string>
+            </property>
+            <property name="text">
+             <string>Cover Art</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../icons/tango.qrc">
+              <normaloff>:/icons/tango/16x16/image-x-generic</normaloff>:/icons/tango/16x16/image-x-generic</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="wiki_search_button">
+            <property name="minimumSize">
+             <size>
+              <width>105</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>93</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">text-align: left</string>
+            </property>
+            <property name="text">
+             <string>Wiki Search</string>
+            </property>
+            <property name="icon">
+             <iconset resource="../icons/tango.qrc">
+              <normaloff>:/icons/tango/16x16/system-search</normaloff>:/icons/tango/16x16/system-search</iconset>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item row="0" column="0">
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout" columnminimumwidth="0">
           <property name="sizeConstraint">
-           <enum>QLayout::SetMaximumSize</enum>
+           <enum>QLayout::SetMinAndMaxSize</enum>
           </property>
           <property name="spacing">
            <number>2</number>
@@ -211,105 +319,20 @@
           </item>
          </layout>
         </item>
-        <item row="0" column="1">
-         <layout class="QGridLayout" name="buttons_grid">
-          <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
-          </property>
-          <item row="0" column="0">
-           <widget class="QPushButton" name="browse_button">
-            <property name="maximumSize">
-             <size>
-              <width>93</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>browse</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QPushButton" name="lyrics_button">
-            <property name="maximumSize">
-             <size>
-              <width>93</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Lyrics search</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QPushButton" name="coverArt">
-            <property name="text">
-             <string>Cover Art</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="wiki_search_button">
-            <property name="maximumSize">
-             <size>
-              <width>93</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Wiki Search</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
         <item row="0" column="2">
-         <layout class="QVBoxLayout" name="verticalLayout_3">
+         <layout class="QHBoxLayout" name="picture_layout">
           <property name="sizeConstraint">
            <enum>QLayout::SetMinimumSize</enum>
           </property>
-          <item>
-           <widget class="QCheckBox" name="write_json_sw">
-            <property name="maximumSize">
-             <size>
-              <width>109</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Write json?</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="offline_debbug_sw">
-            <property name="maximumSize">
-             <size>
-              <width>109</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Offline debug?</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="multi_threaded_sw">
-            <property name="text">
-             <string>Multi threaded</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
        </layout>
       </widget>
       <widget class="QWidget" name="tab_4">
+       <attribute name="icon">
+        <iconset resource="../icons/tango.qrc">
+         <normaloff>:/icons/tango/16x16/edit-find-replace</normaloff>:/icons/tango/16x16/edit-find-replace</iconset>
+       </attribute>
        <attribute name="title">
         <string>Replace Tool</string>
        </attribute>
@@ -321,6 +344,12 @@
           <width>171</width>
           <height>22</height>
          </rect>
+        </property>
+        <property name="contextMenuPolicy">
+         <enum>Qt::DefaultContextMenu</enum>
+        </property>
+        <property name="toolTip">
+         <string>Input string you want to search for</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_13">
@@ -339,14 +368,21 @@
        <widget class="QPushButton" name="replace_one">
         <property name="geometry">
          <rect>
-          <x>400</x>
+          <x>410</x>
           <y>10</y>
-          <width>75</width>
+          <width>91</width>
           <height>24</height>
          </rect>
         </property>
+        <property name="styleSheet">
+         <string notr="true">text-align: left</string>
+        </property>
         <property name="text">
          <string>Replace</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/22x22/edit-find-replace</normaloff>:/icons/tango/22x22/edit-find-replace</iconset>
         </property>
        </widget>
        <widget class="QPushButton" name="search_next">
@@ -354,12 +390,19 @@
          <rect>
           <x>320</x>
           <y>40</y>
-          <width>75</width>
+          <width>81</width>
           <height>24</height>
          </rect>
         </property>
+        <property name="styleSheet">
+         <string notr="true">text-align: left</string>
+        </property>
         <property name="text">
          <string>Next</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/16x16/go-next</normaloff>:/icons/tango/16x16/go-next</iconset>
         </property>
        </widget>
        <widget class="QPushButton" name="search_previous">
@@ -367,44 +410,65 @@
          <rect>
           <x>320</x>
           <y>10</y>
-          <width>75</width>
+          <width>81</width>
           <height>24</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Skip to the next search match</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">text-align: left</string>
+        </property>
         <property name="text">
          <string>Previous</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/16x16/go-previous</normaloff>:/icons/tango/16x16/go-previous</iconset>
         </property>
        </widget>
        <widget class="QPushButton" name="replace_all">
         <property name="geometry">
          <rect>
-          <x>400</x>
+          <x>410</x>
           <y>40</y>
-          <width>75</width>
+          <width>91</width>
           <height>24</height>
          </rect>
         </property>
+        <property name="styleSheet">
+         <string notr="true">text-align: left</string>
+        </property>
         <property name="text">
          <string>Replace all</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/32x32/document-revert</normaloff>:/icons/tango/32x32/document-revert</iconset>
         </property>
        </widget>
        <widget class="QCheckBox" name="search_support_re">
         <property name="geometry">
          <rect>
-          <x>490</x>
-          <y>10</y>
-          <width>141</width>
+          <x>80</x>
+          <y>70</y>
+          <width>181</width>
           <height>20</height>
          </rect>
         </property>
         <property name="text">
-         <string>Support re patterns</string>
+         <string>Support regex patterns</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/32x32/emblem-system</normaloff>:/icons/tango/32x32/emblem-system</iconset>
         </property>
        </widget>
        <widget class="QLabel" name="label_14">
         <property name="geometry">
          <rect>
-          <x>650</x>
+          <x>520</x>
           <y>0</y>
           <width>131</width>
           <height>16</height>
@@ -417,8 +481,8 @@
        <widget class="QListView" name="replace_tag_selector_view">
         <property name="geometry">
          <rect>
-          <x>650</x>
-          <y>30</y>
+          <x>520</x>
+          <y>20</y>
           <width>221</width>
           <height>141</height>
          </rect>
@@ -427,27 +491,35 @@
        <widget class="QCheckBox" name="search_support_wildcard">
         <property name="geometry">
          <rect>
-          <x>490</x>
-          <y>30</y>
-          <width>141</width>
+          <x>80</x>
+          <y>100</y>
+          <width>181</width>
           <height>20</height>
          </rect>
         </property>
         <property name="text">
          <string>Support wildcards</string>
         </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/32x32/emblem-system</normaloff>:/icons/tango/32x32/emblem-system</iconset>
+        </property>
        </widget>
        <widget class="QCheckBox" name="search_case_sensitive">
         <property name="geometry">
          <rect>
-          <x>490</x>
-          <y>50</y>
+          <x>80</x>
+          <y>130</y>
           <width>131</width>
           <height>20</height>
          </rect>
         </property>
         <property name="text">
          <string>Case sensitive</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../icons/tango.qrc">
+          <normaloff>:/icons/tango/32x32/format-text-italic</normaloff>:/icons/tango/32x32/format-text-italic</iconset>
         </property>
        </widget>
        <widget class="QLabel" name="label_15">
@@ -471,19 +543,6 @@
           <width>171</width>
           <height>22</height>
          </rect>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_16">
-        <property name="geometry">
-         <rect>
-          <x>120</x>
-          <y>110</y>
-          <width>351</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Only replace all is working dependably now !!!</string>
         </property>
        </widget>
       </widget>
@@ -550,6 +609,10 @@
           <widget class="QToolButton" name="toolButton">
            <property name="text">
             <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../icons/tango.qrc">
+             <normaloff>:/icons/tango/16x16/audio-x-generic</normaloff>:/icons/tango/16x16/audio-x-generic</iconset>
            </property>
           </widget>
          </item>
@@ -652,12 +715,9 @@
     </property>
     <addaction name="actionGetApiKey"/>
     <addaction name="actionNltkData"/>
-   </widget>
-   <widget class="QMenu" name="menuMass_replace">
-    <property name="title">
-     <string>Tools</string>
-    </property>
-    <addaction name="actionMass_replace"/>
+    <addaction name="actionWrite_tags_to_JSON"/>
+    <addaction name="actionOffline_debug"/>
+    <addaction name="actionMulti_threaded"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOpen"/>
@@ -665,30 +725,49 @@
    <addaction name="menuHelp"/>
    <addaction name="menuSearch"/>
    <addaction name="menuSettings"/>
-   <addaction name="menuMass_replace"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/document-new</normaloff>:/icons/tango/32x32/document-new</iconset>
+   </property>
    <property name="text">
     <string>New</string>
    </property>
   </action>
   <action name="actionOpen">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/folder-open</normaloff>:/icons/tango/32x32/folder-open</iconset>
+   </property>
    <property name="text">
     <string>Open</string>
    </property>
   </action>
   <action name="actionSave">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/document-save</normaloff>:/icons/tango/32x32/document-save</iconset>
+   </property>
    <property name="text">
     <string>Save</string>
    </property>
   </action>
   <action name="actionExit">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/emblem-unreadable</normaloff>:/icons/tango/32x32/emblem-unreadable</iconset>
+   </property>
    <property name="text">
     <string>Exit</string>
    </property>
   </action>
   <action name="actionAll_Tags">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/document-save</normaloff>:/icons/tango/32x32/document-save</iconset>
+   </property>
    <property name="text">
     <string>All Tags</string>
    </property>
@@ -699,31 +778,55 @@
    </property>
   </action>
   <action name="actionDirectory">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/folder-open</normaloff>:/icons/tango/16x16/folder-open</iconset>
+   </property>
    <property name="text">
     <string>Directory</string>
    </property>
   </action>
   <action name="actionWikipedia">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/applications-internet</normaloff>:/icons/tango/16x16/applications-internet</iconset>
+   </property>
    <property name="text">
     <string>Wikipedia</string>
    </property>
   </action>
   <action name="actionCover_Art_search">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/image-x-generic</normaloff>:/icons/tango/16x16/image-x-generic</iconset>
+   </property>
    <property name="text">
     <string>Cover Art search</string>
    </property>
   </action>
   <action name="actionMp3_Tag">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/audio-x-generic</normaloff>:/icons/tango/16x16/audio-x-generic</iconset>
+   </property>
    <property name="text">
     <string>Mp3Tag</string>
    </property>
   </action>
   <action name="actionHelp">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/help-browser</normaloff>:/icons/tango/16x16/help-browser</iconset>
+   </property>
    <property name="text">
     <string>Help Index</string>
    </property>
   </action>
   <action name="actionGit">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/internet-web-browser</normaloff>:/icons/tango/16x16/internet-web-browser</iconset>
+   </property>
    <property name="text">
     <string>Git</string>
    </property>
@@ -734,41 +837,76 @@
    </property>
   </action>
   <action name="actionVersion">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/dialog-information</normaloff>:/icons/tango/32x32/dialog-information</iconset>
+   </property>
    <property name="text">
     <string>Version</string>
    </property>
   </action>
   <action name="actionWikipedia_2">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/system-search</normaloff>:/icons/tango/16x16/system-search</iconset>
+   </property>
    <property name="text">
     <string>Wikipedia</string>
    </property>
   </action>
   <action name="actionLyrics">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/format-justify-center</normaloff>:/icons/tango/16x16/format-justify-center</iconset>
+   </property>
    <property name="text">
     <string>Lyrics</string>
    </property>
   </action>
   <action name="actionCoverArt">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/image-x-generic</normaloff>:/icons/tango/16x16/image-x-generic</iconset>
+   </property>
    <property name="text">
     <string>Cover Art</string>
    </property>
   </action>
   <action name="actionLogs">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/document-properties</normaloff>:/icons/tango/32x32/document-properties</iconset>
+   </property>
    <property name="text">
     <string>Logs</string>
    </property>
   </action>
   <action name="actionGetApiKey">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/network-wireless-encrypted</normaloff>:/icons/tango/32x32/network-wireless-encrypted</iconset>
+   </property>
    <property name="text">
     <string>Get Google API key</string>
    </property>
   </action>
   <action name="actionNltkData">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/package-x-generic</normaloff>:/icons/tango/32x32/package-x-generic</iconset>
+   </property>
    <property name="text">
     <string>Download nltk data</string>
    </property>
   </action>
   <action name="actionSelected_Tags">
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/document-save-as</normaloff>:/icons/tango/32x32/document-save-as</iconset>
+   </property>
    <property name="text">
     <string>Selected Tags</string>
    </property>
@@ -776,6 +914,48 @@
   <action name="actionMass_replace">
    <property name="text">
     <string>Mass replace</string>
+   </property>
+  </action>
+  <action name="actionWrite_tags_to_JSON">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/format-indent-more</normaloff>:/icons/tango/32x32/format-indent-more</iconset>
+   </property>
+   <property name="text">
+    <string>Write tags to JSON</string>
+   </property>
+  </action>
+  <action name="actionOffline_debug">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/16x16/network-offline</normaloff>:/icons/tango/16x16/network-offline</iconset>
+   </property>
+   <property name="text">
+    <string>Offline debug</string>
+   </property>
+  </action>
+  <action name="actionMulti_threaded">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../icons/tango.qrc">
+     <normaloff>:/icons/tango/32x32/applications-system</normaloff>:/icons/tango/32x32/applications-system</iconset>
+   </property>
+   <property name="text">
+    <string>Multi threaded</string>
    </property>
   </action>
  </widget>
@@ -786,6 +966,8 @@
    <header>wiki_music.gui_lib.custom_classes</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../icons/tango.qrc"/>
+ </resources>
  <connections/>
 </ui>

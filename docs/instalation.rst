@@ -158,6 +158,34 @@ This will generate list three directories under setup/ folder: gdist/ cdist/
 and build/. Build contains just pyinstaller help files and
 **(g/c)dist/wiki_music** contains packaged GUI and CLI console apps. 
 
+Generating icon sets
+^^^^^^^^^^^^^^^^^^^^
+
+To generate new icon set, place directory with your icon theme name to icons
+folder under wiki_music. The folder shoud contain subfolders with icons of
+different dimensions 16x16, 22x22, 32x32 and an index.theme file. Then all you
+have to do is run
+
+.. code-block:: bash
+
+    generate_rcc.py <path_to_index.theme>
+
+This will generate two files (*.qrc, *.py) in icons directory with same name
+as your icon theme folder name. After that you only need to include the *.py
+file in
+
+.. code-block:: bash
+
+    wiki_music.gui_lib.base.py
+
+write
+
+.. code-block:: python
+
+    import <your_theme_file_name>
+
+After that all icon set in QtDesigner will apper in GUI.
+
 Creating virtual environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

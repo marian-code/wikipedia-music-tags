@@ -8,7 +8,7 @@ import logging
 # be sure to preserve import order! custom classes must be imported first!
 # otherwise other imports will fail.
 from .custom_classes import (CheckableListModel, CustomQTableView, ImageTable,
-                             NumberSortModel, RememberDir, ResizablePixmap,
+                             NumberSortProxy, RememberDir, ResizablePixmap,
                              SelectablePixmap, TableItemModel)
 
 from .base import BaseGui
@@ -18,7 +18,7 @@ from .cover_art import CoverArtSearch
 from .data_model import DataModel
 from .search_and_replace import Replacer
 
-__all__ = ["TableItemModel", "ImageTable", "DataModel", "NumberSortModel",
+__all__ = ["TableItemModel", "ImageTable", "DataModel", "NumberSortProxy",
            "RememberDir", "ResizablePixmap", "Replacer", "SelectablePixmap",
            "BaseGui", "CoverArtSearch", "CustomQTableView", "Buttons",
            "CheckableListModel", "Checkers"]

@@ -87,6 +87,16 @@
 
 # Change Log
 
+### 13.3.2020
+- search and replace is finished
+- added icons from tango https://commons.wikimedia.org/wiki/Tango_icons
+- written a generator for icon resources based
+  on https://github.com/ppinard/qtango
+- updated docs
+
+### 12.3.2020
+- impovements to search and replace
+
 ### 11.3.2020
 - additional spliting of code, custom classes noe occupy independent
   sub-directory.

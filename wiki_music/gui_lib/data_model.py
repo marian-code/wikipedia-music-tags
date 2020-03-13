@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional, Union
 
 from wiki_music.constants import GUI_HEADERS, SPLIT_HEADERS, STR_TAGS
-from wiki_music.gui_lib import (BaseGui, NumberSortModel, ResizablePixmap,
+from wiki_music.gui_lib import (BaseGui, NumberSortProxy, ResizablePixmap,
                                 TableItemModel)
 from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QImage, QLabel,
                                             QMessageBox, QPixmap,
@@ -301,13 +301,13 @@ class DataModel(ParserInteract):
         Qt class that displays the found cover art picture
     table: TableItemModel
         Qt table for displaying parser data
-    proxy: NumberSortModel
+    proxy: NumberSortProxy
         table model for data sorting
     """
 
     cover_art: Optional[ResizablePixmap]
     table: TableItemModel
-    proxy: NumberSortModel
+    proxy: NumberSortProxy
     tableView: "CustomQTableView"
 
     def __init__(self) -> None:
@@ -322,7 +322,7 @@ class DataModel(ParserInteract):
         self.table = TableItemModel()
         self.table.setHorizontalHeaderLabels(GUI_HEADERS)
 
-        self.proxy = NumberSortModel()
+        self.proxy = NumberSortProxy()
         self.proxy.setSourceModel(self.table)
 
         log.debug("init data model done")
@@ -347,17 +347,6 @@ class DataModel(ParserInteract):
 
         # connect to signal that is emited when table cell is clicked
         self.tableView.clicked.connect(self._detail)
-
-    def _selected_table_rows(self) -> List[int]:
-        """Returns indices of selected table rows.
-
-        Returns
-        -------
-        List[int]
-            indices of selected rows
-        """
-        indices = self.tableView.selectionModel().selectedRows()
-        return [self.proxy.mapToSource(i).row() for i in indices]
 
     def _input_is_present(self, with_warn: Optional[bool] = False) -> bool:
         """Check if apropriate input to conduct search is present.

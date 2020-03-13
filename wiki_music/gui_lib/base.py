@@ -2,15 +2,16 @@
 
 import ctypes  # lazy loaded
 import logging
+import sys
 from abc import abstractmethod
 from pathlib import Path
-import sys
 
-from wiki_music.constants import MAIN_WINDOW_UI
-from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QIcon,
+from wiki_music.constants import MAIN_WINDOW_UI, ROOT_DIR
+from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QAction, QIcon,
                                             QMainWindow, QMessageBox,
-                                            QStandardItemModel,
+                                            QStandardItemModel, QStyle,
                                             QSystemTrayIcon, uic)
+from wiki_music.icons import tango  # must be included for icons to work
 from wiki_music.utilities import MultiLog, abstract_warning, get_icon
 
 log = logging.getLogger(__name__)

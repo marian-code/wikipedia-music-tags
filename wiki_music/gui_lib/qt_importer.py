@@ -50,13 +50,14 @@ except ImportError as e:
 """
 
 try:
-    from qtpy.QtWidgets import (QMainWindow, QFileDialog, QApplication,
+    from qtpy.QtWidgets import (QMainWindow, QFileDialog, QApplication, QStyle,
                                 QTableWidgetItem, QMessageBox, QProgressDialog,
                                 QAbstractItemView, QInputDialog, QLabel,
                                 QVBoxLayout, QTableWidget, QWidget, QDialog,
                                 QStatusBar, QSystemTrayIcon, QSizePolicy,
                                 QRubberBand, QStyleFactory, QSizeGrip,
-                                QStyledItemDelegate, QProgressBar, QTableView)
+                                QStyledItemDelegate, QProgressBar, QTableView,
+                                QPushButton, QAction)
     from qtpy.QtGui import (QStandardItemModel, QStandardItem, QImage, QColor,
                             QPixmap, QIcon, QResizeEvent, QPalette)
     from qtpy.QtCore import (Qt, QSortFilterProxyModel, QTimer, QObject,

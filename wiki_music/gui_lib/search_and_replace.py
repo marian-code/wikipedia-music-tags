@@ -3,7 +3,7 @@ import logging
 
 from wiki_music.constants import GUI_HEADERS
 from wiki_music.gui_lib import BaseGui, CheckableListModel
-from wiki_music.gui_lib.qt_importer import QMessageBox
+from wiki_music.gui_lib.qt_importer import QMessageBox, QPushButton, QIcon, QStyle
 
 __all__ = ["Replacer"]
 
@@ -38,7 +38,15 @@ class Replacer(BaseGui):
         """Connect to signals essential for search and replace tab."""
         # re-run search when search columns are reselected
         self.replace_tag_selector_model.itemChanged.connect(
-            lambda: self._search_parameters(self.search_string_input.text()))
+            self._search_replace_run)
+
+        # re-run search when options are checked
+        self.search_support_re.stateChanged.connect(
+            self._search_replace_run)
+        self.search_support_wildcard.stateChanged.connect(
+            self._search_replace_run)
+        self.search_case_sensitive.stateChanged.connect(
+            self._search_replace_run)
 
         # connect to control buttons
         self.search_next.clicked.connect(self.tableView.search_next)
@@ -54,17 +62,18 @@ class Replacer(BaseGui):
             ))
 
         # search is run interacively as user is typing
-        self.search_string_input.textChanged.connect(self._search_parameters)
+        self.search_string_input.textChanged.connect(
+            self._search_replace_run)
 
+        # on tab change change selection and search highlight mode
         self.tool_tab.currentChanged.connect(
-            lambda index: self.tableView.set_search_visibility(
-                self.translate_tab_index(index))
-        )
+            self.tableView.set_search_visibility)
 
         # seems that filtering is done by rows
-        #self.search_string_input.textChanged.connect(self.proxy.setFilterFixedString)
+        # self.search_string_input.textChanged.connect(
+        #     self.proxy.setFilterFixedString)
 
-    def _search_parameters(self, string: str):
+    def _search_replace_run(self, string: str):
         """Process search parameters and call table search method.
 
         Parameters
@@ -87,36 +96,9 @@ class Replacer(BaseGui):
                 log.warning("Wildcard and regex used at once in search")
 
         self.tableView.search_string(
-            string,
+            self.search_string_input.text(),
             self.search_case_sensitive.isChecked(),
             self.search_support_re.isChecked(),
             self.search_support_wildcard.isChecked(),
             self.replace_tag_selector_model.get_checked_indices()
         )
-
-    @staticmethod
-    def translate_tab_index(index) -> str:
-        """Translate tab index into string.
-
-        Parameters
-        ----------
-        index: int
-            index of the current tab
-
-        Raises
-        ------
-        NotImplementedError
-            if inedx is not supported by implementation of the method
-
-        Returns
-        -------
-        str
-            name of the current tab
-        """
-        if index == 0:
-            return "search_tab"
-        elif index == 1:
-            return "replace_tab"
-        else:
-            raise NotImplementedError(f"Settings for tab {index} have not "
-                                      f"yet been implemented")

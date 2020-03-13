@@ -54,22 +54,22 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
         self.album_entry_input.editingFinished.connect(self._entry_album)
 
         if not self._DEBUG:
-            self.offline_debbug_sw.hide()
-            self.write_json_sw.hide()
-            self.multi_threaded_sw.hide()
+            self.actionOffline_debug.setVisible(False)
+            self.actionWrite_tags_to_JSON.setVisible(False)
+            self.actionMulti_threaded.setVisible(False)
         else:
             # connect switches to functions
-            self.offline_debbug_sw.stateChanged.connect(
+            self.actionOffline_debug.changed.connect(
                 self._select_offline_debbug)
-            self.write_json_sw.stateChanged.connect(self._select_json)
-            self.multi_threaded_sw.stateChanged.connect(self._select_multi)
+            self.actionWrite_tags_to_JSON.changed.connect(self._select_json)
+            self.actionMulti_threaded.changed.connect(self._select_multi)
 
             # set states
-            self.offline_debbug_sw.setChecked(
+            self.actionOffline_debug.setChecked(
                 IniSettings.read("offline_debug", False, bool))
-            self.write_json_sw.setChecked(
+            self.actionWrite_tags_to_JSON.setChecked(
                 IniSettings.read("write_json", False, bool))
-            self.multi_threaded_sw.setChecked(
+            self.actionMulti_threaded.setChecked(
                 IniSettings.read("multi_threaded", True, bool))
 
     # methods that bind to gui elements
@@ -90,7 +90,7 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
                 return
 
             if selected:
-                indices = self._selected_table_rows()
+                indices = self.tableView.selected_rows()
             else:
                 indices = list(lrange(self._parser))  # TODO test this
 

@@ -205,12 +205,12 @@ class Buttons(BaseGui):
 
     def _select_json(self):
         """Connect to  checkbox."""
-        self._parser.write_json = self.write_json_sw.isChecked()
+        self._parser.write_json = self.actionWrite_tags_to_JSON.isChecked()
         IniSettings.write("write_json", self._parser.write_json)
 
     def _select_multi(self):
         """Connect to  checkbox."""
-        self._parser.multi_threaded = self.multi_threaded_sw.isChecked()
+        self._parser.multi_threaded = self.actionMulti_threaded.isChecked()
         IniSettings.write("multi_threaded", self._parser.multi_threaded)
         log.debug(f"multi threaded is set to: {self._parser.multi_threaded}")
 
@@ -221,7 +221,7 @@ class Buttons(BaseGui):
         ----
         Restarts the preload with right settings.
         """
-        self.offline_debug = self.offline_debbug_sw.isChecked()
+        self.offline_debug = self.actionOffline_debug.isChecked()
         IniSettings.write("offline_debug", self._parser.offline_debug)
 
         if self._input_is_present():

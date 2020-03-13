@@ -3,10 +3,11 @@
 import logging
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Deque, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING, Any, Deque, List, Optional, Sequence, Tuple, Union)
 
-from wiki_music.gui_lib.qt_importer import (QColor, QPalette,
-                                            QSortFilterProxyModel,
+from wiki_music.gui_lib.qt_importer import (QAbstractItemView, QColor,
+                                            QPalette, QSortFilterProxyModel,
                                             QStandardItem, QStandardItemModel,
                                             QStyledItemDelegate, Qt,
                                             QTableView, QTableWidget, QWidget,
@@ -19,15 +20,15 @@ if TYPE_CHECKING:
                                                 QMoveEvent, QModelIndex,
                                                 QStyleOptionViewItem)
 
-__all__ = ["NumberSortModel", "ImageTable", "TableItemModel",
+__all__ = ["NumberSortProxy", "ImageTable", "TableItemModel",
            "CustomQTableView"]
 
 logging.getLogger(__name__)
 
 #: marks item curently marked by search index
-CurrentRole = Qt.UserRole + 1000
+CurrentRole = Qt.UserRole + 1
 #: marks items found by table search
-SelectedRole = Qt.UserRole + 1001
+SelectedRole = Qt.UserRole + 2
 
 
 class _HighlightDelegate(QStyledItemDelegate):
@@ -76,6 +77,9 @@ class CustomQTableView(QTableView):
     Attributes
     ----------
     FileDropped: Signal(Path)
+        signal emited when folder is dropped to table
+    _selected_rows_save: Optional[List[int]]
+        save selected rows when search and replace is active
 
     References
     ----------
@@ -94,6 +98,8 @@ class CustomQTableView(QTableView):
         self.current_index: Optional["QModelIndex"] = None
 
         self.setItemDelegate(_HighlightDelegate(self))
+
+        self._selected_rows_save: List[int] = []
 
     def dragEnterEvent(self, event: "QEnterEvent"):
         """Handle start of a mouse drag, allow only data with file loactions.
@@ -139,17 +145,46 @@ class CustomQTableView(QTableView):
         else:
             self.FileDropped.emit(str(path.parent.resolve()))
 
-    def set_search_visibility(self, tab: str):
+    def selected_rows(self, to_source: bool = True) -> List[int]:
+        """Returns indices of selected table rows.
+
+        Parameters
+        ----------
+        to_source: bool
+            map proxy indices to source model
+
+        Returns
+        -------
+        List[int]
+            indices of selected rows
+        """
+        indices = self.selectionModel().selectedRows()
+        if to_source:
+            return [self._proxy.mapToSource(i).row() for i in indices]
+        else:
+            return [i.row() for i in indices]
+
+    def set_search_visibility(self, tab_index: int):
         """Sets flags that tells if search tab is visible.
 
         Parameters
         ----------
-        tab: str
-            tab name
+        tab_index: int
+            tab index
         """
-        if tab == "replace_tab":
+        if tab_index > 1:
+            raise NotImplementedError(f"Settings for tab {tab_index} have not "
+                                      f"yet been implemented")
+
+        if tab_index:
+            self.setSelectionMode(QAbstractItemView.NoSelection)
+            self._selected_rows_save = self.selected_rows(to_source=False)
+            self.selectionModel().clearSelection()
             self._set(True)
         else:
+            self.setSelectionMode(QAbstractItemView.SingleSelection)
+            for i in self._selected_rows_save:
+                self.selectRow(i)
             self._set(False)
 
     @property
@@ -158,9 +193,17 @@ class CustomQTableView(QTableView):
 
         :type: TableItemModel
         """
-        # need to recurse two layers first is the NumberSortModel proxy and the
+        # need to recurse two layers first is the NumberSortProxy proxy and the
         # second is the actual model: TableItemModel
-        return self.model().sourceModel()
+        return self._proxy.sourceModel()
+
+    @property
+    def _proxy(self) -> "NumberSortProxy":
+        """Underlying proxy model.
+
+        :type: NumberSortProxy
+        """
+        return self.model()
 
     def _set(self, value: bool):
         """Set roles for found items to True or False.
@@ -206,9 +249,6 @@ class CustomQTableView(QTableView):
         https://doc-snapshots.qt.io/4.8/qt.html#MatchFlag-enum
         https://stackoverflow.com/questions/60639974/visual-position-of-item-in-qtableview/60642965?noredirect=1#comment107304241_60642965
         """
-        # TODO first clear selection highlights
-        # self.selectionModel().clear()
-
         # empty string would match all if it is recieved clear selection
         # and return
         if not string:
@@ -242,7 +282,7 @@ class CustomQTableView(QTableView):
 
     def _move_match_cursor(self, direction: int):
         """Move search cursor to the next position.
-        
+
         Parameters
         ----------
         direction: int
@@ -292,9 +332,10 @@ class CustomQTableView(QTableView):
 
     def _sort_indices_by_view(self):
         """Sort indeces by their position in table, top to bottom."""
-        # column-wise sorting should be good, since we are searching column-wise
+        # column-wise sorting should be good,
+        # since we are searching column-wise
         self.selected_indices.sort(
-            key=lambda index: self.model().mapFromSource(index).row()
+            key=lambda index: self._proxy.mapFromSource(index).row()
         )
 
     def replace_all(self, search_str: str, replace_str: str,
@@ -440,7 +481,7 @@ class TableItemModel(QStandardItemModel):
 
         raise KeyError(f"No column with name {name}")
 
-    def match_all(self, string: str, columns: List[Union[str, int]],
+    def match_all(self, string: str, columns: Sequence[Union[str, int]],
                   role: Qt.ItemDataRole, flags: Qt.MatchFlags
                   ) -> List["QModelIndex"]:
         """Matches all indices without restrictions in selected table columns.
@@ -455,7 +496,7 @@ class TableItemModel(QStandardItemModel):
             model data role to search
         flags: Qt.MatchFlags
             Qt match flags
-        
+
         Returns
         -------
         List[QModelIndex]
@@ -561,7 +602,7 @@ class ImageTable(QTableWidget):
         self.resizeRowsToContents()
 
 
-class NumberSortModel(QSortFilterProxyModel):
+class NumberSortProxy(QSortFilterProxyModel):
     """Custom table proxy model which can sort numbers not only strings."""
 
     def lessThan(self, left_index: "QModelIndex",
