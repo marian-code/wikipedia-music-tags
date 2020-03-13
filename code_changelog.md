@@ -10,6 +10,7 @@
   - something is wrong with artist completition when reading file from disk
     for this album https://en.wikipedia.org/wiki/Ayreon_Universe_–_The_Best_of_Ayreon_Live
   - fix as many bugs as possible
+  - update manifest and check build system
 - 0.8a0
   - better modularity for GUI one superclass is a bad idea, we have to limit
     interactions and side effects to minimum. The namespace of the GUI class

@@ -72,6 +72,11 @@ requests>=2.18.4
 wikipedia>=1.4.0
 ```
 
+## Screenshots
+
+![Wiki Search Tab](images/search_tab.jpg?raw=true "Wiki Search Tab")
+![Search & Replace Tab](images/replace_tab.jpg?raw=true "Search & Replace Tab")
+
 ## Authors
 
 * **Marián Rynik** - *Initial work* - [marian-code](https://github.com/marian-code)
