@@ -7,7 +7,7 @@ Lyrical Nonsense, Musixmatch, darklyrics
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import rapidfuzz.fuzz as fuzz  # lazy loaded
 
 from wiki_music.constants import GREEN, NO_LYRIS, RESET
 from wiki_music.external_libraries import lyricsfinder  # lazy loaded
@@ -94,7 +94,7 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
 
         if not lyr:
             for tr_k in tracks_dict.keys():
-                if fuzz.token_set_ratio(tr, tr_k) > 90:
+                if fuzz.token_set_ratio(tr, tr_k, score_cutoff=90):
                     tracks_dict[tr_k]["track"].append(i)
                     break
             else:

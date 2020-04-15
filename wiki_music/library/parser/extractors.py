@@ -5,8 +5,8 @@ import re  # lazy loaded
 from typing import TYPE_CHECKING, List, Tuple, Optional
 from itertools import product  # lazy loaded
 
-import fuzzywuzzy.fuzz as fuzz  # lazy loaded
-import fuzzywuzzy.process as process  # lazy loaded
+import rapidfuzz.fuzz as fuzz  # lazy loaded
+import rapidfuzz.process as process  # lazy loaded
 
 from wiki_music.constants import ORDER_NUMBER, TIME, TO_DELETE
 from wiki_music.utilities import (NoTracklistException, warning)
@@ -234,9 +234,6 @@ class DataExtractors:
         List[str]
             list of extracted choices
         """
-        if limit is None:
-            limit = len(choices)
-
         return [b[0] for b in process.extractBests(string, choices,
                                                    scorer=fuzz.token_set_ratio,
                                                    score_cutoff=90,

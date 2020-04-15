@@ -12,7 +12,7 @@ from typing import (
     TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union)
 
 import bs4  # lazy loaded
-import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import rapidfuzz.fuzz as fuzz  # lazy loaded
 import wikipedia as wiki  # lazy loaded
 
 from wiki_music.constants import OUTPUT_FOLDER
@@ -128,7 +128,7 @@ class Preload:
         if album_artist:
             album_artist = album_artist.parent.get_text()
 
-            if fuzz.token_set_ratio(self._band, album_artist) > 90:
+            if fuzz.token_set_ratio(self._band, album_artist, score_cutoff=90):
                 return True
             else:
                 b = re.sub(r"[Bb]y|[Ss]tudio album", "", album_artist).strip()

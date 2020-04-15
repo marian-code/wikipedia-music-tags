@@ -71,7 +71,6 @@ lyrics and writing them to files
 
 packages that are not necessary:
 
-* *python-Levenshtein* makes fuzzywuzzy a whole lot faster
 * *lxml* makes Beautifulsoup a whole lot faster
 * *PyQt5* if you want to use console mode or other Qt backend
 

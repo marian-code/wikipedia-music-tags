@@ -9,7 +9,7 @@ from time import sleep
 from typing import (TYPE_CHECKING, Any, Callable, Dict, Generator, List,
                     Optional, Tuple, Union, Generator)
 
-import fuzzywuzzy.fuzz as fuzz  # lazy loaded
+import rapidfuzz.fuzz as fuzz  # lazy loaded
 import json  # lazy loaded
 
 from wiki_music.constants import GREEN, RESET
@@ -493,7 +493,7 @@ def _find_N_dim(array: Union[list, str], template: str
     else:
         # length check is to stop shortz words replacing long
         if len(array) > len(template):
-            if fuzz.token_set_ratio(template, array) > 80:
+            if fuzz.token_set_ratio(template, array, score_cutoff=80):
                 return array
 
 
