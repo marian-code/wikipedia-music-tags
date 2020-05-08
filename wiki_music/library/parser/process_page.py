@@ -171,7 +171,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         def cover_art_getter():
             for img in self._sections["infobox"][0].find_all("img", src=True,
                                                              alt=True):
-                if fuzz.token_set_ratio(img["alt"], self._album, score_cutoff=90):
+                if fuzz.token_set_ratio(img["alt"], self._album, score_cutoff=60):
                     break
             else:
                 img = None
@@ -345,6 +345,15 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
         sections = [s for s in PERSONNEL_SECTIONS if s in self._sections]
 
+        if not sections:
+            self._personnel = []
+            self._appearences = []
+            self._complete()
+            self._info_tracks()
+            self._merge_artist_personnel()
+            raise NoPersonnelException("No section with personnel found "
+                                       "on page.")
+
         for html in itemgetter(*sections)(self._sections):
             # if the toplevel tag is the list itself
             if html.name in ("ul", "ol"):
@@ -485,7 +494,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                         self._header.append(song[:-1])
                     else:
                         self._header.append(song)
-                elif re.match(ORDER_NUMBER, song[0]):
+                elif ORDER_NUMBER.match(song[0]):
                     self._numbers.append(song[0].replace(".", ""))
                     tmp1, tmp2 = self._get_track(song[1])
                     self._tracks.append(tmp1)

@@ -87,6 +87,7 @@ class ResizablePixmap(QLabel):
         """
         self.bytes_image_edit = bytes_image
         self.current_pixmap = self._bytes2pixmap(bytes_image)
+        #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scale()
 
     def scale(self, fromResize: bool = False):

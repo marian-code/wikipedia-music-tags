@@ -1,17 +1,13 @@
 """Module for variable synchronization between application and GUI."""
 
+import inspect
 import logging
-from queue import Queue, Empty
-from threading import Barrier, RLock
-from typing import Any, ClassVar, Dict, Hashable, Tuple, Union, Optional
-
 from configparser import ConfigParser  # lazy loaded
+from queue import Empty, Queue
+from threading import Barrier, RLock, current_thread
+from typing import Any, ClassVar, Dict, Hashable, Optional, Tuple, Union
 
 from wiki_music.constants import SETTINGS_INI
-
-# TODO for debuggin purposes
-import inspect
-from threading import current_thread
 
 log = logging.getLogger(__name__)
 
@@ -63,9 +59,6 @@ class Action:
         # TODO only for debugging
         caller_name = inspect.stack()[1].function
         caller_thread = current_thread().getName()
-        log.debug(f"{str(self)}\n"
-                  f"initilized by: {caller_name}\n"
-                  f"in thread: {caller_thread}")
 
         self._put(self)
 
@@ -172,13 +165,17 @@ class Progress:
 
         self._put(self)
 
+    def __str__(self):
+        return (f"<Progres: actual={self.actual}, max={self.max}, "
+                f"description={self.description}, finished={self.finished}>")
+
     @classmethod
     def _put(cls, value: "Progress"):
         cls._queue.put(value)
 
     @classmethod
     def get_nowait(cls) -> Optional["Progress"]:
-        """Get the latest entry in the Progress queue or None if it is empty.
+        """Get the first entry in the Progress queue or None if it is empty.
 
         Returns
         -------
@@ -190,9 +187,24 @@ class Progress:
         except Empty:
             return None
 
-    def __str__(self):
-        return (f"<Progres: actual={self.actual}, max={self.max}, "
-                f"desc={self.description}>")
+    @classmethod
+    def get_actual_nowait(cls) -> Optional["Progress"]:
+        """Get the latest entry in the Progress queue or None if it is empty.
+
+        The method empties whole queue.
+
+        Returns
+        -------
+        Optional[Progress]
+            instance of the Progress class or None
+        """
+        previous = None
+        while True:
+            actual = cls.get_nowait()
+            if not actual:
+                return previous
+            else:
+                previous = actual
 
 
 class ThreadPoolProgress(Progress):
@@ -204,6 +216,9 @@ class ThreadPoolProgress(Progress):
     """
 
     _queue: "Queue[Progress]" = Queue()  # treadpool progress
+
+    def __str__(self):
+        return super().__str__().replace("Progress", "ThreadPoolProgress")
 
 
 class GuiLoggger:

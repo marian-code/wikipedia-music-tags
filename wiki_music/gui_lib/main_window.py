@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, List, Union
 
 from wiki_music.gui_lib import (Buttons, Checkers, CoverArtSearch, DataModel,
                                 RememberDir, Replacer)
-from wiki_music.gui_lib.qt_importer import QMessageBox, QProgressDialog, QTimer
+from wiki_music.gui_lib.custom_classes import ProgressBar
+from wiki_music.gui_lib.qt_importer import QMessageBox, QTimer
 from wiki_music.utilities import (
     GuiLoggger, IniSettings, Progress, exception, lrange, warning)
 
@@ -72,6 +73,30 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
             self.actionMulti_threaded.setChecked(
                 IniSettings.read("multi_threaded", True, bool))
 
+        # TODO test progressbar
+        self.test_button.clicked.connect(self.test_progress)
+
+    # TODO test progressbar
+    def test_progress(self, collect=False):
+
+        if not collect:
+            from wiki_music.utilities import ThreadPool
+            from time import sleep
+
+            def fun(time):
+                print(f"sleep {time}")
+                sleep(time)
+
+            log.debug("create threadpool")
+            t = ThreadPool(target=fun, args=[(i, ) for i in range(5)])
+            t.run()
+
+            log.debug("create progressbar")
+            self.prog = ProgressBar("Writing tags", 0, 5, self, self.test_progress, t)
+        else:
+            self.prog.threadpool.results()
+            t.results()
+
     # methods that bind to gui elements
     @exception(log)
     def _save_tags(self, selected: bool = False):
@@ -92,13 +117,10 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
             if selected:
                 indices = self.tableView.selected_rows()
             else:
-                indices = list(lrange(self._parser))  # TODO test this
+                indices = list(lrange(self._parser))
 
             # show save progress
-            self.progressShow = QProgressDialog("Writing tags", "", 0,
-                                                len(indices), self)
-            self.progressShow.setCancelButton(None)
-            self._threadpool_check()
+            self.progressShow = ProgressBar("Writing tags", 0, len(indices), self)
 
             if not self.write_tags(indices):
                 msg = ("Cannot write tags because there are no "
@@ -150,6 +172,8 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
     def _load2gui(self):
         """Load files, start preload and show in GUI."""
         self._init_progress_bar(0, 2)
+
+        self.progressShow = ProgressBar("Loading files", 0, 1, self)
 
         # TODO non-atomic
         # read files and start preload
@@ -225,10 +249,8 @@ class Window(DataModel, Checkers, Buttons, CoverArtSearch, Replacer):
         self._init_progress_bar(0, 2)
 
         # show download progress
-        self.progressShow = QProgressDialog("Downloading lyrics", "", 0,
-                                            self.number_of_tracks, self)
-        self.progressShow.setCancelButton(None)
-        self._threadpool_check()
+        self.progressShow = ProgressBar("Downloading lyrics", 0,
+                                        self.number_of_tracks, self)
 
         log.info("starting lyrics search")
 

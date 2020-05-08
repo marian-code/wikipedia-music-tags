@@ -8,7 +8,7 @@
 from wiki_music.utilities.gui_utils import get_sizes
 import logging
 import queue
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
@@ -811,7 +811,9 @@ class googleimagesdownload:
     # Bulk Download
     def download(self,arguments):
 
+        # ! added for wiki_music ##############################################
         self.__init__()
+        # ! added for wiki_music ##############################################
 
         #for input coming from other python files
         if __name__ != "__main__":
@@ -853,10 +855,11 @@ class googleimagesdownload:
         # Setting limit on number of images to be downloaded
         if arguments['limit']:
             limit = int(arguments['limit'])
-            # ! added for wiki_music ##########################################
-            self.max = limit
         else:
             limit = 100
+
+        # ! added for wiki_music ##############################################
+        self.max = limit
 
         if arguments['url']:
             current_time = str(datetime.datetime.now()).split('.')[0]

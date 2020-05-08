@@ -5,7 +5,7 @@ Lyrical Nonsense, Musixmatch, darklyrics
 """
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, Tuple
 
 import rapidfuzz.fuzz as fuzz  # lazy loaded
 
@@ -18,11 +18,11 @@ if TYPE_CHECKING:
     from wiki_music.external_libraries.lyricsfinder import LyricsManager
     from typing_extensions import TypedDict
 
-    LyrData = TypedDict("LyrData", {"track": List[int], "lyrics": str})
+    LyrData = TypedDict("LyrData", {"track": List[int], "lyrics": str,
+                                    "source_url": str})
     LyrDict = Dict[str, LyrData]
     from wiki_music.external_libraries.lyricsfinder.models.lyrics import (
         LyricsDict)
-
 
 log = logging.getLogger(__name__)
 log.debug("lyrics imports done")
@@ -31,7 +31,8 @@ __all__ = ["save_lyrics"]
 
 
 def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
-                GUI: bool, multi_threaded: bool) -> List[str]:
+                GUI: bool, multi_threaded: bool
+                ) -> Tuple[List[str], List[Union[str, None]]]:
     """Searches and downloads lyrics for each track.
 
     Does some preprocessing before it starts the lyricsfinder
@@ -68,17 +69,22 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
     -------
     List[str]
         list of track lyrics in same order as tracks list was passed in
+    List[Union[str, None]]
+        list of lyrics source urls
     """
     log.info("starting save lyrics")
 
     GOOGLE_API_KEY = GoogleApiKey.value(GUI)
 
     lyrics: List[str]
+    sources: List[Union[str, None]]
     tracks_dict: "LyrDict"
     raw_lyrics: List["LyricsDict"]
 
     lyrics = []
+    sources = []
     for i, tp in enumerate(types):
+        sources.append(None)
         for nl in NO_LYRIS:
             if caseless_equal(nl, tp):
                 lyrics.append(nl)
@@ -92,13 +98,16 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
 
     for i, (tr, lyr) in enumerate(zip(tracks, lyrics)):
 
+        # TODO might be able to use defaultdict here with custom factory
+        # defaultdict(lambda x: something...)
         if not lyr:
             for tr_k in tracks_dict.keys():
                 if fuzz.token_set_ratio(tr, tr_k, score_cutoff=90):
                     tracks_dict[tr_k]["track"].append(i)
                     break
             else:
-                tracks_dict[tr] = {"track": [i], "lyrics": ""}
+                tracks_dict[tr] = {"track": [i], "lyrics": "",
+                                   "source_url": ""}
 
     log.info("Download lyrics")
 
@@ -110,9 +119,11 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
                    args=[(manager, band, album, t, GOOGLE_API_KEY)
                          for t in tracks_dict.keys()])
     if multi_threaded:
-        raw_lyrics = t.run()
+        t.run()
     else:
-        raw_lyrics = t.run_serial()
+        t.run_serial()
+
+    raw_lyrics = t.results()
 
     log.info("Assign lyrics to tracks_dict")
 
@@ -127,12 +138,15 @@ def save_lyrics(tracks: List[str], types: List[str], band: str, album: str,
                   f"{l['artist']} - {l['title']}")
 
         tracks_dict[l["title"]]["lyrics"] = l["lyrics"]
+        tracks_dict[l["title"]]["source_url"] = l["origin"]["source_url"]
 
     for track in tracks_dict.values():
-        for t in track["track"]:
-            lyrics[t] = track["lyrics"]
+        for i in track["track"]:
+            lyrics[i] = track["lyrics"]
 
-    return lyrics
+        sources[i] = track["source_url"]
+
+    return lyrics, sources
 
 
 @exception(log)

@@ -42,8 +42,9 @@ class TagFlac(TagBase):
         """Function reading flac file to mutagen.flac.FLAC class."""
         try:
             self._song = FLAC(filename=filename)
-        except FLACNoHeaderError:
+        except FLACNoHeaderError as e:
             log.warning("Cannot read FLAC tags")
+            log.debug(e)
 
     def _read(self) -> Dict[str, Union[str, bytes]]:
 
@@ -51,7 +52,10 @@ class TagFlac(TagBase):
         for key, value in self._map_keys.items():  # pylint: disable=no-member
             try:
                 if key == "picture":
-                    tag = [self._song.pictures[0].data]
+                    try:
+                        tag = [self._song.pictures[0].data]
+                    except IndexError:
+                        raise KeyError("No cover art in file")
                 else:
                     tag = self._song.tags[key]
 

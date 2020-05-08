@@ -3,6 +3,7 @@
 import logging
 import sys
 import webbrowser  # lazy loaded
+import textwrap  # lazy loaded
 from pathlib import Path
 from threading import RLock, Thread
 from time import sleep
@@ -93,10 +94,10 @@ class GoogleApiKey:
         # ask user if he wants to get the google API key
         cls._log.debug("show api key prompt")
         if GUI:
-            a = Action("api_key", API_KEY_MESSAGE.replace("\n", " "))
+            a = Action("api_key", API_KEY_MESSAGE)
             inpt = a.response
         else:
-            print(API_KEY_MESSAGE)
+            print(textwrap.fill(API_KEY_MESSAGE, width=70))
             inpt = limited_input(dont_bother=True)
 
         if inpt == "d":
@@ -237,11 +238,10 @@ class NLTK(metaclass=_NltkMeta):
         if not nltk_downloaded:
 
             if cls._GUI:
-                a = Action("nltk_data",
-                           NLTK_DOWNLOAD_MESSAGE.replace("\n", " "))
+                a = Action("nltk_data", NLTK_DOWNLOAD_MESSAGE)
                 inpt = a.response
             else:
-                print(NLTK_DOWNLOAD_MESSAGE)
+                print(textwrap.fill(NLTK_DOWNLOAD_MESSAGE, width=70))
                 inpt = limited_input(dont_bother=True)
 
             if inpt == "d":

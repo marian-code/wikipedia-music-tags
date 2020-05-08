@@ -24,17 +24,16 @@ COVER_ART_SEARCH_UI: str = str(module_path() / "ui" / "CoverArtSearch.ui")
 COVER_ART_EDIT_UI: str = str(module_path() / "ui" / "CoverArtEdit.ui")
 #: description text for google api key getting
 API_KEY_MESSAGE: str = (
-    "To enhance lyrics searching capabilities Wiki Music uses google\n"
-    "custom search. To use it you have to get your own API key. It is\n"
-    "recomended but not necessary. You will be redirected to page in\n"
-    "browser where you will log in with your google account and create\n"
-    "a new project. After that go to the API section, search for\n"
-    "Custom Search API and enable it. Finally go to credentials\n"
-    "section and create new API key.\n"
+    "To enhance lyrics searching capabilities Wiki Music uses googlecustom "
+    "search. To use it you have to get your own API key. It is recomended but "
+    "not necessary. You will be redirected to page in browser where you will "
+    "log in with your google account and create a new project. After that go "
+    "to the API section, search for Custom Search API and enable it. Finally "
+    "go to credentials section and create new API key."
 )
 #: message to show before nltk download
 NLTK_DOWNLOAD_MESSAGE: str = (
-    "\nThe package requires downloading of NLTK data to function to its\n"
-    "full potential. It will work without the data, but the extraction\n"
-    "will not be as effective. Final size is ~32MB.\n"
+    "The package requires downloading of NLTK data to function to its full "
+    "potential. It will work without the data, but the extraction will not be "
+    "as effective. Final size is ~32MB."
 )

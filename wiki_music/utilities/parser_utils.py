@@ -4,7 +4,8 @@ import collections  # lazy loaded
 import logging
 import sys
 import time  # lazy loaded
-from threading import Thread, Lock
+from threading import Thread
+from queue import Queue, Empty
 from time import sleep
 from typing import (TYPE_CHECKING, Any, Callable, Dict, Generator, List,
                     Optional, Tuple, Union, Generator)
@@ -25,7 +26,7 @@ log = logging.getLogger(__name__)
 __all__ = ["ThreadWithTrace", "bracket", "write_roman", "normalize",
            "normalize_caseless", "caseless_equal", "caseless_contains",
            "count_spaces", "json_dump", "complete_N_dim",
-           "delete_N_dim", "ThreadPool", "ThreadWithReturn"]
+           "delete_N_dim", "ThreadPool"]
 
 
 class ThreadWithTrace(Thread):
@@ -130,10 +131,6 @@ class ThreadPool:
         callable that each thread should run
     args: List[tuple]
         each tuple in list contains args for one thread running target
-
-    See Also
-    --------
-    :class:`ThreadWithReturn`
     """
 
     def __init__(self, target: Callable[..., list] = lambda *args: [],
@@ -143,12 +140,28 @@ class ThreadPool:
         self._target = target
 
         # progress inform variables
-        self._completed = 0
-        self._maximum = len(self._args)
-        self._lock = Lock()
+        self._N_threads = len(self._args)
 
-    def _progress_tracker(self, *args, **kwargs):
-        """Wrap the passed in callable and report progress to GUI.
+        # return values
+        self._returns: Queue = Queue()
+
+    def results(self) -> list:
+
+        return_list: List[Tuple[int, list]] = []
+        while self._returns.qsize() < self._N_threads:
+            sleep(0.1)
+
+        while len(return_list) < self._N_threads:
+            try:
+                return_list.append(self._returns.get_nowait())
+            except Empty:
+                sleep(0.1)
+
+        # first item is thread index second is return value of that thread
+        return [i[1] for i in sorted(return_list, key=lambda x: x[0])]
+
+    def _progress_tracker(self, index, *args, **kwargs):
+        """Wrap the callable passed to class constructor and report progress.
 
         Parameters
         ----------
@@ -159,22 +172,26 @@ class ThreadPool:
         """
         response = self._target(*args, **kwargs)
 
-        with self._lock:
-            self._completed += 1
+        self._returns.put((index, response), block=True)
 
-        ThreadPoolProgress(actual=self._completed, maximum=self._maximum)
+        ThreadPoolProgress(actual=self._returns.qsize(),
+                           maximum=self._N_threads)
 
-        return response
-
-    def run(self, timeout: Optional[float] = 60, serial: bool = False) -> list:
+    def run(self, timeout: Optional[float] = 60, serial: bool = False):
         """Starts the execution of threads in pool.
 
         Returns after all threads join() metod has returned.
+
+        Note
+        ----
+        To get the result :meth:`results` must be called
 
         See also
         --------
         :class:`wiki_music.utilities.sync.ThreadPoolProgress`
             inform GUI of threadpool progress
+        :meth:`results`
+            holds results values from threadpool
 
         Parameters
         ----------
@@ -182,48 +199,41 @@ class ThreadPool:
             timeout after which waiting for results will be abandoned
         serial: bool
             run threadpool in orderly fasion, mainly for debugging
-
-        Returns
-        -------
-        list
-            list of returned values from the functions run by the ThreadPool
         """
-        if serial:
-            return self.run_serial()
+        if serial or self._N_threads == 1:
+            self.run_serial()
 
-        N_threads = len(self._args)
+        threads: List[Thread] = []
 
-        if N_threads == 1:
-            return self.run_serial()
-        else:
-            threads: List[ThreadWithReturn] = []
+        log.debug("spawn threadpool threads")
 
-            for i, a in enumerate(self._args):
-                threads.append(ThreadWithReturn(target=self._progress_tracker,
-                                                args=a, daemon=True,
-                                                name=f"ThreadPoolWorker-{i}"))
-                threads[-1].start()
+        for i, a in enumerate(self._args):
+            # add thread index as the first argument
+            a = (i, ) + a
+            threads.append(Thread(target=self._progress_tracker, args=a,
+                                  daemon=True, name=f"ThreadPoolWorker-{i}"))
+            threads[-1].start()
 
-            for i, l in enumerate(threads):
-                threads[i] = l.join(timeout=timeout)
+        log.debug("threadpool is running")
 
-            return threads
-
-    def run_serial(self) -> list:
+    def run_serial(self):
         """Starts the execution of threads in pool in serial fasion.
+
+        Note
+        ----
+        To get the result :meth:`results` must be called
 
         See also
         --------
         :class:`wiki_music.utilities.sync.ThreadPoolProgress`
             inform GUI of threadpool progress
-
-        Returns
-        -------
-        list
-            list of returned values from the functions run by the ThreadPool
+        :meth:`results`
+            holds results values from threadpool
         """
-        return [self._progress_tracker(*a) for a in self._args]
+        for i, a in enumerate(self._args):
+            self._progress_tracker(i, *a)
 
+    # TODO this is executed wrong, see run method
     def run_async(self, timeout: Optional[float] = 60
                   ) -> Generator[Any, None, None]:
         """Starts the execution of threads in pool. Returns asynchronously.

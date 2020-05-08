@@ -10,7 +10,7 @@ from wiki_music.gui_lib.qt_importer import (QImage, QLabel, QPixmap, Property,
 
 __all__ = ["CustomQStandardItem", "ImageItem"]
 
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class CustomQStandardItem(QStandardItem):
@@ -66,8 +66,14 @@ class CustomQStandardItem(QStandardItem):
                     pass
                 else:
                     path = Path(self._filtered)
-                    if path.is_file():
-                        self._filtered = path.name
+                    try:
+                        if path.is_file():
+                            self._filtered = path.name
+                    except OSError as e:
+                        log.warning(e)
+                        # sometimes throws OSError
+                        # when invalid path characters are present
+                        pass
 
             return self._filtered
 

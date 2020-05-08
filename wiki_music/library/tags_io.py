@@ -28,7 +28,7 @@ def _name2tag(song_file: Path) -> str:
     Possible formats (questionmarks show possible spaces):
     1?.?SONGNAME - simple tracknumber
     1?-?SONGNAME
-    B1?.?SONGNAME - vynil side letter with tracknnumber
+    B1?.?SONGNAME - vinyl side letter with tracknnumber
     B1?-?SONGNAME
 
     Parameters
@@ -81,10 +81,12 @@ def write_tags(data: "SongDict"):
         if isinstance(data["ARTIST"], list):
             data["ARTIST"].append(data["ALBUMARTIST"])
         elif isinstance(data["ARTIST"], str):
+            # if the Artist field is not empty
             if data["ARTIST"].strip():
                 data["ARTIST"] = [data["ALBUMARTIST"], data["ARTIST"]]
+            # if it is empty
             else:
-                data["ARTIST"] = data["ALBUMARTIST"]
+                data["ARTIST"] = [data["ALBUMARTIST"]]
         else:
             raise NotImplementedError("Unsupported data type for "
                                       "ARTIST tag")

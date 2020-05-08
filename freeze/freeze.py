@@ -11,20 +11,15 @@ from zipfile import ZipFile
 
 import PyInstaller
 import PyInstaller.__main__
-
-if float(PyInstaller.__version__[0]) >= 4:
-    from PyInstaller.depend.imphook import ModuleHook  # pylint: disable=no-name-in-module, import-error
-else:
-    from PyInstaller.building.imphook import ModuleHook
-
+from PyInstaller.depend.imphook import ModuleHook
 
 # constants
-WORK_DIR = Path(".")
+WORK_DIR = Path(__file__).parent.resolve()
 PACKAGE_PATH = WORK_DIR.parent
 WIKI_MUSIC = PACKAGE_PATH / 'wiki_music'
 HOOKS_DIR = WORK_DIR / "custom_hooks"
 
-PATCH_HOOKS = [f for h in HOOKS_DIR.glob("*.py") if f.name != "__init__.py"]
+PATCH_HOOKS = [h for h in HOOKS_DIR.glob("*.py") if h.name != "__init__.py"]
 
 patched: Set[str] = set()
 
@@ -38,7 +33,7 @@ def patched_load_hook_module(self):
             print(f"patching hook: --> {self.hook_filename}\n"
                   f"               <-- {p}")
 
-            self.hook_filename = p
+            self.hook_filename = str(p.resolve())
             patched.add(p.name)
             break
 
@@ -50,7 +45,7 @@ def input_parser():
     parser = argparse.ArgumentParser(description="script to build freezed app")
     parser.add_argument("mode", type=str, help="choose CLI/GUI build mode",
                         choices=["gui", "cli", "all"])
-    parser.add_argument("-p", "--package", type=bool, action="store_true",
+    parser.add_argument("-p", "--package", action="store_true",
                         help="package to zip for release", default=False)
     args = parser.parse_args()
 
@@ -118,9 +113,8 @@ def build(mode: str, installer_opt: List[str], exclude_libs: List[str],
         installer_opt.extend([
             "--distpath=gdist",
             "--windowed",
-            f"--add-data={(WIKI_MUSIC / 'data')};data",
-            f"--add-data={(WIKI_MUSIC / 'ui')};ui",
-            f"{(WIKI_MUSIC / 'app_gui.py')}"
+            f"--add-data={str((WIKI_MUSIC / 'ui').resolve())};ui",
+            f"{str((WIKI_MUSIC / 'app_gui.py').resolve())}"
         ])
     else:
         build_path = WORK_DIR / "cdist" / "wiki_music"
@@ -129,7 +123,7 @@ def build(mode: str, installer_opt: List[str], exclude_libs: List[str],
         installer_opt.extend([
             "--distpath=cdist",
             "--console",
-            f"{(WIKI_MUSIC / 'app_cli.py')}"
+            f"{str((WIKI_MUSIC / 'app_cli.py').resolve())}"
         ])
         exclude_libs.append("PyQt5")
         exclude_libs.append("distutils")
@@ -144,96 +138,102 @@ def build(mode: str, installer_opt: List[str], exclude_libs: List[str],
     PyInstaller.__main__.run(installer_opt)
 
     # package files for release
-    with ZipFile(zip_file, "w") as zf:
-        for f in build_path.rglob("*"):
-            zf.write(f)
+    if package:
+        with ZipFile(zip_file, "w") as zf:
+            for f in build_path.rglob("*"):
+                zf.write(f)
 
 
-# get build mode and packaging choice
-mode, package = input_parser()
+if __name__ == "__main__":
+    # get build mode and packaging choice
+    mode, package = input_parser()
 
-# clear build paths
-clear_path(mode)
+    # clear build paths
+    clear_path(mode)
 
-# setup loggers
-set_loggers()
+    # setup loggers
+    set_loggers()
 
-# monkey patch hooks
-original_load_hook_module = ModuleHook._load_hook_module
-ModuleHook._load_hook_module = patched_load_hook_module
+    # monkey patch hooks
+    original_load_hook_module = ModuleHook._load_hook_module
+    ModuleHook._load_hook_module = patched_load_hook_module
 
-# ordered by size
-exclude_libs = [
-    "tcl",
-    "tk",
-    "setuptools",
-    "pydoc_data",
-    "pkg_resources",
-    "lib2to3",
-    "tkinter",
-    "multiprocessing",
-    "concurrent",
-    "xmlrpc",
-    "pywin",
-    "Include",
-    "curses",
-    # "html",  needed by wikipedia
-    # "soupsieve",  needed by wikipedia
-    # "chardet",  needed by wikipedia
-    # "email",  needed by wikipedia
-    # "idna",  needed by wikipediaň
-    # "http",  needed by wikipedia
-    # "xml", needed by nltk
-    # "unittest", needed by nltk
-    # "sqlite3", needed by nltk
-]
+    # ordered by size
+    EXCLUDE_LIBS = [
+        "tcl",
+        "tk",
+        "setuptools",
+        "pydoc_data",
+        "pkg_resources",
+        "lib2to3",
+        "tkinter",
+        "multiprocessing",
+        "concurrent",
+        "xmlrpc",
+        "pywin",
+        "Include",
+        "curses",
+        # "html",  needed by wikipedia
+        # "soupsieve",  needed by wikipedia
+        # "chardet",  needed by wikipedia
+        # "email",  needed by wikipedia
+        # "idna",  needed by wikipediaň
+        # "http",  needed by wikipedia
+        # "xml", needed by nltk
+        # "unittest", needed by nltk
+        # "sqlite3", needed by nltk
+    ]
 
-# common installer options
-installer_opt = [
-    # ? constnts build options
-    "--clean",
-    "--noconfirm",
-    # "--version-file=<FILE>",
+    # common installer options
+    INSTALLER_OPT = [
+        # ? constant build options
+        "--clean",
+        "--noconfirm",
+        # "--version-file=<FILE>",
 
-    # ? debbugging options
-    # "--debug=bootloader",
-    # "--debug=all",
-    # "--debug=noarchive",
+        # ? debbugging options
+        # "--debug=bootloader",
+        # "--debug=all",
+        # "--debug=noarchive",
 
-    # ? upx options
-    "--noupx",
-    "--upx-exclude=vcruntime140.dll",
-    "--upx-exclude=msvcp140.dll",
-    "--upx-exclude=qwindows.dll",
-    "--upx-exclude=qwindowsvistastyle.dll",
-    f"--upx-dir={(WORK_DIR / 'upx')}",
+        # ? upx options
+        "--noupx",
+        "--upx-exclude=vcruntime140.dll",
+        "--upx-exclude=msvcp140.dll",
+        "--upx-exclude=qwindows.dll",
+        "--upx-exclude=qwindowsvistastyle.dll",
+        f"--upx-dir={(WORK_DIR / 'upx')}",
 
-    # ? pyinstaller data paths and hooks
-    f"--paths={PACKAGE_PATH}",
-    f"--add-data={(WIKI_MUSIC / 'files')};files",
-    f"--icon={(WIKI_MUSIC / 'files' / 'icon.ico')}",
-    f"--specpath={WORK_DIR}",
-    "--additional-hooks-dir=hooks",
-    f"--runtime-hook={(WORK_DIR / 'rhooks' / 'pyi_rth_nltk.py')}",
+        # ? pyinstaller data paths and hooks
+        f"--paths={PACKAGE_PATH}",
+        f"--add-data={(WIKI_MUSIC / 'files')};files",
+        f"--add-data={(WIKI_MUSIC / 'icons')};icons",
+        f"--icon={(WIKI_MUSIC / 'files' / 'icon.ico')}",
+        f"--specpath={WORK_DIR}",
+        "--additional-hooks-dir=hooks",
+        f"--runtime-hook={(WORK_DIR / 'rhooks' / 'pyi_rth_nltk.py')}",
 
-    # ? what to build
-    "--onedir",
-    # "--onefile",
-    "--name=wiki_music",
-]
+        # ? what to build
+        "--onedir",
+        # "--onefile",
+        "--name=wiki_music",
+    ]
 
-# run build
-if mode in ("CLI", "GUI"):
-    build(mode, installer_opt, exclude_libs, package)
-elif mode == "ALL":
-    gui = Process(target=build, name="GUI", daemon=True,
-                  args=("GUI", installer_opt, exclude_libs, package))
-    cli = Process(target=build, name="CLI", daemon=True,
-                  args=("GUI", installer_opt, exclude_libs, package))
+    # run build
+    if mode in ("CLI", "GUI"):
+        build(mode, INSTALLER_OPT, EXCLUDE_LIBS, package)
+    elif mode == "ALL":
+        gui = Process(target=build, name="GUI", daemon=True,
+                      args=("GUI", INSTALLER_OPT, EXCLUDE_LIBS, package))
+        cli = Process(target=build, name="CLI", daemon=True,
+                      args=("GUI", INSTALLER_OPT, EXCLUDE_LIBS, package))
 
-    cli.join()
-    gui.join()
+        gui.start()
+        cli.start()
 
-# remove *.pyo bytecompiled files
-for f in PACKAGE_PATH.rglob("*.pyo"):
-    f.unlink()
+        cli.join()
+        gui.join()
+
+    # remove *.pyo bytecompiled files
+    for f in PACKAGE_PATH.rglob("*.pyo"):
+        f.unlink()

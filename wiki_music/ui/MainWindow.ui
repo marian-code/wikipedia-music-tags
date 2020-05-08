@@ -239,13 +239,29 @@
              <string>Input</string>
             </property>
             <layout class="QGridLayout" name="input_grid">
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="band_entry_input"/>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item row="1" column="2">
+              <widget class="QLineEdit" name="album_entry_input">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+              </widget>
              </item>
-             <item row="0" column="1">
-              <widget class="QLabel" name="label">
-               <property name="text">
-                <string>Input Artist</string>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="band_entry_input">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
                </property>
               </widget>
              </item>
@@ -256,8 +272,12 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
-              <widget class="QLineEdit" name="album_entry_input"/>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label">
+               <property name="text">
+                <string>Input Artist</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -274,6 +294,12 @@
              <string>Common Tags</string>
             </property>
             <layout class="QGridLayout" name="common_tags_grid">
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
              <item row="0" column="0">
               <widget class="QLabel" name="label_3">
                <property name="text">
@@ -303,16 +329,47 @@
               </widget>
              </item>
              <item row="1" column="0">
-              <widget class="QLineEdit" name="band_entry"/>
+              <widget class="QLineEdit" name="band_entry">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+              </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QLineEdit" name="album_entry"/>
+              <widget class="QLineEdit" name="album_entry">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+              </widget>
              </item>
              <item row="1" column="2">
-              <widget class="QLineEdit" name="year_entry"/>
+              <widget class="QLineEdit" name="year_entry">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
              </item>
              <item row="1" column="3">
-              <widget class="QLineEdit" name="genre_entry"/>
+              <widget class="QLineEdit" name="genre_entry">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -545,6 +602,19 @@
          </rect>
         </property>
        </widget>
+       <widget class="QPushButton" name="test_button">
+        <property name="geometry">
+         <rect>
+          <x>810</x>
+          <y>40</y>
+          <width>75</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>PushButton</string>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>
@@ -663,7 +733,7 @@
      <x>0</x>
      <y>0</y>
      <width>1401</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -681,7 +751,7 @@
      <string>Open</string>
     </property>
     <addaction name="actionDirectory"/>
-    <addaction name="actionWikipedia"/>
+    <addaction name="actionOpenWiki"/>
     <addaction name="actionCover_Art_search"/>
     <addaction name="actionMp3_Tag"/>
    </widget>
@@ -705,7 +775,7 @@
     <property name="title">
      <string>Search</string>
     </property>
-    <addaction name="actionWikipedia_2"/>
+    <addaction name="actionSearchWiki"/>
     <addaction name="actionLyrics"/>
     <addaction name="actionCoverArt"/>
    </widget>
@@ -786,7 +856,7 @@
     <string>Directory</string>
    </property>
   </action>
-  <action name="actionWikipedia">
+  <action name="actionOpenWiki">
    <property name="icon">
     <iconset resource="../icons/tango.qrc">
      <normaloff>:/icons/tango/16x16/applications-internet</normaloff>:/icons/tango/16x16/applications-internet</iconset>
@@ -845,7 +915,7 @@
     <string>Version</string>
    </property>
   </action>
-  <action name="actionWikipedia_2">
+  <action name="actionSearchWiki">
    <property name="icon">
     <iconset resource="../icons/tango.qrc">
      <normaloff>:/icons/tango/16x16/system-search</normaloff>:/icons/tango/16x16/system-search</iconset>

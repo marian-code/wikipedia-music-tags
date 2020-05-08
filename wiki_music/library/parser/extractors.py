@@ -46,9 +46,15 @@ class DataExtractors:
         data_collect = []
         for table in tables:
 
+            # we accept only tbody tags in the table, don't extract from others
+            if table.name != "tbody":
+                log.debug(f"Coundn't extract table from tag: '{table.name}'")
+                continue
+
             # preinit list of lists
             rows = table.findAll("tr")
             row_lengths = [len(r.findAll(['th', 'td'])) for r in rows]
+
             ncols = max(row_lengths)
             nrows = len(rows)
             data = []

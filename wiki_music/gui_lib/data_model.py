@@ -154,7 +154,7 @@ class ParserInteract(BaseGui):
 
     @property
     def offline_debug(self) -> bool:
-        """Toogle offline debugging mmode for parser.
+        """Toogle offline debugging mode for parser.
 
         See also
         --------
@@ -167,6 +167,23 @@ class ParserInteract(BaseGui):
 
     @offline_debug.setter
     def offline_debug(self, value: bool):
+        self._parser.offline_debug = value
+
+    @property
+    def multi_threaded(self) -> bool:
+        """Toogle multi threaded mode for parser.
+
+        See also
+        --------
+        :attr:`wiki_music.library.parser.preload.WikiCooker.multi_threaded`
+            parser attribute tied to this property
+
+        :type: bool
+        """
+        return self._parser.multi_threaded
+
+    @multi_threaded.setter
+    def multi_threaded(self, value: bool):
         self._parser.offline_debug = value
 
     @property  # type: ignore
@@ -422,7 +439,7 @@ class DataModel(ParserInteract):
         if self.cover_art:
             self.cover_art.update_pixmap(self.COVERART)
         else:
-            self.cover_art = ResizablePixmap(self.COVERART, stretch=False)
+            self.cover_art = ResizablePixmap(self.COVERART, stretch=True)
             self.picture_layout.addWidget(self.cover_art)
 
     @exception(log)

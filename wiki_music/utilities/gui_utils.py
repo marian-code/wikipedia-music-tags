@@ -5,15 +5,19 @@ import logging
 import sys
 import urllib  # lazy loaded
 import winreg  # lazy loaded
+from http.client import HTTPException
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import TYPE_CHECKING, BinaryIO, Optional, Tuple, Union, cast
 
 import requests  # lazy loaded
 from PIL import Image, ImageFile  # lazy loaded
 
 from wiki_music.constants.paths import FILES_DIR
 
-logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from http.client import HTTPResponse
+
+log = logging.getLogger(__name__)
 
 # TODO meditate on including clipboard interaction
 # import win32clipboard  # lazy loaded
@@ -230,29 +234,38 @@ def get_sizes(uri: Union[str, Path]
         if the size can be obtained result is a tuple with picture size in Kb
         and dimensions tuple as a second element
     """
-    try:
-        if isinstance(uri, Path):
-            # TODO not working somehow, this is for load coverart from disk
-            fl = uri.open("r")
+    # type anotation for fileobject
+    file_object: Union["HTTPResponse", BinaryIO]
+
+    if isinstance(uri, Path):
+        try:
+            file_object = uri.open("rb")
             size = uri.stat().st_size
+        except FileNotFoundError as e:
+            log.exception(f"Couldn't open cover art from disk -> {e}")
+            return None, None
+    else:
+        try:
+            file_object = urllib.request.urlopen(uri)
+            size = file_object.headers.get("content-length")
+        except HTTPException as e:
+            log.exception(f"Couldn't open cover art from url -> {e}")
+            return None, None
+
+    if size:
+        size = int(size)
+
+    p = ImageFile.Parser()
+    while True:
+        data = file_object.read(1024)
+        # if no data was recieved break out of the loop, without getting dims
+        if not data:
+            break
         else:
-            fl = urllib.request.urlopen(uri)
-            size = fl.headers.get("content-length")
-
-        if size:
-            size = int(size)
-
-        p = ImageFile.Parser()
-        while True:
-            data = fl.read(1024)
-            if not data:
-                break
             p.feed(data)
             if p.image:
                 return size, p.image.size
 
-        fl.close()
+    file_object.close()
 
-        return size, None
-    except Exception:
-        return None, None
+    return size, None

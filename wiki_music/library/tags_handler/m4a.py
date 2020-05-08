@@ -41,8 +41,9 @@ class TagM4a(TagBase):
         """Function reading m4a file to mutagen.mp4.MP4 class."""
         try:
             self._song = MP4(filename=filename)
-        except MP4MetadataError:
+        except MP4MetadataError as e:
             log.warning("Cannot read MP4 tags")
+            log.debug(e)
 
     def _read(self) -> Dict[str, Union[str, bytes]]:
 

@@ -183,7 +183,7 @@ write
 
     import <your_theme_file_name>
 
-After that all icon set in QtDesigner will apper in GUI.
+After that all icons set in QtDesigner will apper in GUI.
 
 Creating virtual environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

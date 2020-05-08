@@ -1,15 +1,20 @@
 """Helper GUI Qt dependent functions and classes."""
 
 import logging
+from typing import Tuple, Callable, TYPE_CHECKING, Optional, Any
 
-from typing import Tuple
+from wiki_music.gui_lib.qt_importer import (QFileDialog, QProgressDialog, Qt,
+                                            QTimer)
+from wiki_music.utilities import (IniSettings, ThreadPoolProgress,
+                                  get_music_path)
 
-from wiki_music.utilities import IniSettings, get_music_path
-from wiki_music.gui_lib.qt_importer import QFileDialog
+if TYPE_CHECKING:
+    from wiki_music.gui_lib.qt_importer import QWidget
+    from wiki_music.utilities import ThreadPool
 
-__all__ = ["RememberDir"]
+__all__ = ["RememberDir", "ProgressBar"]
 
-logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class RememberDir:
@@ -67,3 +72,72 @@ class RememberDir:
         """On context exit try to save opened directory to file."""
         if self._start_dir:
             IniSettings.write("last_opened_dir", self._start_dir)
+
+
+class ProgressBar:
+    """Class controling GUI progressbar and pooling threadpool for progress.
+
+    Parameters
+    ----------
+    dialog_name: str
+        name of the progressbar dialog
+    minimum: int
+        minimum progressbar value
+    maximum: int
+        maximum progressbar value
+    parent: QWidget
+        parent object reference for centering,
+        this should be Qapplication instance
+    run_me_later: Optional[Callable[..., Any]]
+        callable that should be executed after treadpool is finished,
+        it will be called with one keyword argument: collect=True
+    thread_pool: Optional["ThreadPool"]
+        reference to the underlying threadpool
+    """
+
+    def __init__(self, dialog_name: str, minimum: int, maximum: int,
+                 parent: "QWidget",
+                 run_me_later: Optional[Callable[..., Any]] = None,
+                 thread_pool: Optional["ThreadPool"] = None) -> None:
+
+        # setup timers
+        self._setup_timer()
+
+        # keep reference to threadpool and function to be continued
+        self.threadpool = thread_pool
+        self._run_me_later = run_me_later
+
+        log.debug("create progressbar")
+
+        # create progressbar
+        self._progress_dialog = QProgressDialog(dialog_name, "", minimum,
+                                                maximum, parent)
+        self._progress_dialog.setMinimumDuration(0)
+        self._progress_dialog.setWindowTitle(dialog_name)
+        self._progress_dialog.setCancelButton(None)
+
+        # start reading threadpool progress
+        self._threadpool_check()
+
+    def _setup_timer(self):
+
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._threadpool_check)
+        self._timer.setSingleShot(True)
+        self._timer.setTimerType(Qt.PreciseTimer)
+
+    def _threadpool_check(self):
+
+        progress = ThreadPoolProgress.get_actual_nowait()
+
+        if progress:
+            self._progress_dialog.setValue(progress.actual)
+            self._progress_dialog.setMaximum(progress.max)
+
+            if progress.actual == progress.max or progress.finished:
+                self._progress_dialog.cancel()
+                if self._run_me_later:
+                    self._run_me_later(collect=True)
+                return
+
+        self._timer.start(10)

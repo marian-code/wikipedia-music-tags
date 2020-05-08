@@ -43,8 +43,9 @@ class TagMp3(TagBase):
         """Function reading mp3 file to mutagen.id3.ID3 class."""
         try:
             self._song = ID3(filename=filename)
-        except ID3NoHeaderError:
+        except ID3NoHeaderError as e:
             log.warning("Cannot read Mp3 tags")
+            log.debug(e)
 
     @staticmethod
     def _key2str(key):

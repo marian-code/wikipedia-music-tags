@@ -1,20 +1,21 @@
 """Module with parser inpu-output methods."""
 
-from itertools import product, filterfalse, combinations  # lazy loaded
 import logging
 import pickle  # lazy loaded
 from abc import abstractmethod
+from collections import UserList
+from itertools import combinations, filterfalse, product  # lazy loaded
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Tuple, Union
 
 import rapidfuzz.fuzz as fuzz  # lazy loaded
 import rapidfuzz.process as process  # lazy loaded
 
 from wiki_music.constants import (EXTENDED_TAGS, GREEN, LBLUE, LGREEN,
                                   OUTPUT_FOLDER, RESET, YELLOW)
-from wiki_music.utilities import (ThreadPool, bracket, count_spaces,
-                                  list_files, win_naming_convetion,
-                                  write_roman, json_dump, lrange)
+from wiki_music.utilities import (
+    ThreadPool, bracket, count_spaces, exception, json_dump, list_files,
+    lrange, win_naming_convetion, write_roman)
 
 from ..lyrics import save_lyrics
 from ..tags_io import read_tags, write_tags
@@ -54,6 +55,7 @@ class ParserInOut(ParserBase):
 
     _page: "WikiPage"
     _soup: "Bs4Soup"
+    _lyric_sources: List[Union[str, None]]
 
     def __init__(self, protected_vars):
 
@@ -114,28 +116,71 @@ class ParserInOut(ParserBase):
 
         return self._debug_folder
 
+    @exception(log)
     def _reassign_files(self):
         """Search current working directory and assign files to tracks."""
+        class FifoList(UserList):
 
-        # TODO untested !!!!
-        class FilesList(list):
+            class FirstEntry:
 
-            def get(self, key: str) -> Union[str, int]:
-                """Always return the first element."""
-                return self[0][key]
+                def __init__(self, index: int,
+                             list_reference: List[dict]) -> None:
+                    self.index: int = index
+                    self.file: Path = list_reference[0]["file"]
+                    self.score: int = list_reference[0]["score"]
+                    self._list_reference = list_reference
 
-        class FifoList(list):
+                def popleft(self) -> None:
+                    self._list_reference.pop(0)
 
-            def __init__(self, work_dir: Path) -> None:
+            class FilesList(UserList):
+
+                def get(self, key: str) -> Union[str, int]:
+                    """Always return the first element."""
+                    return self.data[0][key]
+
+            def __init__(self, base_dir: Path) -> None:
                 super().__init__()
-                self.work_dir = work_dir
+                self.base_dir = base_dir
+
+            def iter_pair_combinations(self) -> Generator[Tuple["FirstEntry",
+                                                                "FirstEntry"],
+                                                          None, None]:
+                for i, j in combinations(lrange(self), 2):
+                    try:
+                        print(self.data)
+                        yield (self.FirstEntry(i, self.data),
+                               self.FirstEntry(j, self.data))
+                    except StopIteration:
+                        return
 
             def put(self, scored_files: List[Tuple[str, int]]):
                 """Convert list of tuples to list of dicts and append."""
-                self.append(FilesList([{"file": self.work_dir / s[0],
-                                        "score": s[1]}
-                                       for s in scored_files]))
+                self.data.append(
+                    self.FilesList([{"file": self.base_dir / s[0],
+                                     "score": s[1]} for s in scored_files]))
 
+            def cut_to_lenght(self, entries_to_cut: int):
+                # sort indices based on first file score
+                indices = file_map._indices_sorted_by_score
+
+                # keep only number of best indices coresponding
+                # to number of tracks
+                indices = indices[:entries_to_cut]
+
+                # keep the best matching files, reassign the rest to None
+                for i in lrange(self.data):
+                    if i not in indices:
+                        self.data[i] = {"file": None, "score": 0}
+
+            @property
+            def _indices_sorted_by_score(self):
+                indices = [i for i in lrange(file_map)]
+
+                return [i for i, _ in sorted(zip(indices, self),
+                                             key=lambda x: x[1].get("score"),
+                                             reverse=True)]
+            
         disk_files = list_files(self.work_dir)
 
         if not self._tracks:
@@ -155,36 +200,34 @@ class ParserInOut(ParserBase):
         # TODO untested !!!!
         # new file assignment
         file_map = FifoList(self.work_dir)
-        limit = int(len(disk_files) / 2)
+        limit = int(len(disk_files) / 2) + 1
         for tr, tp in zip(self._tracks, self._types):
             # for each track select best matching files
-            file_map.put(process.extractBests(wnc(f"{tr} {tp}"),
-                                              [f.name for f in disk_files],
-                                              scorer=fuzz.token_set_ratio,
-                                              limit=limit))
+            file_map.put(process.extractBests(
+                wnc(f"{tr} {tp}"),
+                [str(f.relative_to(self.work_dir).resolve())
+                 for f in disk_files],
+                scorer=fuzz.token_set_ratio,
+                limit=limit))
 
-        # ! does not work deletes all matches fromn file map
         # if there are more tracks than files
         len_diff = len(disk_files) - len(self._tracks)
         if len_diff < 0:
             indices = [i for i in lrange(file_map)]
-            print(indices)
+
             # sort indices based on first file score
             indices = [i for i, _ in sorted(zip(indices, file_map),
-                                            key=lambda x: x[1].get("score"))]
-            print(indices)
-            # keep only number of best indices coresponding to number of
-            # tracks
+                                            key=lambda x: x[1].get("score"),
+                                            reverse=True)]
+
+            # keep only number of best indices coresponding
+            # to number of tracks
             indices = indices[:len_diff]
-            print(indices)
 
             # keep the best matching files, reassign the rest to None
             for i in lrange(file_map):
                 if i not in indices:
                     file_map[i] = {"file": None, "score": 0}
-
-        print("-----------------------------------")
-        print(file_map)
 
         # if lengths are equal but two tacks have same files
         for i, j in combinations(lrange(file_map), 2):
@@ -448,11 +491,13 @@ class ParserInOut(ParserBase):
             function that handles lyrics finding and saving
         """
         if find:
-            self._lyrics = save_lyrics(self._tracks, self._types, self._band,
-                                       self._album, self._GUI,
-                                       self.multi_threaded)
+            self._lyrics, self._lyric_sources = save_lyrics(
+                self._tracks, self._types, self._band, self._album, self._GUI,
+                self.multi_threaded
+            )
         else:
             self._lyrics = [""] * len(self)
+            self._lyric_sources = [None] * len(self)  # TODO lyric sources
 
     def read_files(self):
         """Read tags from files in working directory.
@@ -466,9 +511,13 @@ class ParserInOut(ParserBase):
         self.reinit(protected_vars=False)
 
         t = ThreadPool(read_tags, [(f, ) for f in self.files])
+        if self.multi_threaded:
+            t.run()
+        else:
+            t.run_serial()
 
         # read tags
-        for tag in t.run(serial=not self.multi_threaded):
+        for tag in t.results():
 
             for key, value in tag.items():
 

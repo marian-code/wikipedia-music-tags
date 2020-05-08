@@ -9,7 +9,8 @@ __all__ = ["NoTracklistException", "NoReleaseDateException",
            "NoNames2ExtractException", "NoContentsException",
            "NoPersonnelException", "Mp3tagNotFoundException",
            "NltkUnavailableException", "TagReadException",
-           "TagSaveException", "ExceptionBase", "UnsupportedFileType"]
+           "TagSaveException", "ExceptionBase", "UnsupportedFileType",
+           "ImageDecodeError"]
 
 
 class _ExceptionCollect(type):
@@ -105,3 +106,9 @@ class UnsupportedFileType(ExceptionBase):
     """Raised when wiki_music cannot handle tags for given file type."""
 
     name: str = "UnsupportedFileType"
+
+
+class ImageDecodeError(ExceptionBase):
+    """Raised when wiki_music cannot get image dimensions and/or size."""
+
+    name: str = "ImageDecodeError"

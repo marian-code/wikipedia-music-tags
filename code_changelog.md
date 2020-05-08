@@ -2,28 +2,45 @@
 
 ### Main problems ordered by targeted release
 - 0.7a0
+  - handle name permutations like: Anthony Lucassen Arjen, Arjen Anthony Lucassen
+  - probably encoding problem when downloading lyrics
+  - treadpool progressbar is not showing or showing late !!!!!!!
+  - add button to open lyrics url _lyric_sources is prepared for that and button to open browser with lyrics search
+  - when genre is N/A in search if rewritten in GUI it reverts back To N/A on save
   - problem with writing lyrics to flac files or maybe only rocketplayer does
     not know how to read them
-  - treadpool progressbar is not showing or showing late
-  - cover art rectangle size is fixed to size of first shown picture
-    if some larger one is displayed it is not resized
   - something is wrong with artist completition when reading file from disk
     for this album https://en.wikipedia.org/wiki/Ayreon_Universe_–_The_Best_of_Ayreon_Live
   - fix as many bugs as possible
   - update manifest and check build system
+  - use show() or open() for non-modal dialogs and messages
+  - a lot of errors when writing tags
+      Traceback (most recent call last):
+      File "c:\users\marián rynik\onedrive\dokumenty\visual studio 2019\projects\python\wiki_music\wiki_music\utilities\wrappers.py", line 48, in wrapper
+        return function(*args, **kwargs)
+      File "c:\users\marián rynik\onedrive\dokumenty\visual studio 2019\projects\python\wiki_music\wiki_music\utilities\wrappers.py", line 85, in wrapper
+        return function(*args, **kwargs)
+      File "c:\users\marián rynik\onedrive\dokumenty\visual studio 2019\projects\python\wiki_music\wiki_music\library\tags_io.py", line 153, in read_tags
+        return tags
+      UnboundLocalError: local variable 'tags' referenced before assignment 
+  - add defaut aspec ratio checked for image editor
+  - ger coverart from url should open browser window with search
+  - use https://github.com/sczhengyabin/Image-Downloader instead of google images download
 - 0.8a0
   - better modularity for GUI one superclass is a bad idea, we have to limit
     interactions and side effects to minimum. The namespace of the GUI class
     is gigantic and poluted with names inimportant to whole object.
   - implement undo/redo https://www.informit.com/articles/article.aspx?p=1187104
+  - fix travis CI system setup
 - 0.xb0
+  - parallel freezing should implement locks on some resources, otherwise
+    processes colide
   - fix a problem with google images download https://github.com/hardikvasa/google-images-download/issues/302 until then add a warning if no coverart could be downloaded
   - make proper progressbar indicators
   - fix gui scaling and elements moving around
-  - convert constants to re patterns for better matching and use more re for better            extraction
+  - convert constants to re patterns for better matching and use more re for better extraction
   - make parser parts as plugins so different parts of extraction can use
     different backends
-  - try to setup some CI system
   - cells with dropdowns for subtracks
   - make parser iterable
   - implement image search controls
@@ -39,8 +56,6 @@
 - upx probably messes some dll, PIXmap does not work, pictures are blank
 
 ### Ideas
-- parser probably should have its own lock? - access to its mutable variables
-  should be guarded  see 13.1.2019 entry in changelog
 - add system tray icon menu: http://rowinggolfer.blogspot.com/2011/06/pyqt-qsystrayicon-example.html
 - add cue spliting and audio conversions
 - migrate to QThreads, Qsignals don't work with threading module
@@ -49,11 +64,10 @@
 - research PIL interface to PyQt, and what about Pyside?
 - cover art search could anounce new downloaded images by signals
   if we were using QThreads
-- parser locks could be implemented easilly by getattr and setattr
-  only for public attributes.
 - use themes https://github.com/ColinDuquesnoy/QDarkStyleSheet ,
   https://github.com/seanwu1105/pyqt5-qtquick2-example
 - enable to open files from more dirs at once, when files are spread
+- implement web based GUI through flask
 - implement a threadsafe dict alternative to queue for control queues or
   maybe use some alternative to multiprocessing pipe
 - https://github.com/beetbox/beets
@@ -88,7 +102,41 @@
 
 # Change Log
 
+### 19.4.2020
+- lowered fuzz ratio for coverart matching on wikipedia
+
+### 18.4.2020
+- fixed bug in reading flac files when no cover art was in file
+
+### 5.3.2020
+- maybe fixed coverart not resizing bug
+- fixed bug when there was fewertracks on disk tha found tracks on wiki, files
+  were assigned incorrectly
+
+### 4.3.2020
+- fixed bud with wrong identified files, if they were in sudirs of the work dir
+- fixed bud in extraction of tables, when wrong html part was
+  passed to extractor
+- fixed bug if no personel section was on page
+- added option to load cover art from url
+
+### 3.3.2020
+- experiments with async version of pool similar to asyncio, so the pool
+  does not halt main loop but still can wait for results
+
+### 31.3.2020
+- added textwrap.fill to format long paragraphs of text in console
+- fixed bug. If artist field is empty, album artist is passed there on save
+  and split to letters
+
+### 15.3.2020
+- fixed reading coverart file from disk
+- bug with recuring gender prompt is probably fixed, caused by stupid typo
+  wiki:search function was connected to wrong QAction signal in menubar
+
 ### 13.3.2020
+- patched freeze process, fixed minor bugs
+- upgraded to pyinstaller 3.6
 - search and replace is finished
 - added icons from tango https://commons.wikimedia.org/wiki/Tango_icons
 - written a generator for icon resources based

@@ -285,9 +285,9 @@ def input_parser() -> Tuple[bool, bool, bool, str, str, str, bool]:
     parser.add_argument("-j", "--json",
                         action="store_true", dest="write_json",
                         help="Write json save file?")
-    parser.add_argument("-od", "--offline_debbug",
+    parser.add_argument("-od", "--offline_debug",
                         action="store_true",
-                        help="Use offline pickle debbug file instead of "
+                        help="Use offline pickle debug file instead of "
                         "web page?")
     parser.add_argument("-lo", "--lyrics_only",
                         action="store_true",

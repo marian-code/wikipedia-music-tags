@@ -45,7 +45,7 @@ class WikipediaRunner(WikipediaParser):
         whether to run some parts of code in threads
     """
 
-    def __init__(self, album: str = "", albumartist: str = "",
+    def __init__(self, album: str = "", band: str = "",
                  work_dir: Union[str, Path] = "", with_log: bool = False,
                  GUI: bool = True, protected_vars: bool = True,
                  offline_debug: bool = False, write_json: bool = False,
@@ -58,7 +58,7 @@ class WikipediaRunner(WikipediaParser):
         self._GUI = GUI
         self.with_log = with_log
         self.ALBUM = album
-        self.ALBUMARTIST = albumartist
+        self.ALBUMARTIST = band
         self.work_dir = Path(work_dir)
         self.offline_debug = offline_debug
         self.write_json = write_json

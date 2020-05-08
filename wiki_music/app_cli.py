@@ -26,8 +26,12 @@ def main():
     else:
         set_log_handles(logging.WARNING)
 
+    # remove keys that won't be used to init WikipediaRunner
+    args.pop("debug")
+    lyrics_only = args.pop("lyrics_only")
+
     # get input if it was not specified on command line
-    if not args["lyrics_only"]:
+    if not lyrics_only:
         if not args["album"]:
             print(GREEN + "Enter album name: " + RESET, end="")
             args["album"] = str(input())
@@ -40,7 +44,7 @@ def main():
     parser = WikipediaRunner(**args, GUI=False)
 
     # run search
-    if args["lyrics_only"]:
+    if lyrics_only:
         parser.run_lyrics()
     else:
         parser.run_wiki()

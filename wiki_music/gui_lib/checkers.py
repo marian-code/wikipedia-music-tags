@@ -6,6 +6,7 @@ from typing import Optional
 
 from wiki_music.constants import LOG_DIR
 from wiki_music.gui_lib import BaseGui
+from wiki_music.gui_lib.custom_classes import ProgressBar
 from wiki_music.gui_lib.qt_importer import (QFileDialog, QInputDialog,
                                             QMessageBox, QProgressBar,
                                             QProgressDialog, Qt, QTimer)
@@ -25,12 +26,6 @@ class Checkers(BaseGui):
     --------
     This class is not ment to be instantiated, only inherited.
     """
-
-    def __init__(self) -> None:
-
-        super().__init__()
-
-        self.progressShow: Optional[QProgressDialog] = None
 
     def _setup_statusbar(self):
 
@@ -70,11 +65,6 @@ class Checkers(BaseGui):
         self.conditions_timer = QTimer()
         self.conditions_timer.timeout.connect(self._conditions_check)
         self.conditions_timer.setInterval(200)
-
-        self.threadpool_timer = QTimer()
-        self.threadpool_timer.timeout.connect(self._threadpool_check)
-        self.threadpool_timer.setSingleShot(True)
-        self.threadpool_timer.setTimerType(Qt.PreciseTimer)
 
     def _start_checkers(self):
         """Initializes timers of periodically repeating methods.
@@ -128,12 +118,8 @@ class Checkers(BaseGui):
 
                 if answer:
                     # show download progress
-                    self.progressShow = QProgressDialog("Downloading lyrics",
-                                                        "", 0,
-                                                        self.number_of_tracks,
-                                                        self)
-                    self.progressShow.setCancelButton(None)
-                    self._threadpool_check()
+                    ProgressBar("Downloading lyrics", 0,
+                                self.number_of_tracks, self)
 
             elif action.switch == "load_api_key":
                 dialog = QInputDialog(self)
@@ -159,9 +145,11 @@ class Checkers(BaseGui):
                     action.response = folder
                 else:
                     action.response = action.message
+
             elif action.switch == "load":
                 # if we want to only load values to gui
                 pass
+            
             else:
                 raise Exception(f"Requested unknown action: {action.switch}")
 
@@ -222,15 +210,3 @@ class Checkers(BaseGui):
                 self.progressBar.setValue(progress.actual)
 
             self.progressBar.setFormat(progress.description)
-
-    def _threadpool_check(self):
-
-        progress = ThreadPoolProgress.get_nowait()
-        if progress:
-            self.progressShow.setValue(progress.actual)
-            self.progressShow.setMaximum(progress.max)
-
-            if progress.actual == progress.max:
-                return
-
-        self.threadpool_timer.start(10)

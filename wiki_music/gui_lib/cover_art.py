@@ -12,10 +12,11 @@ from wiki_music.external_libraries.google_images_download import (  # lazy loade
     google_images_download, google_images_download_offline)
 from wiki_music.gui_lib import BaseGui, ImageTable, SelectablePixmap
 from wiki_music.gui_lib.qt_importer import (QDialog, QFileDialog, QIcon,
-                                            QMessageBox, QSize, Qt, QTimer,
-                                            QWidget, Signal, uic)
-from wiki_music.utilities import (MultiLog, comp_res, exception, get_icon,
-                                  get_image, get_image_size, get_sizes)
+                                            QInputDialog, QMessageBox, QSize,
+                                            Qt, QTimer, QWidget, Signal, uic)
+from wiki_music.utilities import (ImageDecodeError, MultiLog, comp_res,
+                                  exception, get_icon, get_image,
+                                  get_image_size, get_sizes, warning)
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
@@ -651,7 +652,9 @@ class CoverArtSearch(BaseGui):
         self.search_dialog.search_button.clicked.connect(self._do_nothing)
         self.search_dialog.browser_button.clicked.connect(self._do_nothing)
         self.search_dialog.load_from_file_button.clicked.connect(
-            lambda x: self._load_from_file())
+            lambda x: self._manual_load("file"))
+        self.search_dialog.load_from_url_button.clicked.connect(
+            lambda x: self._manual_load("url"))
 
         self.search_dialog.show()
 
@@ -745,22 +748,48 @@ class CoverArtSearch(BaseGui):
             QTimer.singleShot(50, self._async_loader)
 
     @exception(log)
-    def _load_from_file(self):
+    @warning(log)
+    def _manual_load(self, from_where: str):
+        """Handle user manual picture load from file or url.
 
-        file_types = "Image files (*.png *.jpg *.jpeg)"
+        Parameters
+        ----------
+        from_where: str
+            possible choices are url or file
+        """
+        if from_where == "file":
 
-        filename = QFileDialog.getOpenFileName(self, "Select cover art file",
-                                               self.work_dir,
-                                               f"{file_types};;All files (*)")
+            file_types = "Image files (*.png *.jpg *.jpeg)"
 
-        filename = filename[0]
+            filename = QFileDialog.getOpenFileName(
+                self, "Select cover art file", self.work_dir,
+                f"{file_types};;All files (*)")
+
+            url = Path(filename[0])
+        elif from_where == "url":
+
+            url, ok = QInputDialog.getText(self, "Load image from url",
+                                           "Enter cover art url:")
+
+            if not ok:
+                raise RuntimeWarning("Couldn't read string from input")
+
+        # get image dimension and disk size
+        sizes = get_sizes(url)
+
+        if not all(sizes):
+            if isinstance(url, Path):
+                ulr_print = str(url.resolve())
+            else:
+                url_print = url
+            raise ImageDecodeError(f"Couldn't read cover art file {url_print}")
 
         # stop internet image search
         self.gimd.close()
         # stop async loader method loop
         self._stop_aysnc_loader = True
         # append picture to downloaded list along with its dimensions
-        self.images.append({"dim": get_sizes(filename), "url": Path(filename)})
+        self.images.append({"dim": sizes, "url": url})
         # start picture editor
         self._select_picture(-1)
 

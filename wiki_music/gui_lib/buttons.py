@@ -33,7 +33,7 @@ class Buttons(BaseGui):
         # connect menubar actions to functions
         # must use lambda otherwise wrapper doesnt work correctly
         self.actionDirectory.triggered.connect(lambda: self._open_dir())
-        self.actionWikipedia.triggered.connect(lambda: self._open_browser())
+        self.actionOpenWiki.triggered.connect(lambda: self._open_browser())
         self.actionMp3_Tag.triggered.connect(lambda: self._run_Mp3tag())
 
         # save action
@@ -56,7 +56,7 @@ class Buttons(BaseGui):
             lambda: GoogleApiKey.get(True, in_thread=True))
 
         # search actons
-        self.actionWikipedia.triggered.connect(lambda: self._wiki_search())
+        self.actionSearchWiki.triggered.connect(lambda: self._wiki_search())
         self.actionLyrics.triggered.connect(lambda: self.cover_art_search())
         self.actionCoverArt.triggered.connect(lambda: self._lyrics_search())
 
@@ -210,9 +210,9 @@ class Buttons(BaseGui):
 
     def _select_multi(self):
         """Connect to  checkbox."""
-        self._parser.multi_threaded = self.actionMulti_threaded.isChecked()
+        self.multi_threaded = self.actionMulti_threaded.isChecked()
         IniSettings.write("multi_threaded", self._parser.multi_threaded)
-        log.debug(f"multi threaded is set to: {self._parser.multi_threaded}")
+        log.debug(f"multi threaded is set to: {self.multi_threaded}")
 
     def _select_offline_debbug(self):
         """Connect to offline debug checkbox.

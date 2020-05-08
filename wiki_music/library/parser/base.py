@@ -125,7 +125,7 @@ class ParserBase:
             self._band: str = ""
             self.offline_debug = False
             self.write_json = False
-            self.multi_threaded= True
+            self.multi_threaded = True
             self.work_dir: Path = Path("")
             self._log: MultiLog = MultiLog(log)
             self._GUI = False

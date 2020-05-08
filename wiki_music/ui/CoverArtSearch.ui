@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
+    <width>1200</width>
     <height>650</height>
    </rect>
   </property>
@@ -78,6 +78,13 @@
       <widget class="QPushButton" name="load_from_file_button">
        <property name="text">
         <string>Load from file</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="load_from_url_button">
+       <property name="text">
+        <string>Load from url</string>
        </property>
       </widget>
      </item>
