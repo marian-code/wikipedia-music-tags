@@ -7,8 +7,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
-import fuzzywuzzy.fuzz as fuzz  # lazy loaded
-import fuzzywuzzy.process as process  # lazy loaded
+import rapidfuzz.fuzz as fuzz  # lazy loaded
+import rapidfuzz.process as process  # lazy loaded
 
 from wiki_music.constants import (EXTENDED_TAGS, GREEN, LBLUE, LGREEN,
                                   OUTPUT_FOLDER, RESET, YELLOW)

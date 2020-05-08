@@ -13,8 +13,8 @@ from threading import Thread
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import datefinder  # lazy loaded
-import fuzzywuzzy.fuzz as fuzz  # lazy loaded
-import fuzzywuzzy.process as process  # lazy loaded
+import rapidfuzz.fuzz as fuzz  # lazy loaded
+import rapidfuzz.process as process  # lazy loaded
 
 from wiki_music.constants import (COMPOSER_HEADER, DEF_TYPES, DELIMITERS,
                                   FILES_DIR, ORDER_NUMBER, PERSONNEL_SECTIONS,
@@ -171,7 +171,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         def cover_art_getter():
             for img in self._sections["infobox"][0].find_all("img", src=True,
                                                              alt=True):
-                if fuzz.token_set_ratio(img["alt"], self._album) > 90:
+                if fuzz.token_set_ratio(img["alt"], self._album, score_cutoff=90):
                     break
             else:
                 img = None
@@ -545,7 +545,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         self._types = []
         self._subtypes = []
 
-        # options list for fuzzywuzzy process must have length at least == 1
+        # options list for rapidfuzz process must have length at least == 1
         comp_flat = flatten_set(self._composers)
         if not comp_flat:
             comp_flat = [""]
@@ -765,6 +765,6 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
 
             # filter out already found tracks
             self._NLTK_names = [n for n in names
-                                if fuzz.token_set_ratio(n, self._tracks) < 90]
+                                if not fuzz.token_set_ratio(n, self._tracks, score_cutoff=90)]
 
         return self._NLTK_names
