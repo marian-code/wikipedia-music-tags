@@ -24,11 +24,21 @@ class TestDocsBuild(unittest.TestCase):
                          cwd=DOCS_ROOT)
         except CalledProcessError:
             log.exception(DOCS_ROOT)
-            self.stdout = output.stdout
-            self.stderr = output.stderr
+            self.stdout = None
+            self.stderr = None
         else:
             self.stdout = output.stdout
             self.stderr = output.stderr
+
+    def test_bld(self):
+
+        output = run("make html", stdout=PIPE, stderr=PIPE,
+                     check=False, shell=True, universal_newlines=True,
+                     cwd=DOCS_ROOT)
+
+        log.exception(output)
+        log.exception(output.stdout)
+        log.exception(output.stderr)
 
     def test_build_gave_output(self):
         self.assertNotEqual(self.stdout, None)
@@ -64,7 +74,6 @@ class TestDocsBuild(unittest.TestCase):
 
     def test_build_successful(self):
         log.debug(self.stdout)
-        log.debug(self.stderr)
 
         self.assertIn("build succeeded.", self.stdout)
 
