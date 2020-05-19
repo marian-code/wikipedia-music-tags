@@ -2,7 +2,11 @@
 # environment you will polute it with a lot of unnecessary libs
 
 # installs: docutils, mistune
-# is no longer actively maintained!
+# is no longer actively maintained! It will need to be completely removed in
+# the future !
+# https://github.com/sphinx-doc/sphinx/issues/7420
+# https://github.com/sphinx-doc/sphinx/issues/7000
+# https://github.com/readthedocs/recommonmark/issues/191#issuecomment-622369992
 m2r>=0.2.1
 
 # replacement for m2r

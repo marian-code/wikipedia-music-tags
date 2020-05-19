@@ -8,7 +8,7 @@ jobs:
       before_install:
       - python --version
       - pip install -U pip
-      - pip install codecov
+      - pip install coverage
       - pip install -r docs/requirements.txt
     - name: "Python 3.7 on Ubuntu 18.04 (Bionic Beaver)"
       dist: bionic
@@ -16,7 +16,7 @@ jobs:
       before_install:
       - python --version
       - pip install -U pip
-      - pip install codecov
+      - pip install coverage
       - pip install -r docs/requirements.txt
     - name: "Python 3.8 on Ubuntu 18.04 (Bionic Beaver)"
       dist: bionic
@@ -24,7 +24,7 @@ jobs:
       before_install:
       - python --version
       - pip install -U pip
-      - pip install codecov
+      - pip install coverage
       - pip install -r docs/requirements.txt
     # ======= OSX ========
     - name: "Python 3.6.5 on macOS 10.13"
@@ -34,10 +34,10 @@ jobs:
       before_install:
         - python3 --version
         - pip3 install -U pip
-        - pip3 install codecov
+        - pip3 install coverage
         - pip3 install -r docs/requirements.txt
       script: python3 -m unittest discover
-      after_success: python 3 -m codecov
+      after_success: python 3 -m coverage
     - name: "Python 3.7.3 on macOS 10.14"
       os: osx
       osx_image: xcode10.2  # Python 3.7.3 running on macOS 10.14.3
@@ -45,10 +45,10 @@ jobs:
       before_install:
         - python3 --version
         - pip3 install -U pip
-        - pip3 install codecov
+        - pip3 install coverage
         - pip3 install -r docs/requirements.txt
       script: python3 -m unittest discover
-      after_success: python 3 -m codecov
+      after_success: python 3 -m coverage
     #  ====== WINDOWS =========
     - name: "Python 3.6.8 on Windows"
       os: windows           # Windows 10.0.17134 N/A Build 17134
@@ -57,7 +57,7 @@ jobs:
         - choco install python --version 3.6.8
         - python --version
         - python -m pip install --upgrade pip
-        - pip3 install codecov
+        - pip3 install coverage
         - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
     - name: "Python 3.7.4 on Windows"
@@ -67,7 +67,7 @@ jobs:
         - choco install python --version 3.7.4
         - python --version
         - python -m pip install --upgrade pip
-        - pip3 install codecov
+        - pip3 install coverage
         - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
     - name: "Python 3.8.1 on Windows"
@@ -77,11 +77,11 @@ jobs:
         - choco install python --version 3.8.1
         - python --version
         - python -m pip install --upgrade pip
-        - pip3 install codecov
+        - pip3 install coverage
         - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python38:/c/Python38/Scripts:$PATH
 install:
   - pip3 install .
-script: python3 -m unittest discover | python -m unittest discover
+script: coverage run -m unittest discover
 after_success:
-  - codecov # submit coverage
+  - coveralls # submit coverage

@@ -19,11 +19,12 @@ class TestDocsBuild(unittest.TestCase):
         try:
             # use PIPEs instead of capture output because it is supported only
             # in py3.7 and higher
+            # must use shell=True otherwise it fails on windows
+            # and must use string argument when shell=True
             output = run("make html", stdout=PIPE, stderr=PIPE,
                          check=True, shell=True, universal_newlines=True,
                          cwd=DOCS_ROOT)
         except CalledProcessError:
-            log.exception(DOCS_ROOT)
             self.stdout = None
             self.stderr = None
         else:
