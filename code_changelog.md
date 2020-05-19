@@ -103,7 +103,11 @@
 # Change Log
 
 ### 19.5.2020
-- fixed bg related to rapidfuzz implementation
+- fixed bug related to rapidfuzz implementation
+- travis builds are now passing
+- code cov is set and running too
+- fixed google images download, thanks to:
+  https://github.com/hardikvasa/google-images-download/pull/309
 
 ### 19.4.2020
 - lowered fuzz ratio for coverart matching on wikipedia

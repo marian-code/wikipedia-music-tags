@@ -1,6 +1,4 @@
 """Module handling cover art downloades from goole image search."""
-from __future__ import absolute_import
-
 
 def main():
     from google_images_download import google_images_download
