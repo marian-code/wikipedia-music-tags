@@ -1,7 +1,7 @@
 """Test documentation build."""
 
 import unittest
-import subprocess
+from subprocess import run, CalledProcessError, PIPE
 import logging
 from pathlib import Path
 
@@ -17,11 +17,12 @@ class TestDocsBuild(unittest.TestCase):
     def setUp(self):
 
         try:
-            output = subprocess.run(["make", "html"], capture_output=True,
-                                    check=True, shell=True,
-                                    universal_newlines=True,
-                                    cwd=DOCS_ROOT)
-        except subprocess.CalledProcessError:
+            # use PIPEs instead of capture output because it is supported only
+            # in py3.7 and higher
+            output = run(["make", "html"], stdout=PIPE, stderr=PIPE,
+                         check=True, shell=True, universal_newlines=True,
+                         cwd=DOCS_ROOT)
+        except CalledProcessError:
             log.exception(DOCS_ROOT)
             self.stdout = None
             self.stderr = None

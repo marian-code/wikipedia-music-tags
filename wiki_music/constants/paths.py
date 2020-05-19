@@ -31,8 +31,10 @@ def _dir_writable(dir_name: Path) -> bool:
         return False
     else:
         f.close()
-        if test_write.is_file():
+        try:  # cirrcumvent a bug in travis-CI when file is not created
             test_write.unlink()
+        except FileNotFoundError:
+            pass
         return True
 
 
