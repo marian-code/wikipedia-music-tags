@@ -24,8 +24,8 @@ class TestDocsBuild(unittest.TestCase):
                          cwd=DOCS_ROOT)
         except CalledProcessError:
             log.exception(DOCS_ROOT)
-            self.stdout = None
-            self.stderr = None
+            self.stdout = output.stdout
+            self.stderr = output.stderr
         else:
             self.stdout = output.stdout
             self.stderr = output.stderr
@@ -64,6 +64,7 @@ class TestDocsBuild(unittest.TestCase):
 
     def test_build_successful(self):
         log.debug(self.stdout)
+        log.debug(self.stderr)
 
         self.assertIn("build succeeded.", self.stdout)
 
