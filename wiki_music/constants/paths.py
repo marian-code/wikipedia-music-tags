@@ -11,7 +11,7 @@ __all__ = ["ROOT_DIR", "LOG_DIR", "OUTPUT_FOLDER", "OFFLINE_DEBUG_IMAGES",
 
 
 def _dir_writable(dir_name: Path) -> bool:
-    """Test if inpu directory is writable.
+    """Test if input directory is writable.
 
     Parameters
     ----------
@@ -31,7 +31,8 @@ def _dir_writable(dir_name: Path) -> bool:
         return False
     else:
         f.close()
-        test_write.unlink()
+        if test_write.is_file():
+            test_write.unlink()
         return True
 
 
