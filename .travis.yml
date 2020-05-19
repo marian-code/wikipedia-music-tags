@@ -9,7 +9,7 @@ jobs:
       - python --version
       - pip install -U pip
       - pip install codecov
-      - pip install docs/requirements.txt
+      - pip install -r docs/requirements.txt
     - name: "Python 3.7 on Ubuntu 18.04 (Bionic Beaver)"
       dist: bionic
       python: 3.7
@@ -17,7 +17,7 @@ jobs:
       - python --version
       - pip install -U pip
       - pip install codecov
-      - pip install docs/requirements.txt
+      - pip install -r docs/requirements.txt
     - name: "Python 3.8 on Ubuntu 18.04 (Bionic Beaver)"
       dist: bionic
       python: 3.8
@@ -25,7 +25,7 @@ jobs:
       - python --version
       - pip install -U pip
       - pip install codecov
-      - pip install docs/requirements.txt
+      - pip install -r docs/requirements.txt
     # ======= OSX ========
     - name: "Python 3.6.5 on macOS 10.13"
       os: osx
@@ -35,7 +35,7 @@ jobs:
         - python3 --version
         - pip3 install -U pip
         - pip3 install codecov
-        - pip3 install docs/requirements.txt
+        - pip3 install -r docs/requirements.txt
       script: python3 -m unittest discover
       after_success: python 3 -m codecov
     - name: "Python 3.7.3 on macOS 10.14"
@@ -46,7 +46,7 @@ jobs:
         - python3 --version
         - pip3 install -U pip
         - pip3 install codecov
-        - pip3 install docs/requirements.txt
+        - pip3 install -r docs/requirements.txt
       script: python3 -m unittest discover
       after_success: python 3 -m codecov
     #  ====== WINDOWS =========
@@ -58,7 +58,7 @@ jobs:
         - python --version
         - python -m pip install --upgrade pip
         - pip3 install codecov
-        - pip3 install docs/requirements.txt
+        - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
     - name: "Python 3.7.4 on Windows"
       os: windows           # Windows 10.0.17134 N/A Build 17134
@@ -68,7 +68,7 @@ jobs:
         - python --version
         - python -m pip install --upgrade pip
         - pip3 install codecov
-        - pip3 install docs/requirements.txt
+        - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
     - name: "Python 3.8.1 on Windows"
       os: windows           # Windows 10.0.17134 N/A Build 17134
@@ -78,7 +78,7 @@ jobs:
         - python --version
         - python -m pip install --upgrade pip
         - pip3 install codecov
-        - pip3 install docs/requirements.txt
+        - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python38:/c/Python38/Scripts:$PATH
 install:
   - pip3 install .
