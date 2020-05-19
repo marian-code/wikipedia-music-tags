@@ -3,12 +3,15 @@
 ![PyPI](https://img.shields.io/pypi/v/wiki-music)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/wiki-music)
 [![license](https://img.shields.io/pypi/l/qtpy.svg)](./LICENSE)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/wiki-music)
+
 
 [![Documentation Status](https://readthedocs.org/projects/wikipedia-music-tags/badge/?version=latest)](https://wikipedia-music-tags.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/github/marian-code/wikipedia-music-tags/badge.svg?branch=master)](https://coveralls.io/github/marian-code/wikipedia-music-tags?branch=master)
 [![Requirements Status](https://requires.io/github/marian-code/wikipedia-music-tags/requirements.svg?branch=master)](https://requires.io/github/marian-code/wikipedia-music-tags/requirements/?branch=master)
 [![Build Status](https://travis-ci.com/marian-code/wikipedia-music-tags.svg?branch=master)](https://travis-ci.com/marian-code/wikipedia-music-tags)
-
+![PyPI - Implementation](https://img.shields.io/pypi/implementation/wiki-music)
+[![Maintainability](https://api.codeclimate.com/v1/badges/d53cf7baff45efab643d/maintainability)](https://codeclimate.com/github/marian-code/wikipedia-music-tags/maintainability)
 
 
 Python application which parses wikipedia for music tags and writes them to 
