@@ -1,0 +1,22 @@
+INFO - __main__ - PyInstaller: 3.5
+INFO - __main__ - Python: 3.7.4
+INFO - __main__ - Platform: Windows-10-10.0.18362-SP0
+INFO - __main__ - wrote .\wiki_music.spec
+INFO - configure - UPX is not available.
+INFO - build_main - Removing temporary files and cleaning cache in C:\Users\Marián Rynik\AppData\Roaming\pyinstaller
+INFO - build_main - Extending PYTHONPATH with paths
+['C:\\Users\\Marián Rynik\\OneDrive\\Dokumenty\\Visual Studio '
+ '2019\\Projects\\Python\\wiki_music',
+ 'C:\\Users\\Marián Rynik\\OneDrive\\Dokumenty\\Visual Studio '
+ '2019\\Projects\\Python\\wiki_music',
+ 'C:\\Users\\Marián Rynik\\OneDrive\\Dokumenty\\Visual Studio '
+ '2019\\Projects\\Python\\wiki_music']
+INFO - datastruct - checking Analysis
+INFO - datastruct - Building Analysis because Analysis-00.toc is non existent
+INFO - analysis - Initializing module dependency graph...
+INFO - analysis - Initializing module graph hooks...
+INFO - analysis - Analyzing base_library.zip ...
+INFO - build_main - running Analysis Analysis-00.toc
+INFO - bindepend - Adding Microsoft.Windows.Common-Controls to dependent assemblies of final executable
+  required by C:\miniconda\envs\wikimusic37\python.exe
+INFO - build_main - Caching module hooks...

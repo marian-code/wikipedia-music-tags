@@ -171,7 +171,8 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
         def cover_art_getter():
             for img in self._sections["infobox"][0].find_all("img", src=True,
                                                              alt=True):
-                if fuzz.token_set_ratio(img["alt"], self._album, score_cutoff=60):
+                if fuzz.token_set_ratio(img["alt"], self._album,
+                                        score_cutoff=60):
                     break
             else:
                 img = None
@@ -748,7 +749,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
             names = []
             for tagged_sentence in sentences:
                 for chunk in NLTK.nltk.ne_chunk(tagged_sentence):
-                    if type(chunk) == NLTK.nltk.tree.Tree:
+                    if isinstance(chunk, NLTK.nltk.tree.Tree):
                         if chunk.label() == 'PERSON':
                             names.append(' '.join([c[0] for c in chunk]))
 
@@ -772,8 +773,7 @@ class WikipediaParser(DataExtractors, WikiCooker, ParserInOut):
                 selected_names.append(name)
             """
 
-            # filter out already found tracks
-            self._NLTK_names = [n for n in names
-                                if not fuzz.token_set_ratio(n, self._tracks, score_cutoff=90)]
+            # filter out names of already found tracks
+            self._NLTK_names = [n for n in names if not process.extractOne(n, self._tracks, scorer=fuzz.token_set_ratio, score_cutoff=90)]
 
         return self._NLTK_names

@@ -7,8 +7,6 @@ from unittest import TestCase, main, mock
 
 from wiki_music.library.parser import in_out
 
-from . import setup_tests
-
 logging.basicConfig(stream=sys.stderr)
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)

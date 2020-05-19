@@ -5,9 +5,7 @@ import subprocess
 import logging
 from pathlib import Path
 
-from . import setup_tests
-
-DOCS_ROOT = str((Path(__file__).parent / ".." / "docs").resolve())
+DOCS_ROOT = str((Path(__file__).parent.parent / "docs").resolve())
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -20,7 +18,8 @@ class TestDocsBuild(unittest.TestCase):
 
         try:
             output = subprocess.run(["make", "html"], capture_output=True,
-                                    check=True, shell=True, universal_newlines=True,
+                                    check=True, shell=True,
+                                    universal_newlines=True,
                                     cwd=DOCS_ROOT)
         except subprocess.CalledProcessError:
             log.exception(DOCS_ROOT)
@@ -63,6 +62,7 @@ class TestDocsBuild(unittest.TestCase):
         self.assertFalse(has_warning)
 
     def test_build_successful(self):
+        log.debug(self.stdout)
 
         self.assertIn("build succeeded.", self.stdout)
 

@@ -102,6 +102,9 @@
 
 # Change Log
 
+### 19.5.2020
+- fixed bg related to rapidfuzz implementation
+
 ### 19.4.2020
 - lowered fuzz ratio for coverart matching on wikipedia
 
