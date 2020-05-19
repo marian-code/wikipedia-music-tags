@@ -13,6 +13,9 @@
 
 import sys
 from pathlib import Path
+from m2r import MdInclude
+from recommonmark.transform import AutoStructify
+
 sys.path.insert(0, str(Path('..').resolve()))
 
 
@@ -37,7 +40,7 @@ extensions = [
     "sphinx_rtd_theme",
     'sphinx.ext.autodoc',
     "sphinx.ext.napoleon",
-    "m2r"
+    "recommonmark"
 ]
 
 autodoc_default_options = {
@@ -68,3 +71,21 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+# https://github.com/rtfd/recommonmark/blob/master/docs/conf.py
+def setup(app):
+    config = {
+        # 'url_resolver': lambda url: github_doc_root + url,
+        'auto_toc_tree_section': 'Contents',
+        'enable_eval_rst': True,
+    }
+    app.add_config_value('recommonmark_config', config, True)
+    app.add_transform(AutoStructify)
+
+    # from m2r to make `mdinclude` work
+    app.add_config_value('no_underscore_emphasis', False, 'env')
+    app.add_config_value('m2r_parse_relative_links', False, 'env')
+    app.add_config_value('m2r_anonymous_references', False, 'env')
+    app.add_config_value('m2r_disable_inline_math', False, 'env')
+    app.add_directive('mdinclude', MdInclude)

@@ -1,8 +1,15 @@
 # optional - build docs. Do not install these extensions in virtual
 # environment you will polute it with a lot of unnecessary libs
 
-#installs: docutils, mistune
+# installs: docutils, mistune
+# is no longer actively maintained!
 m2r>=0.2.1
+
+# replacement for m2r
+# installs: commonmark, docutils, snowballstemmer, requests, Pygments, babel,
+# Jinja2, alabaster, colorama, certifi, urllib3, idna, chardet, pytz,
+# MarkupSafe, pyparsing
+recommonmark>=0.6.0
 
 # installs: sphinx, sphinxcontrib-serializinghtml, babel, requests, colorama,
 # Jinja2, imagesize, sphinxcontrib-htmlhelp, setuptools, docutils,
@@ -10,3 +17,4 @@ m2r>=0.2.1
 #packaging, sphinxcontrib-devhelp, sphinxcontrib-qthelp, alabaster,
 #Pygments, pytz, idna, urllib3, chardet, certifi, MarkupSafe, six, pyparsing
 sphinx_rtd_theme>=0.4.3
+
