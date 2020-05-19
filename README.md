@@ -91,5 +91,6 @@ See also the list of [contributors](https://github.com/your/project/contributors
 * Stackoverflow
 * [Giesela Inc.](https://github.com/GieselaDev) - LyricsFinder
 * [https://github.com/hardikvasa](https://github.com/hardikvasa) - google_images_download
+* [https://github.com/maxbachmann/rapidfuzz](https://github.com/maxbachmann/rapidfuzz) - rapidfuzz
 * [https://github.com/ppinard/qtango](https://github.com/ppinard/qtango) - Tango icon theme, with qrc generator
 

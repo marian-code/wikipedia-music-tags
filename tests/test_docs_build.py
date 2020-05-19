@@ -75,7 +75,7 @@ class TestDocsBuild(unittest.TestCase):
     def test_build_successful(self):
         log.debug(self.stdout)
 
-        self.assertIn("build succeeded.", self.stdout)
+        self.assertIn("build succeeded", self.stdout)
 
 
 if __name__ == '__main__':
