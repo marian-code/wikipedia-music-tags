@@ -9,6 +9,7 @@ jobs:
       - python --version
       - pip install -U pip
       - pip install coverage
+      - pip install coveralls
       - pip install -r docs/requirements.txt
     - name: "Python 3.7 on Ubuntu 18.04 (Bionic Beaver)"
       dist: bionic
@@ -17,6 +18,7 @@ jobs:
       - python --version
       - pip install -U pip
       - pip install coverage
+      - pip install coveralls
       - pip install -r docs/requirements.txt
     - name: "Python 3.8 on Ubuntu 18.04 (Bionic Beaver)"
       dist: bionic
@@ -25,6 +27,7 @@ jobs:
       - python --version
       - pip install -U pip
       - pip install coverage
+      - pip install coveralls
       - pip install -r docs/requirements.txt
     # ======= OSX ========
     - name: "Python 3.6.5 on macOS 10.13"
@@ -35,6 +38,7 @@ jobs:
         - python3 --version
         - pip3 install -U pip
         - pip3 install coverage
+        - pip3 install coveralls
         - pip3 install -r docs/requirements.txt
       script: python3 -m unittest discover
       after_success: python 3 -m coverage
@@ -46,6 +50,7 @@ jobs:
         - python3 --version
         - pip3 install -U pip
         - pip3 install coverage
+        - pip3 install coveralls
         - pip3 install -r docs/requirements.txt
       script: python3 -m unittest discover
       after_success: python 3 -m coverage
@@ -58,6 +63,7 @@ jobs:
         - python --version
         - python -m pip install --upgrade pip
         - pip3 install coverage
+        - pip3 install coveralls
         - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
     - name: "Python 3.7.4 on Windows"
@@ -68,6 +74,7 @@ jobs:
         - python --version
         - python -m pip install --upgrade pip
         - pip3 install coverage
+        - pip3 install coveralls
         - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
     - name: "Python 3.8.1 on Windows"
@@ -78,6 +85,7 @@ jobs:
         - python --version
         - python -m pip install --upgrade pip
         - pip3 install coverage
+        - pip3 install coveralls
         - pip3 install -r docs/requirements.txt
       env: PATH=/c/Python38:/c/Python38/Scripts:$PATH
 install:
