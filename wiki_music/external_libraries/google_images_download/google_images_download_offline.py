@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 log.info("Loaded Offline google images download")
 
 
-class googleimagesdownload:
+class GoogleImagesDownload:
     """Offline version imitating google images download API.
 
     Main puprose is offline testing.

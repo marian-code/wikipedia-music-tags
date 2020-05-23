@@ -529,14 +529,14 @@ class ImageTable(QTableWidget):
 
     Attribures
     ----------
-    self.MAX_COLUMNS: int
+    MAX_COLUMNS: int
         constant saying how many columns should the table have
-    self.actualCol: int
+    actualCol: int
         holds the position of actual column
 
     See also
     --------
-    :class:ImageItem
+    :class:`ImageItem`
         each cell holds one of these widgets
     """
 
@@ -571,7 +571,7 @@ class ImageTable(QTableWidget):
         Raises
         ------
         ValueError
-            when method trie to add picture in column with
+            when method tries to add picture in column with
             `index` > `ImageTable.MAX_COLUMNS`
         """
         if self.actualCol < self.MAX_COLUMNS:
