@@ -17,8 +17,9 @@ if TYPE_CHECKING:
                                       "dim": Tuple[int, Tuple[int, int]],
                                       "url": "Path"})
 
-log = logging.getLogger(__name__)
+__all__ = ["GoogleImagesDownload"]
 
+log = logging.getLogger(__name__)
 log.info("Loaded Offline google images download")
 
 

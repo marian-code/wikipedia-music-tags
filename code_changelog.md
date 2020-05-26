@@ -29,13 +29,11 @@
 - 0.8a0
   - better modularity for GUI one superclass is a bad idea, we have to limit
     interactions and side effects to minimum. The namespace of the GUI class
-    is gigantic and poluted with names inimportant to whole object.
+    is gigantic and poluted with names unimportant to whole object.
   - implement undo/redo https://www.informit.com/articles/article.aspx?p=1187104
-  - fix travis CI system setup
 - 0.xb0
   - parallel freezing should implement locks on some resources, otherwise
     processes colide
-  - fix a problem with google images download https://github.com/hardikvasa/google-images-download/issues/302 until then add a warning if no coverart could be downloaded
   - make proper progressbar indicators
   - fix gui scaling and elements moving around
   - convert constants to re patterns for better matching and use more re for better extraction
@@ -101,6 +99,16 @@
 - create a github release
 
 # Change Log
+
+### 26.5.2020
+- fixed lazy loading bug of rapidfuzz, it must be imported normaly
+
+### 24.5.2020
+- more minor changes and fixes to google images download
+
+### 23.5.2020
+- major rewrite, clean up and simplification of google images download,
+  looks like the original repo is no longer maintained
 
 ### 19.5.2020
 - fixed bug related to rapidfuzz implementation

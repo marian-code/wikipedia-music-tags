@@ -22,11 +22,11 @@ if TYPE_CHECKING:
                                       "dim": Tuple[int, Tuple[int, int]],
                                       "url": str})
 
+__all__ = ["GoogleImagesDownload"]
+
 http.client._MAXHEADERS = 1000
 
-
 log = logging.getLogger(__name__)
-
 log.info("Loaded google images download")
 
 
@@ -126,10 +126,10 @@ class GoogleImagesDownload:
                    'ico': 'ift:ico'}
         }
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.stack: "queue.Queue[RespDict]" = queue.Queue()
         self._exit: bool = False
-        self.max: int  = 100
+        self.max: int = 100
         self.parameters: dict = {}
 
         # this iterator contains the parsed info contained in the
@@ -154,22 +154,23 @@ class GoogleImagesDownload:
             with urlopen(req) as resp:
                 return str(resp.read())
         except Exception as e:
+            log.exception(e)
             print(f"Could not open URL. Please check your internet "
                   f"connection and/or ssl settings: {e}")
 
     @staticmethod
     def format_object(obj):
         """Format the object in readable format."""
-        formatted_object = {}
-        formatted_object['image_format'] = obj['ity']
-        formatted_object['image_height'] = obj['oh']
-        formatted_object['image_width'] = obj['ow']
-        formatted_object['image_link'] = obj['ou']
-        formatted_object['image_description'] = obj['pt']
-        formatted_object['image_host'] = obj['rh']
-        formatted_object['image_source'] = obj['ru']
-        formatted_object['image_thumbnail_url'] = obj['tu']
-        return formatted_object
+        return {
+            'image_format': obj['ity'],
+            'image_height': obj['oh'],
+            'image_width': obj['ow'],
+            'image_link': obj['ou'],
+            'image_description': obj['pt'],
+            'image_host': obj['rh'],
+            'image_source': obj['ru'],
+            'image_thumbnail_url': obj['tu']
+        }
 
     def build_url_parameters(self):
         """Building URL parameters."""
@@ -318,6 +319,7 @@ class GoogleImagesDownload:
                 object_decode = bytes(object_raw, "utf-8").decode("unicode_escape")
                 final_object = json.loads(object_decode)
             except Exception:
+                log.exception(e)
                 final_object = ""
 
             return final_object, end_object
@@ -328,6 +330,7 @@ class GoogleImagesDownload:
         try:
             self._parse_AF_initDataCallback(page)
         except Exception as e:
+            log.exception(e)
             print('WARNING: _parse_AF_initDataCallback failed', e)
 
         items = []
@@ -393,101 +396,99 @@ class GoogleImagesDownload:
     def _parse_AF_initDataCallback(self, page):
         """Parse data callback.
 
+        How it works: there's a <script> that contains the images info,
+        the code in it contains `AF_initDataCallback` this contains
+        the image data
+
         Parameters
         ----------
         page:
             html string
+
+        References
+        ----------
+        https://gist.github.com/FarisHijazi/6c9ba3fb315d0ce9bfa62c10dfa8b2f8
+            See the js code
+
         Returns
         -------
             self._info_AF_initDataCallback, this is an iterator containing rg_meta objects
         """
 
-        def get_metas(page):
-            """This works by parsing the info in the page scripts
-            See the js code in: https://gist.github.com/FarisHijazi/6c9ba3fb315d0ce9bfa62c10dfa8b2f8
-            :returns a list of objects, these contain the image info
-            how it works:
-              there's a <script> that contains the images info, the code in it contains `AF_initDataCallback`
-              this contains the image data
-            """
-            bs = BeautifulSoup(page, 'lxml')
-            # get scripts
-            scripts = bs.select('script[nonce]')
+        def parse_json(t):
+            try:
+                t = t.encode('utf8').decode("unicode_escape")
 
-            def get_element_text(element):
-                return element.text
- 
+                # this will trim the code to choose only
+                # the part with the data arrays
+                start, end = "data:function(){return ",  "]\n}});"
+                data_str = t[t.index(start) + len(start): t.rindex(end) + 1]
+                json_obj = json.loads(data_str)
+                return json_obj
+            except Exception as e:
+                log.exception(e)
+                print('WARNING:', e, t)
+                return {}
 
-            scriptTexts = map(get_element_text, scripts)
-            # choose only those with AF_initDataCallback
-            scriptTexts = [stext for stext in scriptTexts
-                           if bool(re.match('^AF_initDataCallback', stext))]
+        def meta_array2meta_dict(meta):
+            rg_meta = {
+                'id': '',  # thumbnail
+                'tu': '', 'th': '', 'tw': '',  # original
+                'ou': '', 'oh': '', 'ow': '',  # site and name
+                'pt': '', 'st': '',  # titles
+                'ity': 'gif',
+                'rh': 'IMAGE_HOST',
+                'ru': 'IMAGE_SOURCE',
+            }
+            try:
+                rg_meta['id'] = meta[1]
+                # thumbnail
+                rg_meta['tu'], rg_meta['th'], rg_meta['tw'] = meta[2]
+                # original
+                rg_meta['ou'], rg_meta['oh'], rg_meta['ow'] = meta[3]
 
-            def parse_json(t):
+                siteAndNameInfo = meta[9] or meta[11]
+                # site and name
                 try:
-                    t = t.encode('utf8').decode("unicode_escape")
+                    if '2003' in siteAndNameInfo:
+                        rg_meta['ru'] = siteAndNameInfo['2003'][2]
+                        rg_meta['pt'] = siteAndNameInfo['2003'][3]
+                    elif '2008' in siteAndNameInfo:
+                        rg_meta['pt'] = siteAndNameInfo['2008'][2]
 
-                    # this will trim the code to choose only
-                    # the part with the data arrays
-                    start, end = "data:function(){return ",  "]\n}});"
-                    data_str = t[t.index(start) + len(start): t.rindex(end) + 1]
-                    json_obj = json.loads(data_str)
-                    return json_obj
-                except Exception as e:
-                    print('WARNING:', e, t)
-                    return {}
-
-            entries = list(map(parse_json, scriptTexts))
-            entry = entries[-1]
-            imgMetas = map(lambda meta: meta[1], entry[31][0][12][2])  # confirmed
-
-            def meta_array2meta_dict(meta):
-                rg_meta = {
-                    'id': '',  # thumbnail
-                    'tu': '', 'th': '', 'tw': '',  # original
-                    'ou': '', 'oh': '', 'ow': '',  # site and name
-                    'pt': '', 'st': '',  # titles
-                    'ity': 'gif',
-                    'rh': 'IMAGE_HOST',
-                    'ru': 'IMAGE_SOURCE',
-                }
-                try:
-                    rg_meta['id'] = meta[1]
-                    # thumbnail
-                    rg_meta['tu'], rg_meta['th'], rg_meta['tw'] = meta[2]
-                    # original
-                    rg_meta['ou'], rg_meta['oh'], rg_meta['ow'] = meta[3]
-
-                    siteAndNameInfo = meta[9] or meta[11]
-                    # site and name
-                    try:
-                        if '2003' in siteAndNameInfo:
-                            rg_meta['ru'] = siteAndNameInfo['2003'][2]
-                            rg_meta['pt'] = siteAndNameInfo['2003'][3]
-                        elif '2008' in siteAndNameInfo:
-                            rg_meta['pt'] = siteAndNameInfo['2008'][2]
-
-                        if '183836587' in siteAndNameInfo:
-                            rg_meta['st'] = siteAndNameInfo['183836587'][0]  # infolink
-                            rg_meta['rh'] = rg_meta['st']
-                    except Exception as e:
-                        log.exception(e)
-                        pass
-
-                    return rg_meta
-
+                    if '183836587' in siteAndNameInfo:
+                        # infolink
+                        rg_meta['st'] = siteAndNameInfo['183836587'][0]
+                        rg_meta['rh'] = rg_meta['st']
                 except Exception as e:
                     log.exception(e)
-                    print("WARNING:", e, meta)
+                    pass
 
-            metas = list(filter(None, map(meta_array2meta_dict, imgMetas)))
-            return metas
+                return rg_meta
 
-        metas = get_metas(page)
+            except Exception as e:
+                log.exception(e)
+                print("WARNING:", e, meta)
+
+        bs = BeautifulSoup(page, 'lxml')
+        # get scripts
+        scripts = bs.select('script[nonce]')
+
+        scriptTexts = [element.text for element in scripts]
+        # choose only those with AF_initDataCallback
+        scriptTexts = [stext for stext in scriptTexts
+                       if bool(re.match('^AF_initDataCallback', stext))]
+
+        entry = parse_json(scriptTexts[-1])
+        # confirmed
+        imgMetas = map(lambda meta: meta[1], entry[31][0][12][2])
+
+        metas = list(filter(None, map(meta_array2meta_dict, imgMetas)))
+
         self._info_AF_initDataCallback = iter(metas)
         return self._info_AF_initDataCallback
 
-    def download(self, arguments):
+    def download(self, arguments: dict):
         """Bulk Download."""
 
         self.__init__()
@@ -496,7 +497,8 @@ class GoogleImagesDownload:
 
         # Initialization and Validation of user arguments
         if self.args('keywords'):
-            search_keyword = [str(item) for item in self.args('keywords').split(',')]
+            search_keyword = [str(item) for item in
+                              self.args('keywords').split(',')]
 
         # both time and time range should not be allowed in the same query
         if self.args('time') and self.args('time_range'):
@@ -554,19 +556,3 @@ class GoogleImagesDownload:
             items, errorCount = self._get_all_items(raw_html, limit)
 
             print(f"\nErrors: {errorCount}\n")
-
-
-def remove_illegal_characters(string):
-    string = str(string)
-
-    badchars = re.compile(r'[^A-Za-z0-9_. ]+|^\.|\.$|^ | $|^$')
-    badnames = re.compile(r'(aux|com[1-9]|con|lpt[1-9]|prn)(\.|$)')
-
-    try:
-        name = badchars.sub('_', string)
-        if badnames.match(name):
-            name = '_' + name
-        return name
-    except Exception as e:
-        print("ERROR cleaning filename:", e)
-    return string

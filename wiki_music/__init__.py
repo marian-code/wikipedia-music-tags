@@ -46,8 +46,9 @@ lazy_module("collections")
 lazy_module("configparser")
 lazy_module("PIL.Image")
 lazy_module("PIL.ImageFile")
-lazy_module("rapidfuzz.fuzz")
-lazy_module("rapidfuzz.process")
+# TODO cannot be lazy loaded
+# lazy_module("rapidfuzz.fuzz")
+# lazy_module("rapidfuzz.process")
 lazy_module("wiki_music.external_libraries.lyricsfinder")
 lazy_module("wiki_music.external_libraries.google_images_download"
             ".google_images_download")

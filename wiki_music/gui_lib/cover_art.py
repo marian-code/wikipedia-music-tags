@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple, Union
 from wiki_music.constants import (ASPECT_RATIOS, COVER_ART_EDIT_UI,
                                   COVER_ART_SEARCH_UI)
 from wiki_music.external_libraries.google_images_download import (  # lazy loaded
-    google_images_download, google_images_download_offline)
+    GoogleImagesDownload)
 from wiki_music.gui_lib import BaseGui, ImageTable, SelectablePixmap
 from wiki_music.gui_lib.qt_importer import (QDialog, QFileDialog, QIcon,
                                             QInputDialog, QMessageBox, QSize,
@@ -610,14 +610,14 @@ class CoverArtSearch(BaseGui):
         self._stop_aysnc_loader = False
 
         if self.offline_debug:
-            self.gimd = google_images_download_offline.googleimagesdownload()
+            self.gimd = GoogleImagesDownload(offline=True)
             self._max_count = 5
         else:
             if not all((self.ALBUMARTIST, self.ALBUM)):
                 QMessageBox(QMessageBox.Information, "Message",
                             "You must input Artist and Album first").exec_()
                 return
-            self.gimd = google_images_download.googleimagesdownload()
+            self.gimd = GoogleImagesDownload(offline=False)
             self._max_count = 20
 
         query = f"{self.ALBUMARTIST} {self.ALBUM}"
