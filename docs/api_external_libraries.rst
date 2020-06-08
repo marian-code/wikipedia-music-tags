@@ -68,8 +68,8 @@ external_libraries.google_images_download
 .. automodule:: wiki_music.external_libraries.google_images_download
    :members:
 
-.. automodule:: wiki_music.external_libraries.google_images_download.google_images_download_offline
+.. automodule:: wiki_music.external_libraries.google_images_download.GoogleImagesDownload
    :members:
 
-.. automodule:: wiki_music.external_libraries.google_images_download.google_images_download
+.. automodule:: wiki_music.external_libraries.google_images_download.GoogleImagesDownload
    :members:

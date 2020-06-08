@@ -12,6 +12,7 @@
 [![Build Status](https://travis-ci.com/marian-code/wikipedia-music-tags.svg?branch=master)](https://travis-ci.com/marian-code/wikipedia-music-tags)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/wiki-music)
 [![Maintainability](https://api.codeclimate.com/v1/badges/d53cf7baff45efab643d/maintainability)](https://codeclimate.com/github/marian-code/wikipedia-music-tags/maintainability)
+[![Checked with mypy](https://img.shields.io/static/v1?label=MyPy&message=checked&color=blue)](http://mypy-lang.org/)
 
 
 Python application which parses wikipedia for music tags and writes them to 

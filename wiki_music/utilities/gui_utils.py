@@ -248,7 +248,7 @@ def get_sizes(uri: Union[str, Path]
         try:
             file_object = urllib.request.urlopen(uri)
             size = file_object.headers.get("content-length")
-        except HTTPException as e:
+        except (HTTPException, urllib.error.HTTPError) as e:
             log.exception(f"Couldn't open cover art from url -> {e}")
             return None, None
 

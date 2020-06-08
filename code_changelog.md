@@ -2,6 +2,7 @@
 
 ### Main problems ordered by targeted release
 - 0.7a0
+  - flac save tags is weird and slow
   - handle name permutations like: Anthony Lucassen Arjen, Arjen Anthony Lucassen
   - probably encoding problem when downloading lyrics
   - treadpool progressbar is not showing or showing late !!!!!!!
